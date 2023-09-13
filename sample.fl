@@ -1,0 +1,7 @@
+(*Sample comment*) int x;
+
+1234 8.933 "Hello world!"
+1f 1d 1l 1r 1i
+std::cout
+#Compiler
+    "Sample code"
