@@ -1,7 +1,13 @@
 #pragma once
-#include <types.hpp>
+#include "types.hpp"
 
 class Token{
+private:
+    Type type;
+    std::string string;
+    unsigned long row;
+    unsigned long column;
+public:
     Token();
     Token(Type inType, char inChar, unsigned long inRow, unsigned long inColumn);
     void operator=(Token right);

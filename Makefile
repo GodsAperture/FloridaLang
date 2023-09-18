@@ -1,3 +1,3 @@
-florida: FLexer.cpp
-	g++ -g FLexer.cpp -o FLexer.out
-	./FLexer.out sample.fl
+florida: main.cpp
+	g++ -g main.cpp -o Florida.out
+	./Florida.out sample.fl

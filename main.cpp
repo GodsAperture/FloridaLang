@@ -1,4 +1,7 @@
-#include <lexer.cpp>
+#include <stdio.h>
+
+#include "lexer.hpp"
+#include "lexer.cpp"
 #include <vector>
 
 int main(int argc, char** argv){    

@@ -1,9 +1,9 @@
 #pragma once
 
-#include <token.hpp>
+#include "token.hpp"
 #include <fstream>
-#include <helpers.hpp>
-#include <token.cpp>
+#include "helpers.hpp"
+#include "token.cpp"
 
 class Lexer{
     private:
