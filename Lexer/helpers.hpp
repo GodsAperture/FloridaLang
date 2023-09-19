@@ -1,3 +1,5 @@
+#pragma once
+
 inline bool POperatorQ(bool);
 inline bool MOperatorQ(char in);
 inline bool AOperatorQ(char in);

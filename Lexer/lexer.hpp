@@ -3,7 +3,6 @@
 #include "token.hpp"
 #include <fstream>
 #include "helpers.hpp"
-#include "token.cpp"
 
 class Lexer{
     private:

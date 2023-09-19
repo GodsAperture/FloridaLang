@@ -1,3 +1,4 @@
+#pragma once
 
 //Check if the given character is any of the paired operators.
 inline bool POperatorQ(char in){

@@ -1,8 +1,5 @@
 #pragma once
-
-#include "token.hpp"
-#include <fstream>
-#include "helpers.hpp"
+#include "lexer.hpp"
 #include <iostream>
 
 class Lexer{

@@ -1,5 +1,6 @@
 #pragma once
-#include "types.hpp"
+#include "types.cpp"
+#include <string>
 
 class Token{
 private:

@@ -1,7 +1,6 @@
 #include <stdio.h>
 
-#include "lexer.hpp"
-#include "lexer.cpp"
+#include "Lexer/lexer.hpp"
 #include <vector>
 
 int main(int argc, char** argv){    
