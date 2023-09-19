@@ -1,10 +1,10 @@
 #pragma once
 
-inline bool POperatorQ(bool);
-inline bool MOperatorQ(char in);
-inline bool AOperatorQ(char in);
-inline bool SOperatorQ(char in);
+bool POperatorQ(bool);
+bool MOperatorQ(char in);
+bool AOperatorQ(char in);
+bool SOperatorQ(char in);
 
-inline bool AlphaQ(char in);
-inline bool NumberQ(char in);
-inline bool PagerQ(char in);
+bool AlphaQ(char in);
+bool NumberQ(char in);
+bool PagerQ(char in);

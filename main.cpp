@@ -8,7 +8,7 @@ int main(int argc, char** argv){
 
     if(true){
 //        Lexer FloridaLexer = Lexer(argv[1]);
-        char* fileName = "sample.fl";
+        char* fileName = "../sample.fl";
         Lexer FloridaLexer = Lexer(fileName);
 
         Token thisToken = FloridaLexer.next();
@@ -21,10 +21,10 @@ int main(int argc, char** argv){
             thisToken = FloridaLexer.next();
         }
 
+
+
         //Close the file, because if I don't there's a big problem.
         FloridaLexer.file.close();
-
-
         printf("\n");
     } else {
         

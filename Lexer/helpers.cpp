@@ -1,7 +1,5 @@
-#pragma once
-
 //Check if the given character is any of the paired operators.
-inline bool POperatorQ(char in){
+bool POperatorQ(char in){
 
     switch(in){
 
@@ -25,7 +23,7 @@ inline bool POperatorQ(char in){
 
 
 //Check if the given character is any of the math operators.
-inline bool MOperatorQ(char in){
+bool MOperatorQ(char in){
 
     switch(in){
 
@@ -64,7 +62,7 @@ inline bool MOperatorQ(char in){
 
 
 //Check if the given chracter is any of the arbitrary operators.
-inline bool AOperatorQ(char in){
+bool AOperatorQ(char in){
 
     switch(in){
 
@@ -97,7 +95,7 @@ inline bool AOperatorQ(char in){
 
 
 //Check if the operator is a character shared between the Math set and the Arbitrary set.
-inline bool SOperatorQ(char in){
+bool SOperatorQ(char in){
 
     switch(in){
 
@@ -118,7 +116,7 @@ inline bool SOperatorQ(char in){
 
 
 //Check if the given character is an alphabetical character 
-inline bool AlphaQ(char in){
+bool AlphaQ(char in){
 
     if((in >= 'a' & in <= 'z') | (in >= 'A' & in <= 'Z')){
         return true;
@@ -130,7 +128,7 @@ inline bool AlphaQ(char in){
 
 
 //Check if the given character is a number.
-inline bool NumberQ(char in){
+bool NumberQ(char in){
 
     if(in >= '0' & in <= '9'){
         return true;
@@ -142,7 +140,7 @@ inline bool NumberQ(char in){
 
 
 //Check if the given character is any page related character.
-inline bool PagerQ(char in){
+bool PagerQ(char in){
 
     switch(in){
 

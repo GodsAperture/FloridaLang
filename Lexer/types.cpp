@@ -1,5 +1,3 @@
-#pragma once
-
 enum Type{
 
     //Pesky fucking comments.
