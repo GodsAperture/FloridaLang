@@ -15,6 +15,7 @@ Lexer/LexerObjects/token.o: Lexer/token.cpp Lexer/LexerObjects/types.o
 
 clean:
 	rm Lexer/LexerObjects/*.o
+	rm Florida.out
 
 run:
 	./Florida.out sample.fl
