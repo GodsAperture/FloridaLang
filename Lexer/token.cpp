@@ -51,3 +51,10 @@ void Token::append(char in){
 void Token::changeType(Type in){
     type = in;
 }
+
+
+
+//Let me print tokens to see if there are any bugs.
+void Token::print(){
+    std::cout << string;
+}

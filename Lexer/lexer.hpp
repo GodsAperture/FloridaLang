@@ -3,14 +3,15 @@
 #include "token.hpp"
 #include <fstream>
 
-class Lexer{
-    private:
-        char* fileName;
-        unsigned long row;
-        unsigned long column;
-    public:
-        std::fstream file;
-        Lexer(char* &inFile);
-        bool getEOF();
-        Token next();
+class Lexer {
+private:
+	const std::string fileName;
+	unsigned long row;
+	unsigned long column;
+
+public:
+	std::fstream file;
+	Lexer(const std::string& inFile);
+	bool getEOF();
+	Token next();
 };
