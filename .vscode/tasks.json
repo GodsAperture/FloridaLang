@@ -2,14 +2,31 @@
     "tasks": [
         {
             "type": "cppbuild",
-            "label": "C/C++: g++ build active file",
+            "label": "make",
+            "command": "make",
+            "args": [
+                "Florida"
+            ],
+            "options": {
+                "cwd": "${fileDirname}"
+            }
+        },
+        {
+            "type": "cppbuild",
+            "label": "makeFile",
             "command": "/usr/bin/g++",
             "args": [
                 "-fdiagnostics-color=always",
                 "-g",
                 "${file}",
                 "-o",
-                "${fileDirname}/${fileBasenameNoExtension}"
+                "${fileDirname}/build/Florida",
+                "${fileDirname}/Lexer/*.cpp",
+                //"${fileDirname}/Parser/*.cpp",
+                "-Wall",
+                "-Werror",
+                "-Wpedantic",
+                "-fsanitize=address,undefined"
             ],
             "options": {
                 "cwd": "${fileDirname}"

@@ -296,7 +296,7 @@ Token Lexer::next() {
 		column++;
 
 		// Compiler commands are whole tokens. An example is '#include'.
-		while (currChar != ' ' & currChar != '\n' & !file.eof()) {
+		while ((currChar != ' ') & (currChar != '\n') & !file.eof()) {
 			inToken.append(currChar);
 
 			file.get(currChar);

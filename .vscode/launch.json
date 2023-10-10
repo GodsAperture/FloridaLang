@@ -4,15 +4,13 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+
         {
             "name": "(gdb) Launch",
+            "preLaunchTask": "makeFile",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceRoot}/build/Florida",
-            "args": [
-                "cmake CMakeLists.txt -B /build",
-                "make Florida"
-            ],
+            "program": "${workspaceRoot}/build/Florida",    
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
             "environment": [],
@@ -27,6 +25,11 @@
                 {
                     "description": "Set Disassembly Flavor to Intel",
                     "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Enable power of 10 programming",
+                    "text": "-Wall -Werror -Wpedantic",
                     "ignoreFailures": true
                 }
             ]

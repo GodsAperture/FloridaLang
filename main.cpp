@@ -5,13 +5,12 @@
 int main(int argc, char** argv){
 
 	if (true) {
-//		Lexer FloridaLexer = Lexer(argv[1]);
+		// Lexer FloridaLexer = Lexer(argv[0]);
 		Lexer FloridaLexer = Lexer("sample.fl");
-		printf("Hello world!\n");
+		printf("Goodbye bugs!\n");
 
 		Token thisToken = FloridaLexer.next();
 		std::vector<Token> theList;
-		bool boolean = true;
 
 		// Grab the first token and so long as it isn't EOF it will continue.
 		while (!FloridaLexer.file.eof()) {

@@ -1,4 +1,4 @@
-#pragma once
+#ifndef lhelpers
 
 bool POperatorQ(bool);
 bool MOperatorQ(char in);
@@ -8,3 +8,5 @@ bool SOperatorQ(char in);
 bool AlphaQ(char in);
 bool NumberQ(char in);
 bool PagerQ(char in);
+
+#endif

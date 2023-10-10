@@ -1,4 +1,4 @@
-#pragma once
+#ifndef lexer
 
 #include "token.hpp"
 #include <fstream>
@@ -15,3 +15,5 @@ public:
 	bool getEOF();
 	Token next();
 };
+
+#endif

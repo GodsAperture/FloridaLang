@@ -118,7 +118,7 @@ bool SOperatorQ(char in){
 //Check if the given character is an alphabetical character 
 bool AlphaQ(char in){
 
-    if((in >= 'a' & in <= 'z') | (in >= 'A' & in <= 'Z')){
+    if(((in >= 'a') & (in <= 'z')) | ((in >= 'A') & (in <= 'Z'))){
         return true;
     } else {
         return false;
@@ -130,7 +130,7 @@ bool AlphaQ(char in){
 //Check if the given character is a number.
 bool NumberQ(char in){
 
-    if(in >= '0' & in <= '9'){
+    if((in >= '0') & (in <= '9')){
         return true;
     } else {
         return false;

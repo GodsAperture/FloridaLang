@@ -1,4 +1,5 @@
-#pragma once
+#ifndef token
+
 #include "types.cpp"
 #include <string>
 
@@ -19,3 +20,5 @@ public:
 	void print();
 	std::string string;
 };
+
+#endif 
