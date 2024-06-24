@@ -1,17 +1,28 @@
-//Check if the given character is any of the paired operators.
-bool POperatorQ(char in){
+//Check if the given character is any of the left paired operators.
+bool POperatorLQ(char in){
 
     switch(in){
 
         case '(':
             return true;
-        case ')':
-            return true;
         case '[':
             return true;
-        case ']':
-            return true;
         case '{':
+            return true;
+        default:
+            return false;
+    }
+
+}
+
+//Check if the given character is any of the left paired operators.
+bool POperatorRQ(char in){
+
+    switch(in){
+
+        case ')':
+            return true;
+        case ']':
             return true;
         case '}':
             return true;
@@ -22,97 +33,10 @@ bool POperatorQ(char in){
 }
 
 
-//Check if the given character is any of the math operators.
-bool MOperatorQ(char in){
-
-    switch(in){
-
-        case '!':
-            return true;
-        case '>':
-            return true;
-        case '<':
-            return true;
-        case '=':
-            return true;
-        case '&':
-            return true;
-        case '|':
-            return true;
-        case '+':
-            return true;
-        case '-':
-            return true;
-        case '*':
-            return true;
-        case '/':
-            return true;
-        case '\\':
-            return true;
-        case '%':
-            return true;
-        case '.':
-            return true;
-        default:
-            return false;
-
-    }
-
+//Check if the given character is any of the operator characters.
+bool OperatorQ(char in){
+    return !AlphaQ(in) && !NumberQ(in) && !PagerQ(in) && in != ';' && in != ',' && in != '_' && in != '"';
 }
-
-
-//Check if the given chracter is any of the arbitrary operators.
-bool AOperatorQ(char in){
-
-    switch(in){
-
-        case '`':
-            return true;
-        case '~':
-            return true;
-        case '!':
-            return true;
-        case '@':
-            return true;
-        case '$':
-            return true;
-        case '%':
-            return true;
-        case '^':
-            return true;
-        case '&':
-            return true;
-        case '*':
-            return true;
-        case '?':
-            return true;
-        default:
-            return false;
-
-    }
-
-}
-
-
-//Check if the operator is a character shared between the Math set and the Arbitrary set.
-bool SOperatorQ(char in){
-
-    switch(in){
-
-        case '%':
-            return true;
-        case '^':
-            return true;
-        case '*':
-            return true;
-        default:
-            return false;
-
-    }
-
-}
-
-
 
 
 //Check if the given character is an alphabetical character 

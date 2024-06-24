@@ -16,7 +16,7 @@ Token Lexer::next() {
 	char currChar;
 	file.get(currChar);
 
-	// Catch EOF and immediately terminate next.
+	// Catch EOF and immediately terminate next().
 	if (file.eof()) {
 		inToken = Token(eof, currChar, row, column);
 		return inToken;
@@ -78,12 +78,15 @@ Token Lexer::next() {
 
 	// Deal with numbers
 	if (NumberQ(currChar)) {
-		inToken = Token(integer, currChar, row, column);
+		//The token type here isn't the default, it's simply a placeholder.
+		//Coincidentally, fix8 will be any number that doesn't have a period or letter.
+		inToken = Token(Type::fix8, currChar, row, column);
 		file.get(currChar);
 		column++;
 
 		while (true) {
 
+			//If the character is a number, append it.
 			if (NumberQ(currChar)) {
 				inToken.append(currChar);
 
@@ -93,10 +96,10 @@ Token Lexer::next() {
 				continue;
 			}
 
-			// Numbers with decimals will default to type double.
+			// Numbers with decimals will default to type fix8.
 			if (currChar == '.') {
 				inToken.append(currChar);
-				inToken.changeType(double8);
+				inToken.changeType(Type::float8);
 
 				file.get(currChar);
 				column++;
@@ -104,28 +107,65 @@ Token Lexer::next() {
 				continue;
 			}
 
-			// If the number ends with f, d, i, r, or l it will change the type
+			// If the number ends with f, i, e, or E it will change the type
 			// of number.
 			switch (currChar) {
+			//This case handles floating point values.
 			case 'f':
-				inToken.append(currChar);
-				inToken.changeType(float4);
-				return inToken;
-			case 'd':
-				inToken.append(currChar);
-				inToken.changeType(double8);
-				return inToken;
+				if(file.peek() == '4'){
+					inToken.append(currChar);
+					inToken.changeType(Type::float4);
+					return inToken;
+				}
+				if(file.peek() == '8'){
+					inToken.append(currChar);
+					inToken.changeType(Type::float8);
+					return inToken;
+				}
+				if(file.peek() == 'n'){
+					inToken.append(currChar);
+					inToken.changeType(Type::floatn);
+					return inToken;
+				}
+				else{
+					inToken.append(currChar);
+					inToken.changeType(Type::float8);
+					return inToken;
+				}
+			//This case handles fixed point values.
 			case 'i':
+				if(file.peek() == '2'){
+					inToken.append(currChar);
+					inToken.changeType(Type::fix2);
+					return inToken;
+				}
+				if(file.peek() == '4'){
+					inToken.append(currChar);
+					inToken.changeType(Type::fix4);
+					return inToken;
+				}
+				if(file.peek() == '8'){
+					inToken.append(currChar);
+					inToken.changeType(Type::fix8);
+					return inToken;
+				}
+				if(file.peek() == 'n'){
+					inToken.append(currChar);
+					inToken.changeType(Type::fixn);
+					return inToken;
+				}
+				else{
+					inToken.append(currChar);
+					inToken.changeType(Type::fix8);
+					return inToken;
+				}
+			case 'e':
 				inToken.append(currChar);
-				inToken.changeType(imaginary);
+				inToken.changeType(Type::scifix8);
 				return inToken;
-			case 'r':
+			case 'E':
 				inToken.append(currChar);
-				inToken.changeType(real);
-				return inToken;
-			case 'l':
-				inToken.append(currChar);
-				inToken.changeType(long8);
+				inToken.changeType(Type::scifixn);
 				return inToken;
 			default:
 				break;
@@ -184,60 +224,21 @@ Token Lexer::next() {
 
 
 	// Strings of operators
-	if (SOperatorQ(currChar)) {
-		inToken = Token(VOperator, currChar, row, column);
+	if (OperatorQ(currChar) && currChar) {
+		inToken = Token(Type::Operator, currChar, row, column);
 		file.get(currChar);
 		column++;
 
-		// While the first few characters are shared operators, append them
-		// and assume it could be a math related operator until proven
-		// otherwise.
-		while (SOperatorQ(currChar)) {
+		//While every consecutive character is an operator character add them to the token.
+		while(OperatorQ(currChar)){
 			inToken.append(currChar);
+
 			file.get(currChar);
 			column++;
 		}
 
-		// If the operator is an arbitrary type operator, change its type to
-		// AOperator and continually append shared and arbitrary operators.
-		if (AOperatorQ(currChar)) {
-			inToken.append(currChar);
-			inToken.changeType(AOperator);
-
-			file.get(currChar);
-			column++;
-			while (SOperatorQ(currChar) | AOperatorQ(currChar)) {
-				inToken.append(currChar);
-				file.get(currChar);
-				column++;
-			}
-
-			// There are no more arbitrary operator or shared operator
-			// characters to be appended, finish and return.
-			return inToken;
-		}
-
-		// If the operator is a math type operator, change its type to MOperator
-		// and continually append shared and math operators.
-		if (MOperatorQ(currChar)) {
-			inToken.append(currChar);
-			inToken.changeType(MOperator);
-
-			file.get(currChar);
-			column++;
-			while (SOperatorQ(currChar) | MOperatorQ(currChar)) {
-				inToken.append(currChar);
-				file.get(currChar);
-				column++;
-			}
-
-			// There are no more math operator or shared operator characters
-			// to be appended, finish and return.
-			return inToken;
-		}
-
-		// If the token is nothing but arbitrary characters,
-		// then the type will remain VOperator and it shall be returned as is.
+		file.unget();
+		column--;
 		return inToken;
 	}
 
@@ -251,9 +252,8 @@ Token Lexer::next() {
 		column++;
 
 		while (currChar != '"' && !file.eof()) {
-
 			switch (currChar) {
-			// In the event the next two characters are the escape sequence
+			// In the event the next character is the escape sequence
 			// it will be lexed properly.
 			// By default, it will just append the character as is.
 			case '\\':
@@ -270,6 +270,14 @@ Token Lexer::next() {
 					file.get();
 					column++;
 					inToken.append('\\');
+					continue;
+				}
+				if(file.peek() == 't'){
+					file.get();
+					file.get();
+					column++;
+					column++;
+					inToken.append('t');
 					continue;
 				}
 			default:
@@ -310,21 +318,19 @@ Token Lexer::next() {
 	}
 
 
+	//Catch all paired operators
+	if(POperatorLQ(currChar) || POperatorRQ(currChar)){
+		//Check if it's a left operator, otherwise it's a right operator.
+		if(POperatorLQ(currChar)){
+			return Token(POperatorL, currChar, row, column);
+		}
+
+		return Token(POperatorR, currChar, row, column);
+	}
+
 
 	// Catch those other tokens
 	switch (currChar) {
-	case ':':
-		if (file.peek() == ':') {
-			inToken = Token(DColon, ':', row, column);
-			inToken.append(':');
-			column++;
-			column++;
-			file.get();
-			return inToken;
-		} else {
-			inToken = Token(Colon, ':', row, column);
-			return inToken;
-		}
 	case ',':
 		inToken = Token(Comma, ',', row, column);
 		column++;
@@ -332,11 +338,6 @@ Token Lexer::next() {
 	case ';':
 		inToken = Token(Semicolon, ';', row, column);
 		column++;
-		return inToken;
-	default:
-		std::cout << "\t\nMystery character, please add " << currChar << "!\n";
-		std::abort();
-		// I hope this is unreachable.
 		return inToken;
 	}
 

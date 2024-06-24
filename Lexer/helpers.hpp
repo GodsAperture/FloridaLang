@@ -1,9 +1,8 @@
 #ifndef lhelpers
 
-bool POperatorQ(bool);
-bool MOperatorQ(char in);
-bool AOperatorQ(char in);
-bool SOperatorQ(char in);
+bool POperatorLQ(char);
+bool POperatorRQ(char);
+bool OperatorQ(char);
 
 bool AlphaQ(char in);
 bool NumberQ(char in);

@@ -38,6 +38,10 @@ Type Token::getType(){
 }
 
 
+//Return the Token's 'name'.
+std::string Token::getName(){
+    return name;
+}
 
 //Append the given character to the end Token and adds 1 to its length.
 void Token::append(char in){

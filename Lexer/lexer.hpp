@@ -13,6 +13,7 @@ public:
 	std::fstream file;
 	Lexer(const std::string& inFile);
 	bool getEOF();
+	//Grabs the next token.
 	Token next();
 };
 

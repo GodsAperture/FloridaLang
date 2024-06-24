@@ -22,6 +22,7 @@ public:
 	};
 	
 	Type getType();
+	std::string getName();
 	void append(char in);
 	void changeType(Type in);
 	void print();

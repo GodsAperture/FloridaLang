@@ -1,4 +1,6 @@
 enum Type{
+    //Null objects, mainly for the BaseOperator, until I write a better BaseOperator class.
+    null,
 
     //Pesky fucking comments.
     Comment,
@@ -8,7 +10,11 @@ enum Type{
     Hash,
 
     //Numbers
-    integer, long4, long8, real, imaginary, double8, float4, 
+    fix2, fix4, fix8, fixn, 
+    float4, float8, floatn, 
+    //scifix numbers are scientific notation numbers such as 2.718e0 and 1.234E32
+    scifix8, scifixn,
+    imaginary,
 
     //Quotations marks will not be overloadable. They are exclusively for strings.
     //Brackets and Bars are all nestable.
@@ -17,21 +23,10 @@ enum Type{
     //its entries, but ||A|| will return the determinant.
     
     //Paired Operators: (, ), [, ], {, }, |, "
-    POperator,
+    POperatorL, POperatorR,
 
-    //Comparison Operators: AND, OR, XAND, XOR, NAND, NOR, XNAND, XNOR
-    //For more obvious reasons, these are not concatenatable.
-    COperator,
-
-    //Concatenated Math Operators: +, -, *, /, ^, \, %, .
-    MOperator,
-
-    //Arbitrary Operators: `, ~, !, @, $, %, ^, &, *, ?
-    AOperator,
-
-    //Vague operator: %, ^, *
-    //If by chance the operator is made of only shared operators, this it is vague.
-    VOperator,
+    //Operators are strings of non-alphanumerical characters. 
+    Operator,
 
     //End of File
     eof,
@@ -39,13 +34,10 @@ enum Type{
     //Strings
     Strings,
 
-    //Apostrophes and Colons.
-    Apostrophe, Colons,
-
     //Identifiers and Patterns
     Identifier, Pattern,
 
-    //Others: ',', ;, :, :: (Comma, Period, Semicolon, Colon, DColon)
+    //Others: ',', ;(Comma, Semicolon)
     //Non-overloadable characters.
-    Comma, Semicolon, Colon, DColon
+    Comma, Semicolon
 };
