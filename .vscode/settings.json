@@ -4,5 +4,6 @@
         "iosfwd": "cpp",
         "*.tcc": "cpp",
         "string": "cpp"
-    }
+    },
+    "cmake.configureOnOpen": true
 }

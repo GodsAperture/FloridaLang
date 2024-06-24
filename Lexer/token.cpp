@@ -5,6 +5,7 @@
 Token::Token(){
     row = 0;
     column = 0;
+    name = "";
 };
 
 
@@ -13,7 +14,7 @@ Token::Token(){
 Token::Token(Type inType, char inChar, unsigned long inRow, unsigned long inColumn){
 
     type = inType;
-    string.push_back(inChar);
+    name.push_back(inChar);
     row = inRow;
     column = inColumn;
 
@@ -24,7 +25,7 @@ Token::Token(Type inType, char inChar, unsigned long inRow, unsigned long inColu
 //Make my life easier, have an overload for '='.
 void Token::operator=(Token right){
     type = right.type;
-    string = right.string;
+    name = right.name;
     row = right.row;
     column = right.column;
 }
@@ -41,7 +42,7 @@ Type Token::getType(){
 //Append the given character to the end Token and adds 1 to its length.
 void Token::append(char in){
 
-    string.push_back(in);
+    name.push_back(in);
 
 }
 
@@ -56,5 +57,5 @@ void Token::changeType(Type in){
 
 //Let me print tokens to see if there are any bugs.
 void Token::print(){
-    std::cout << string;
+    std::cout << name;
 }

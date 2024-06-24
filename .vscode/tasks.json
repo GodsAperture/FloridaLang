@@ -20,7 +20,7 @@
                 "-g",
                 "${file}",
                 "-o",
-                "${fileDirname}/build/Florida",
+                "${fileDirname}/build/main",
                 "${fileDirname}/Lexer/*.cpp",
                 //"${fileDirname}/Parser/*.cpp",
                 "-Wall",
