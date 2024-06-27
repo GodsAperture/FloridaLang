@@ -1,11 +1,12 @@
-#ifndef token
+#ifndef Token_h__
+#define Token_h__
 
-#include "types.cpp"
+#include "Types.cpp"
 #include <string>
 
 class Token {
 private:
-	Type type;
+	FloridaType type;
 	unsigned long row;
 	unsigned long column;
 
@@ -13,7 +14,7 @@ public:
 	std::string name;
 
 	Token();
-	Token(Type inType, char inChar, unsigned long inRow, unsigned long inColumn);
+	Token(FloridaType inType, char inChar, unsigned long inRow, unsigned long inColumn);
 
 	void operator=(Token right){
 		type = right.type;
@@ -21,11 +22,11 @@ public:
 		column = right.column;
 	};
 	
-	Type getType();
+	FloridaType getType();
 	std::string getName();
 	void append(char in);
-	void changeType(Type in);
+	void changeType(FloridaType in);
 	void print();
 };
 
-#endif 
+#endif

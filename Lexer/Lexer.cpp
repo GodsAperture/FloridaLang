@@ -1,5 +1,7 @@
-#include "lexer.hpp"
-#include "helpers.hpp"
+#ifndef Lexer
+
+#include "Lexer.hpp"
+#include "Helpers.hpp"
 #include <iostream>
 
 Lexer::Lexer(const std::string& inFile) : fileName(inFile), file(inFile) {
@@ -80,7 +82,7 @@ Token Lexer::next() {
 	if (NumberQ(currChar)) {
 		//The token type here isn't the default, it's simply a placeholder.
 		//Coincidentally, fix8 will be any number that doesn't have a period or letter.
-		inToken = Token(Type::fix8, currChar, row, column);
+		inToken = Token(FloridaType::fix8, currChar, row, column);
 		file.get(currChar);
 		column++;
 
@@ -99,7 +101,7 @@ Token Lexer::next() {
 			// Numbers with decimals will default to type fix8.
 			if (currChar == '.') {
 				inToken.append(currChar);
-				inToken.changeType(Type::float8);
+				inToken.changeType(FloridaType::float8);
 
 				file.get(currChar);
 				column++;
@@ -114,58 +116,111 @@ Token Lexer::next() {
 			case 'f':
 				if(file.peek() == '4'){
 					inToken.append(currChar);
-					inToken.changeType(Type::float4);
+					inToken.changeType(FloridaType::float4);
+					//Consume the 4 character
+					file.get(currChar);
+					column++;
+
 					return inToken;
 				}
 				if(file.peek() == '8'){
 					inToken.append(currChar);
-					inToken.changeType(Type::float8);
+					inToken.changeType(FloridaType::float8);
+					//Consume the 8 character
+					file.get(currChar);
+					column++;
+
 					return inToken;
 				}
 				if(file.peek() == 'n'){
 					inToken.append(currChar);
-					inToken.changeType(Type::floatn);
+					inToken.changeType(FloridaType::floatn);
+					//Consume the n character
+					file.get(currChar);
+					column++;
+
 					return inToken;
 				}
 				else{
 					inToken.append(currChar);
-					inToken.changeType(Type::float8);
+					inToken.changeType(FloridaType::float8);
+
 					return inToken;
 				}
 			//This case handles fixed point values.
 			case 'i':
 				if(file.peek() == '2'){
 					inToken.append(currChar);
-					inToken.changeType(Type::fix2);
+					inToken.changeType(FloridaType::fix2);
+					//Consume the 2 character
+					file.get(currChar);
+					column++;
+
 					return inToken;
 				}
 				if(file.peek() == '4'){
 					inToken.append(currChar);
-					inToken.changeType(Type::fix4);
+					inToken.changeType(FloridaType::fix4);
+					//Consume the 4 character
+					file.get(currChar);
+					column++;
+
 					return inToken;
 				}
 				if(file.peek() == '8'){
 					inToken.append(currChar);
-					inToken.changeType(Type::fix8);
+					inToken.changeType(FloridaType::fix8);
+					//Consume the 8 character
+					file.get(currChar);
+					column++;
+
 					return inToken;
 				}
 				if(file.peek() == 'n'){
 					inToken.append(currChar);
-					inToken.changeType(Type::fixn);
+					inToken.changeType(FloridaType::fixn);
+					//Consume the n character
+					file.get(currChar);
+					column++;
+
 					return inToken;
 				}
 				else{
 					inToken.append(currChar);
-					inToken.changeType(Type::fix8);
+					inToken.changeType(FloridaType::fix8);
 					return inToken;
 				}
 			case 'e':
 				inToken.append(currChar);
-				inToken.changeType(Type::scifix8);
+				inToken.changeType(FloridaType::scifix8);
+				//Consume the e character and move to the next character.
+				file.get(currChar);
+				file.get(currChar);
+				column++;
+				column++;
+
+				//While the next characters are alphanumeric, append them.
+				while(AlphaQ(currChar)){
+					inToken.append(currChar);
+					column++;
+				}
+
 				return inToken;
 			case 'E':
 				inToken.append(currChar);
-				inToken.changeType(Type::scifixn);
+				inToken.changeType(FloridaType::scifixn);
+				//Consume the E character and move to the next character.
+				file.get(currChar);
+				file.get(currChar);
+				column++;
+				column++;
+
+				//While the next characters are alphanumeric, append them.
+				while(AlphaQ(currChar)){
+					inToken.append(currChar);
+					column++;
+				}
+
 				return inToken;
 			default:
 				break;
@@ -190,7 +245,7 @@ Token Lexer::next() {
 	// Identifers: Functions, variables, methods, patterns, and character based
 	// operators.
 	if (AlphaQ(currChar)) {
-		inToken = Token(Identifier, currChar, row, column);
+		inToken = Token(FloridaType::Identifier, currChar, row, column);
 		file.get(currChar);
 		column++;
 
@@ -225,7 +280,7 @@ Token Lexer::next() {
 
 	// Strings of operators
 	if (OperatorQ(currChar) && currChar) {
-		inToken = Token(Type::Operator, currChar, row, column);
+		inToken = Token(FloridaType::Operator, currChar, row, column);
 		file.get(currChar);
 		column++;
 
@@ -341,5 +396,8 @@ Token Lexer::next() {
 		return inToken;
 	}
 
+	return Token(FloridaType::BadToken, '.', row, column);
 	
 }
+
+#endif

@@ -1,5 +1,5 @@
 #include <iostream>
-#include "token.hpp"
+#include "Token.hpp"
 
 //Default Token constructor.
 Token::Token(){
@@ -11,7 +11,7 @@ Token::Token(){
 
 
 //Secondary Token constructor.
-Token::Token(Type inType, char inChar, unsigned long inRow, unsigned long inColumn){
+Token::Token(FloridaType inType, char inChar, unsigned long inRow, unsigned long inColumn){
 
     type = inType;
     name.push_back(inChar);
@@ -22,18 +22,8 @@ Token::Token(Type inType, char inChar, unsigned long inRow, unsigned long inColu
 
 
 
-//Make my life easier, have an overload for '='.
-void Token::operator=(Token right){
-    type = right.type;
-    name = right.name;
-    row = right.row;
-    column = right.column;
-}
-
-
-
 //Return the Token's 'type'.
-Type Token::getType(){
+FloridaType Token::getType(){
     return type;
 }
 
@@ -53,7 +43,7 @@ void Token::append(char in){
 
 
 //Allow for the changing of the type via method.
-void Token::changeType(Type in){
+void Token::changeType(FloridaType in){
     type = in;
 }
 

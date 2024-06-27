@@ -22,7 +22,7 @@
                 "-o",
                 "${fileDirname}/build/main",
                 "${fileDirname}/Lexer/*.cpp",
-                //"${fileDirname}/Parser/*.cpp",
+                "${fileDirname}/Parser/*.cpp",
                 "-Wall",
                 "-Werror",
                 "-Wpedantic",

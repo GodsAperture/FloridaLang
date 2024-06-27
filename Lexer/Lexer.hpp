@@ -1,6 +1,6 @@
-#ifndef lexer
+#ifndef Lexer
 
-#include "token.hpp"
+#include "Token.cpp"
 #include <fstream>
 
 class Lexer {

@@ -1,4 +1,7 @@
-enum Type{
+#ifndef Types_h__
+#define Types_h__
+
+enum FloridaType{   
     //Null objects, mainly for the BaseOperator, until I write a better BaseOperator class.
     null,
 
@@ -39,5 +42,10 @@ enum Type{
 
     //Others: ',', ;(Comma, Semicolon)
     //Non-overloadable characters.
-    Comma, Semicolon
+    Comma, Semicolon,
+
+    //Bad tokens, only exist to make the lexer not shit itself.
+    BadToken
 };
+
+#endif

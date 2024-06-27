@@ -3,7 +3,8 @@
     "files.associations": {
         "iosfwd": "cpp",
         "*.tcc": "cpp",
-        "string": "cpp"
+        "string": "cpp",
+        "vector": "cpp"
     },
     "cmake.configureOnOpen": true
 }

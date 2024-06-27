@@ -32,13 +32,6 @@ bool POperatorRQ(char in){
 
 }
 
-
-//Check if the given character is any of the operator characters.
-bool OperatorQ(char in){
-    return !AlphaQ(in) && !NumberQ(in) && !PagerQ(in) && in != ';' && in != ',' && in != '_' && in != '"';
-}
-
-
 //Check if the given character is an alphabetical character 
 bool AlphaQ(char in){
 
@@ -50,7 +43,6 @@ bool AlphaQ(char in){
 
 }
 
-
 //Check if the given character is a number.
 bool NumberQ(char in){
 
@@ -61,7 +53,6 @@ bool NumberQ(char in){
     }
 
 }
-
 
 //Check if the given character is any page related character.
 bool PagerQ(char in){
@@ -79,4 +70,9 @@ bool PagerQ(char in){
 
     }
 
+}
+
+//Check if the given character is any of the operator characters.
+bool OperatorQ(char in){
+    return !AlphaQ(in) && !NumberQ(in) && !PagerQ(in) && in != ';' && in != ',' && in != '_' && in != '"';
 }
