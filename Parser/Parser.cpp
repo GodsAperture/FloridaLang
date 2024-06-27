@@ -7,7 +7,7 @@
 class Parser{
 private:
 //Iterator points to current token
-    ulong iter = 0;
+    unsigned long iter = 0;
     std::vector<Token> given;
 
 //0 priority
@@ -45,7 +45,10 @@ bool parse(std::vector<Token> input);
 
 };
 
-bool Parser::p0(){
+inline bool Parser::parse(std::vector<Token> input) {
+
+}
+inline bool Parser::p0(){
     if(add()){
         return true;
     }
@@ -62,7 +65,7 @@ bool Parser::p0(){
 
 }
 
-bool Parser::p1(){
+inline bool Parser::p1(){
     if(multiply()){
         return true;
     }
@@ -79,7 +82,7 @@ bool Parser::p1(){
 
 }
 
-bool Parser::p2(){
+inline bool Parser::p2(){
     if(exponent()){
         return true;
     }
@@ -92,7 +95,7 @@ bool Parser::p2(){
 
 }
 
-bool Parser::p3(){
+inline bool Parser::p3(){
     if(factorial()){
         return true;
     }
@@ -105,7 +108,7 @@ bool Parser::p3(){
 
 }
 
-bool Parser::p4(){
+inline bool Parser::p4(){
     if(parentheses()){
         return true;
     }
@@ -126,7 +129,7 @@ bool Parser::p4(){
 
 }
 
-bool Parser::p5(){
+inline bool Parser::p5(){
     if(given[iter].getType() != FloridaType::fix8){
         return false;
     } else {
@@ -138,8 +141,8 @@ bool Parser::p5(){
 
 
 
-bool Parser::add(){
-    const ulong initial = iter;
+inline bool Parser::add(){
+    const auto initial = iter;
     //Check if this program has reached the end of the token stream.
     if(given.size() - 1 <= iter){
         goto fail;
@@ -168,8 +171,8 @@ fail:
     return false;
 }
 
-bool Parser::subtract(){
-    const ulong initial = iter;
+inline bool Parser::subtract(){
+    const auto initial = iter;
     //Check if this program has reached the end of the token stream.
     if(given.size() - 1 <= iter){
         goto fail;
@@ -200,8 +203,8 @@ fail:
 
 
 
-bool Parser::multiply(){
-    const ulong initial = iter;
+inline bool Parser::multiply(){
+    const auto initial = iter;
     //Check if this program has reached the end of the token stream.
     if(given.size() - 1 <= iter){
         goto fail;
@@ -230,8 +233,8 @@ fail:
     return false;
 }
 
-bool Parser::divide(){
-    const ulong initial = iter;
+inline bool Parser::divide(){
+    const auto initial = iter;
     //Check if this program has reached the end of the token stream.
     if(given.size() - 1 <= iter){
         goto fail;
@@ -262,8 +265,8 @@ fail:
 
 
 
-bool Parser::exponent(){
-    const ulong initial = iter;
+inline bool Parser::exponent(){
+    const auto initial = iter;
     //Check if this program has reached the end of the token stream.
     if(given.size() - 1 <= iter){
         goto fail;
@@ -294,8 +297,8 @@ fail:
 
 
 
-bool Parser::factorial(){
-    const ulong initial = iter;
+inline bool Parser::factorial(){
+    const auto initial = iter;
     //Check if this program has reached the end of the token stream.
     if(given.size() - 1 <= iter){
         goto fail;
@@ -321,8 +324,8 @@ fail:
 
 
 
-bool Parser::parentheses(){
-    const ulong initial = iter;
+inline bool Parser::parentheses(){
+    const auto initial = iter;
     //Check if this program has reached the end of the token stream.
     if(given.size() - 1 <= iter){
         goto fail;
@@ -350,7 +353,7 @@ fail:
     return false;
 }
 
-// bool Parser::brackets(){
+// inline bool Parser::brackets(){
 //     const ulong initial = iter;
 //     //Check if this program has reached the end of the token stream.
 //     if(given.size() - 1 <= iter){
@@ -380,7 +383,7 @@ fail:
 //     return false;
 // }
 
-// bool Parser::curly(){
+// inline bool Parser::curly(){
 //     const ulong initial = iter;
 //     //Check if this program has reached the end of the token stream.
 //     if(given.size() - 1 <= iter){
@@ -410,8 +413,8 @@ fail:
 //     return false;
 // }
 
-bool Parser::negate(){
-    ulong initial = iter;
+inline bool Parser::negate(){
+    auto initial = iter;
     if(given[iter].getName() != "-"){
         return false;
         goto fail;

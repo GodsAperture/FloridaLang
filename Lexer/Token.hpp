@@ -1,7 +1,7 @@
 #ifndef Token_h__
 #define Token_h__
 
-#include "Types.cpp"
+#include "Types.hpp"
 #include <string>
 
 class Token {

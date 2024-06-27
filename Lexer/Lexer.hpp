@@ -1,7 +1,10 @@
-#ifndef Lexer
+#ifndef Lexer_h
+#define Lexer_h
 
-#include "Token.cpp"
+#include "Token.hpp"
+#include "Helpers.hpp"
 #include <fstream>
+#include <string>
 
 class Lexer {
 private:

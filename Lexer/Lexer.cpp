@@ -1,7 +1,6 @@
 #ifndef Lexer
 
 #include "Lexer.hpp"
-#include "Helpers.hpp"
 #include <iostream>
 
 Lexer::Lexer(const std::string& inFile) : fileName(inFile), file(inFile) {
