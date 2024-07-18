@@ -303,7 +303,7 @@ Token Lexer::next() {
 
 			// If the current character is a letter or a number it is appended, else
 			// it will unget the character and return.
-			if (AlphaQ(currChar) | NumberQ(currChar)) {
+			if (AlphaQ(currChar) || NumberQ(currChar)) {
 				inToken.append(currChar);
 
 				this->get(currChar);

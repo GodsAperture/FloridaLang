@@ -16,13 +16,6 @@ public:
 
 	Token();
 	Token(FloridaType inType, char inChar, unsigned long inRow, unsigned long inColumn);
-
-	void operator=(Token right){
-		name = right.name;
-		type = right.type;
-		row = right.row;
-		column = right.column;
-	};
 	
 	FloridaType getType();
 	std::string getName();
