@@ -36,7 +36,7 @@ $(TARGET): $(LEXER_OBJS) $(PARSER_OBJS) $(MAIN_OBJ)
 $(LEXER_DIR)/%.o: $(LEXER_DIR)/%.cpp $(LEXER_HDRS)
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
-$(PARSER_DIR)/%.o: $(PARSER_DIR)/%.cpp $(PARSER_HDRS)
+$(PARSER_DIR)/%.o: $(PARSER_DIR)/%.cpp $(PARSER_HDRS) $(LEXER_HDRS)
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 $(SRC_DIR)/%.o: $(SRC_DIR)/%.cpp $(LEXER_HDRS) $(PARSER_HDRS)
