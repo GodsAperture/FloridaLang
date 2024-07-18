@@ -193,9 +193,8 @@ fail:
 bool Parser::factorial(){
     const uint64_t initial = iter;
     //Check if this program has reached the end of the token stream.
-    if(given.size() - 1 >= iter){
+    if((int64_t) (given.size() - iter) <= 1)
         goto fail;
-    }
 
     //Check if left is a valid subexpression.
     if(!p5()){
@@ -307,9 +306,8 @@ fail:
 
 bool Parser::negate(){
     uint64_t initial = iter;
-    if(given.size() - 1 >= iter){
+    if((int64_t) (given.size() - iter) <= 1)
         goto fail;
-    }
 
     if(given[iter].getName() != "-"){
         return false;
