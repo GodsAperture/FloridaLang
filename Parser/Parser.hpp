@@ -3,11 +3,13 @@
 
 #include <vector>
 #include "../Lexer/Token.hpp"
+#include <cinttypes>
+#include <iostream>
 
 class Parser{
 private:
 //Iterator points to current token
-    ulong iter = 0;
+    uint64_t iter = 0;
     std::vector<Token> given;
 
 //0 priority

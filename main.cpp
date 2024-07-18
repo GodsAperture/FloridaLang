@@ -18,8 +18,9 @@ int main(){
 	std::vector<Token> theList;
 
 	//Generate tokens up until a semicolon or EOF is reached.
-	while(!FloridaLexer.isEOF()){
+	while(!FloridaLexer.isEOF()) {
 		theList.push_back(thisToken);
+		std::cout << "Lexed token: " << thisToken.name << " type: " << thisToken.getType() << "\n";
 		thisToken = FloridaLexer.next();
 	}
 

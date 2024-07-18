@@ -3,6 +3,7 @@
 
 #include "Token.hpp"
 #include <fstream>
+#include <cinttypes>
 
 class Lexer {
 private:

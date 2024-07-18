@@ -1,78 +1,46 @@
 #include "Parser.hpp"
 
-bool Parser::parse(){
-    return this->p0();
+bool Parser::parse() {
+    return this->p0() && iter == this->given.size();
 };
 
-
-bool Parser::p0(){
-
-    bool b1 = add();
-    bool b2 = subtract();
-    bool b3 = p1();
-
-    return b1 | b2 | b3;
-
+// || is a short circuiting boolean or, in other words
+// given a || b if expression a is met then b is never evaluated
+bool Parser::p0() {
+    return add() || subtract() || p1();
 }
 
-bool Parser::p1(){
-
-    bool b1 = multiply();
-    bool b2 = divide();
-    bool b3 = p2();
-
-    return b1 | b2 | b3;
-
+bool Parser::p1() {
+    return multiply() || divide() || p2();
 }
 
-bool Parser::p2(){
-
-    bool b1 = exponent();
-    bool b2 = p3();
-
-    return b1 | b2;
-
+bool Parser::p2() {
+    return exponent() || p3();
 }
 
-bool Parser::p3(){
-
-    bool b1 = factorial();
-    bool b2 = p4();
-
-    return b1 | b2;
-
+bool Parser::p3() {
+    return factorial() || p4();
 }
 
-bool Parser::p4(){
-
-    bool b1 = parentheses();
-    // bool b2 = brackets();
-    // bool b3 = curly();
-    bool b4 = negate();
-    bool b5 = p5();
-
-    return b1 | /*b2 | b3 |*/ b4 | b5;
-
+bool Parser::p4() {
+    return parentheses() || /*brackets() || curly() ||*/ negate() || p5();
 }
 
 bool Parser::p5(){
-    if(given[iter].getType() != FloridaType::fix8){
+    if(given[iter].getType() != FloridaType::fix8)
         return false;
-    } else {
-        iter++;
-        return true;
-    }
 
+    iter++;
+    return true;
 }
 
 
 //Priority 0
 bool Parser::add(){
-    const ulong initial = iter;
+    const uint64_t initial = iter;
     //Check if this program has reached the end of the token stream.
-    if(given.size() - 2 <= iter){
+    if((int64_t) (given.size() - iter) <= 2)
         goto fail;
-    }
 
     //Check if left is a valid subexpression.
     if(!p1()){
@@ -101,11 +69,10 @@ fail:
 }
 
 bool Parser::subtract(){
-    const ulong initial = iter;
+    const uint64_t initial = iter;
     //Check if this program has reached the end of the token stream.
-    if(given.size() - 2 <= iter){
+    if((int64_t) (given.size() - iter) <= 2)
         goto fail;
-    }
 
     //Check if left is a valid subexpression.
     if(!p1()){
@@ -132,11 +99,10 @@ fail:
 
 //Priority 1
 bool Parser::multiply(){
-    const ulong initial = iter;
+    const uint64_t initial = iter;
     //Check if this program has reached the end of the token stream.
-    if(given.size() - 2 <= iter){
+    if((int64_t) (given.size() - iter) <= 2)
         goto fail;
-    }
 
     //Check if left is a valid subexpression.
     if(!p2()){
@@ -165,11 +131,10 @@ fail:
 }
 
 bool Parser::divide(){
-    const ulong initial = iter;
+    const uint64_t initial = iter;
     //Check if this program has reached the end of the token stream.
-    if(given.size() - 2 <= iter){
+    if((int64_t) (given.size() - iter) <= 2)
         goto fail;
-    }
 
     //Check if the center of this subexpression is the "+" operator.
     if(given[iter + 1].getName() != "/"){
@@ -196,11 +161,10 @@ fail:
 
 //Priority 2
 bool Parser::exponent(){
-    const ulong initial = iter;
+    const uint64_t initial = iter;
     //Check if this program has reached the end of the token stream.
-    if(given.size() - 2 <= iter){
+    if((int64_t) (given.size() - iter) <= 2)
         goto fail;
-    }
 
     //Check if left is a valid subexpression.
     if(!p5()){
@@ -227,9 +191,9 @@ fail:
 
 //Priority 3
 bool Parser::factorial(){
-    const ulong initial = iter;
+    const uint64_t initial = iter;
     //Check if this program has reached the end of the token stream.
-    if(given.size() - 1 <= iter){
+    if(given.size() - 1 >= iter){
         goto fail;
     }
 
@@ -253,11 +217,10 @@ fail:
 
 //Priority 4
 bool Parser::parentheses(){
-    const ulong initial = iter;
+    const uint64_t initial = iter;
     //Check if this program has reached the end of the token stream.
-    if(given.size() - 2 <= iter){
+    if((int64_t) (given.size() - iter) <= 2)
         goto fail;
-    }
 
     //Check if the center of this subexpression is the "+" operator.
     if(given[iter].getName() != "("){
@@ -283,7 +246,7 @@ fail:
 }
 
 // bool Parser::brackets(){
-//     const ulong initial = iter;
+//     const uint64_t initial = iter;
 //     //Check if this program has reached the end of the token stream.
 //     if(given.size() - 1 <= iter){
 //         goto fail;
@@ -313,7 +276,7 @@ fail:
 // }
 
 // bool Parser::curly(){
-//     const ulong initial = iter;
+//     const uint64_t initial = iter;
 //     //Check if this program has reached the end of the token stream.
 //     if(given.size() - 1 <= iter){
 //         goto fail;
@@ -343,8 +306,8 @@ fail:
 // }
 
 bool Parser::negate(){
-    ulong initial = iter;
-    if(given.size() - 1 <= iter){
+    uint64_t initial = iter;
+    if(given.size() - 1 >= iter){
         goto fail;
     }
 

@@ -3,6 +3,7 @@
 
 #include "Types.hpp"
 #include <string>
+#include <cinttypes>
 
 class Token {
 private:
