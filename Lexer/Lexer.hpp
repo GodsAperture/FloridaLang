@@ -1,20 +1,26 @@
-#ifndef Lexer
+#ifndef Lexer_h__
+#define Lexer_h__
 
-#include "Token.cpp"
+#include "Token.hpp"
 #include <fstream>
 
 class Lexer {
 private:
-	const std::string fileName;
-	unsigned long row;
-	unsigned long column;
+	unsigned long row = 1;
+	unsigned long column = 0;
+	unsigned long count = 0;
 
 public:
-	std::fstream file;
-	Lexer(const std::string& inFile);
-	bool getEOF();
+	const std::string file;
+	Lexer(const std::string& inString);
+	bool isEOF();
 	//Grabs the next token.
 	Token next();
+	//Grabs the next character.
+	char get();
+	void get(char& inChar);
+	void unget();
+	char peek();
 };
 
 #endif

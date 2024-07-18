@@ -1,7 +1,7 @@
 #ifndef Token_h__
 #define Token_h__
 
-#include "Types.cpp"
+#include "Types.hpp"
 #include <string>
 
 class Token {
@@ -17,6 +17,7 @@ public:
 	Token(FloridaType inType, char inChar, unsigned long inRow, unsigned long inColumn);
 
 	void operator=(Token right){
+		name = right.name;
 		type = right.type;
 		row = right.row;
 		column = right.column;

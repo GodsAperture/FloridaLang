@@ -1,25 +1,84 @@
-#ifndef Lexer
-
 #include "Lexer.hpp"
 #include "Helpers.hpp"
 #include <iostream>
 
-Lexer::Lexer(const std::string& inFile) : fileName(inFile), file(inFile) {
-	row = 1;
-	column = 1;
-};
+Lexer::Lexer(const std::string& inString):file(inString){};
 
 // Determine if the EOF token has been reached.
-bool Lexer::getEOF() { return this->file.eof(); }
+bool Lexer::isEOF() { return file.length() + 1 == count; }
+
+char Lexer::get(){
+
+	if(count == file.length()){
+		column++;
+		return EOF;
+	}
+
+	char currChar = file[count];
+	count++;
+
+	if(currChar == '\n'){
+		row++;
+	} else {
+		column++;
+	}
+
+	return currChar;
+}
+
+void Lexer::unget(){
+	count--;
+	char currChar = file[count];
+
+	if(currChar == '\n'){
+		row--;
+	} 
+	if(currChar == '\t'){
+		column -= 4;
+	} else {
+		column--;
+	}
+
+}
+
+void Lexer::get(char& inChar){
+
+	if(count == file.length()){
+		column++;
+		inChar = EOF;
+	}
+
+	char currChar = file[count];
+	count++;
+
+	if(currChar == '\n'){
+		row++;
+	} 
+	if(currChar == '\t'){
+		column += 4;
+	} else {
+		column++;
+	}
+
+	inChar = currChar;
+}
+
+char Lexer::peek(){
+	if(count == file.length()){
+		return EOF;
+	} else {
+		return file[count];
+	}
+}
 
 Token Lexer::next() {
 	// Grab the first character, and then decide what to do with it.
 	Token inToken;
 	char currChar;
-	file.get(currChar);
+	this->get(currChar);
 
-	// Catch EOF and immediately terminate next().
-	if (file.eof()) {
+
+	if (this->isEOF()) {
 		inToken = Token(eof, currChar, row, column);
 		return inToken;
 	}
@@ -29,24 +88,21 @@ Token Lexer::next() {
 	// Catch and delete page related characters.
 	// Whitespaces, tabs, and newlines.
 	if (PagerQ(currChar)) {
-		while (PagerQ(currChar)){
+		while (PagerQ(currChar) && !this->isEOF()){
 			switch (currChar) {
 			case '\n':
-				row++;
-				file.get(currChar);
+				this->get(currChar);
 				continue;
 			case '\t':
-				column += 4;
-				file.get(currChar);
+				this->get(currChar);
 				continue;
 			case ' ':
-				column++;
-				file.get(currChar);
+				this->get(currChar);
 				continue;
 			}
 		}
 
-		file.unget();
+		this->unget();
 		return next();
 
 	}
@@ -54,7 +110,7 @@ Token Lexer::next() {
 
 
 	// Deal with those bastardized comments
-	if (currChar == '(' && file.peek() == '*') {
+	if (currChar == '(' && this->peek() == '*') {
 		// If the first couple characters read are specifically (*
 		// then it will continually consume characters until reaching *).
 		// Otherwise it ungets the end character and then sets the currChar to
@@ -64,13 +120,11 @@ Token Lexer::next() {
 		// While in a comment, check for *, if star is found, check to see
 		// if the next character is ). If it is, then return. If not,
 		// continue.
-		while (!file.eof()) {
-			file.get(currChar);
-			column++;
+		while (!this->isEOF()) {
+			this->get(currChar);
 			//If the comment ends, it will call on next() again to return the next viable token.
-			if (currChar == '*' && file.peek() == ')') {
-				file.get();
-				column++;
+			if (currChar == '*' && this->peek() == ')') {
+				this->get();
 				return next();
 			}
 		}
@@ -83,17 +137,15 @@ Token Lexer::next() {
 		//The token type here isn't the default, it's simply a placeholder.
 		//Coincidentally, fix8 will be any number that doesn't have a period or letter.
 		inToken = Token(FloridaType::fix8, currChar, row, column);
-		file.get(currChar);
-		column++;
+		this->get(currChar);
 
-		while (true) {
+		while (!this->isEOF()) {
 
 			//If the character is a number, append it.
 			if (NumberQ(currChar)) {
 				inToken.append(currChar);
 
-				file.get(currChar);
-				column++;
+				this->get(currChar);
 
 				continue;
 			}
@@ -103,8 +155,7 @@ Token Lexer::next() {
 				inToken.append(currChar);
 				inToken.changeType(FloridaType::float8);
 
-				file.get(currChar);
-				column++;
+				this->get(currChar);
 
 				continue;
 			}
@@ -114,30 +165,27 @@ Token Lexer::next() {
 			switch (currChar) {
 			//This case handles floating point values.
 			case 'f':
-				if(file.peek() == '4'){
+				if(this->peek() == '4'){
 					inToken.append(currChar);
 					inToken.changeType(FloridaType::float4);
 					//Consume the 4 character
-					file.get(currChar);
-					column++;
+					this->get(currChar);
 
 					return inToken;
 				}
-				if(file.peek() == '8'){
+				if(this->peek() == '8'){
 					inToken.append(currChar);
 					inToken.changeType(FloridaType::float8);
 					//Consume the 8 character
-					file.get(currChar);
-					column++;
+					this->get(currChar);
 
 					return inToken;
 				}
-				if(file.peek() == 'n'){
+				if(this->peek() == 'n'){
 					inToken.append(currChar);
 					inToken.changeType(FloridaType::floatn);
 					//Consume the n character
-					file.get(currChar);
-					column++;
+					this->get(currChar);
 
 					return inToken;
 				}
@@ -149,39 +197,35 @@ Token Lexer::next() {
 				}
 			//This case handles fixed point values.
 			case 'i':
-				if(file.peek() == '2'){
+				if(this->peek() == '2'){
 					inToken.append(currChar);
 					inToken.changeType(FloridaType::fix2);
 					//Consume the 2 character
-					file.get(currChar);
-					column++;
+					this->get(currChar);
 
 					return inToken;
 				}
-				if(file.peek() == '4'){
+				if(this->peek() == '4'){
 					inToken.append(currChar);
 					inToken.changeType(FloridaType::fix4);
 					//Consume the 4 character
-					file.get(currChar);
-					column++;
+					this->get(currChar);
 
 					return inToken;
 				}
-				if(file.peek() == '8'){
+				if(this->peek() == '8'){
 					inToken.append(currChar);
 					inToken.changeType(FloridaType::fix8);
 					//Consume the 8 character
-					file.get(currChar);
-					column++;
+					this->get(currChar);
 
 					return inToken;
 				}
-				if(file.peek() == 'n'){
+				if(this->peek() == 'n'){
 					inToken.append(currChar);
 					inToken.changeType(FloridaType::fixn);
 					//Consume the n character
-					file.get(currChar);
-					column++;
+					this->get(currChar);
 
 					return inToken;
 				}
@@ -194,32 +238,31 @@ Token Lexer::next() {
 				inToken.append(currChar);
 				inToken.changeType(FloridaType::scifix8);
 				//Consume the e character and move to the next character.
-				file.get(currChar);
-				file.get(currChar);
-				column++;
-				column++;
+				this->get(currChar);
 
-				//While the next characters are alphanumeric, append them.
-				while(AlphaQ(currChar)){
+				//While the next characters are numeric, append them.
+				while(NumberQ(currChar) && !this->isEOF()){
 					inToken.append(currChar);
-					column++;
+					this->get(currChar);
 				}
+				//When a non-numerical character is encountered, break the loop and unget.
+				this->unget();
 
 				return inToken;
 			case 'E':
 				inToken.append(currChar);
 				inToken.changeType(FloridaType::scifixn);
 				//Consume the E character and move to the next character.
-				file.get(currChar);
-				file.get(currChar);
-				column++;
-				column++;
+				//Scifix numbers take the form 1.23E123 to represent 1.23 * 10^123
+				this->get(currChar);
 
-				//While the next characters are alphanumeric, append them.
-				while(AlphaQ(currChar)){
+				//While the next characters are numeric, append them.
+				while(NumberQ(currChar) && !this->isEOF()){
 					inToken.append(currChar);
-					column++;
+					this->get(currChar);
 				}
+				//When a non-numerical character is encountered, break the loop and unget.
+				this->unget();
 
 				return inToken;
 			default:
@@ -232,8 +275,7 @@ Token Lexer::next() {
 
 		} // End while Loop
 
-		file.unget();
-		column--;
+		this->unget();
 
 		// In case a number is not specified, it returns as is and ungets.
 		return inToken;
@@ -246,10 +288,9 @@ Token Lexer::next() {
 	// operators.
 	if (AlphaQ(currChar)) {
 		inToken = Token(FloridaType::Identifier, currChar, row, column);
-		file.get(currChar);
-		column++;
+		this->get(currChar);
 
-		while (true) {
+		while (!this->isEOF()) {
 
 			// If the end character is an underscore, it will be appended and
 			// the type will be changed to Pattern and return.
@@ -265,12 +306,10 @@ Token Lexer::next() {
 			if (AlphaQ(currChar) | NumberQ(currChar)) {
 				inToken.append(currChar);
 
-				file.get(currChar);
-				column++;
+				this->get(currChar);
 				continue;
 			} else {
-				file.unget();
-				column--;
+				this->unget();
 				return inToken;
 			}
 		}
@@ -279,21 +318,18 @@ Token Lexer::next() {
 
 
 	// Strings of operators
-	if (OperatorQ(currChar) && currChar) {
+	if (OperatorQ(currChar)) {
 		inToken = Token(FloridaType::Operator, currChar, row, column);
-		file.get(currChar);
-		column++;
+		this->get(currChar);
 
 		//While every consecutive character is an operator character add them to the token.
-		while(OperatorQ(currChar)){
+		while(OperatorQ(currChar) && !this->isEOF()){
 			inToken.append(currChar);
 
-			file.get(currChar);
-			column++;
+			this->get(currChar);
 		}
 
-		file.unget();
-		column--;
+		this->unget();
 		return inToken;
 	}
 
@@ -303,48 +339,44 @@ Token Lexer::next() {
 	if (currChar == '"') {
 		inToken = Token(Strings, '"', row, column);
 
-		file.get(currChar);
-		column++;
+		this->get(currChar);
 
-		while (currChar != '"' && !file.eof()) {
+		while (currChar != '"' && !this->isEOF()) {
 			switch (currChar) {
 			// In the event the next character is the escape sequence
 			// it will be lexed properly.
 			// By default, it will just append the character as is.
 			case '\\':
-				if (file.peek() == 'n') {
-					file.get();
-					file.get();
-					column++;
-					column++;
+				if (this->peek() == 'n') {
+					this->get();
+					this->get();
+
 					inToken.append('\n');
 					continue;
 				}
-				if (file.peek() == '\\') {
-					file.get();
-					file.get();
-					column++;
+				if (this->peek() == '\\') {
+					this->get();
+					this->get();
+
 					inToken.append('\\');
 					continue;
 				}
-				if(file.peek() == 't'){
-					file.get();
-					file.get();
-					column++;
-					column++;
+				if(this->peek() == 't'){
+					this->get();
+					this->get();
+
 					inToken.append('t');
 					continue;
 				}
 			default:
 				inToken.append(currChar);
-				file.get(currChar);
-				column++;
+				this->get(currChar);
 				continue;
 			}
 		}
 
 		inToken.append('"');
-		column++;
+		this->get();
 
 		return inToken;
 	}
@@ -355,20 +387,17 @@ Token Lexer::next() {
 	if (currChar == '#') {
 		inToken = Token(Hash, '#', row, column);
 
-		file.get(currChar);
-		column++;
+		this->get(currChar);
 
 		// Compiler commands are whole tokens. An example is '#include'.
-		while ((currChar != ' ') & (currChar != '\n') & !file.eof()) {
+		while ((currChar != ' ') & (currChar != '\n') & !this->isEOF()) {
 			inToken.append(currChar);
 
-			file.get(currChar);
-			column++;
+			this->get(currChar);
 		}
 
 		// No more characters to add to the compiler command
-		file.unget();
-		column--;
+		this->unget();
 		return inToken;
 	}
 
@@ -388,16 +417,12 @@ Token Lexer::next() {
 	switch (currChar) {
 	case ',':
 		inToken = Token(Comma, ',', row, column);
-		column++;
 		return inToken;
 	case ';':
 		inToken = Token(Semicolon, ';', row, column);
-		column++;
 		return inToken;
 	}
 
 	return Token(FloridaType::BadToken, '.', row, column);
 	
 }
-
-#endif

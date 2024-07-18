@@ -1,4 +1,3 @@
 this: main.cpp Lexer/*.cpp Parser/*.cpp
-	g++ Lexer/*.cpp Parser/*.cpp -o build/*.o
-	g++ main.cpp build/*.o -o build/main.out
-	./build/main.out
+	g++ main.cpp Lexer/*.cpp Parser/*.cpp  -std=c++20
+	./a.out

@@ -1,29 +1,34 @@
 #include <iostream>
 #include <vector>
 #include "Lexer/Lexer.hpp"
-#include "Parser/Parser.cpp"
+#include "Parser/Parser.hpp"
+
+	std::string readFile(std::string filePath){
+		std::fstream file = std::fstream(filePath);
+		std::string val((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+		return val;
+	}
 
 int main(){
-
-	Lexer FloridaLexer = Lexer("sample.fl");
+	
+	std::string thing = readFile("sample.fl");
+	Lexer FloridaLexer = Lexer(thing);
 
 	Token thisToken = FloridaLexer.next();
-	std::vector<Token> theList = std::vector<Token>(32);
+	std::vector<Token> theList;
 
 	//Generate tokens up until a semicolon or EOF is reached.
-	while(thisToken.getType() != FloridaType::Semicolon && thisToken.getType() != FloridaType::eof){
+	while(!FloridaLexer.isEOF()){
 		theList.push_back(thisToken);
 		thisToken = FloridaLexer.next();
 	}
 
-	Parser FloridaParser;
+	Parser FloridaParser = Parser(theList);
 
-	bool result = FloridaParser.parse(theList);
+	bool result = FloridaParser.parse();
 
 	std::cout << result;
 
-	//Close the file, because if I don't there's a big problem.
-	FloridaLexer.file.close();
 	printf("\n");
 
 	return 0;

@@ -1,4 +1,5 @@
-#ifndef Helpers
+#ifndef Helpers_h__
+#define Helpers_h__
 
 bool POperatorLQ(char);
 bool POperatorRQ(char);
