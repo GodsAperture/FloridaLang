@@ -23,7 +23,7 @@ int main(){
 		std::cout << "Lexed token: " << thisToken.name << " type: " << thisToken.getType() << "\n";
 		thisToken = FloridaLexer.next();
 	}
-	
+
 	Parser FloridaParser = Parser(theList);
 
 	bool result = FloridaParser.parse();
@@ -31,6 +31,8 @@ int main(){
 	std::cout << result;
 
 	printf("\n");
+
+	std::cout << "Happy birthday!!!\n";
 
 	return 0;
 }
