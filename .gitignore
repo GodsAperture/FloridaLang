@@ -1,3 +1,8 @@
+#ignore other folders
 build/
 Garbage/
-a.out
+
+#Ignore object files
+Lexer/*.o
+Parser/*.o
+main.o

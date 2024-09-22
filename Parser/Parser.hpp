@@ -1,6 +1,8 @@
 #ifndef Parser_h__
 #define Parser_h__
 
+#include "StackAllocator.hpp"
+#include "Node.hpp"
 #include <vector>
 #include "../Lexer/Token.hpp"
 #include <cinttypes>
@@ -11,44 +13,45 @@ private:
 //Iterator points to current token
     uint64_t iter = 0;
     std::vector<Token> given;
+    StackAllocator* stack = nullptr;
 
 //0 priority
-    bool p0();
+    Node* p0();
 
 //1 priority
-    bool add();
-    bool subtract();
-    bool p1();
+    Node* add();
+    Node* subtract();
+    Node* p1();
 
 //2 priority
-    bool multiply();
-    bool divide();
-    bool p2();
+    Node* multiply();
+    Node* divide();
+    Node* p2();
 
 //3 priority
-    bool exponent();
-    bool p3();
+    Node* exponent();
+    Node* p3();
 
 //4 priority
-    bool factorial();
-    bool p4();
+    Node* factorial();
+    Node* p4();
 
 //5 priority
-    bool parentheses();
-    // bool brackets();
-    // bool curly();
-    bool negate();
+    Node* parentheses();
+    // Node* brackets();
+    // Node* curly();
+    Node* negate();
 
 //6 priority
-    bool p5();
+    Node* p5();
 
 public:
-    Parser(std::vector<Token> input){
+    Parser(std::vector<Token> input, long size){
         given = input;
+        stack = new StackAllocator(size);
     }
 
 bool parse();
 
 };
-
 #endif

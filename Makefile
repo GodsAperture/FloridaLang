@@ -9,17 +9,17 @@ PARSER_DIR = $(SRC_DIR)/Parser
 
 # Source files
 LEXER_SRCS = $(LEXER_DIR)/Helpers.cpp $(LEXER_DIR)/Lexer.cpp $(LEXER_DIR)/Token.cpp
-PARSER_SRCS = $(PARSER_DIR)/Parser.cpp
+PARSER_SRCS = $(PARSER_DIR)/Parser.cpp 
 MAIN_SRC = $(SRC_DIR)/main.cpp
 
-# Object files
+# Object file s
 LEXER_OBJS = $(LEXER_SRCS:.cpp=.o)
 PARSER_OBJS = $(PARSER_SRCS:.cpp=.o)
 MAIN_OBJ = $(MAIN_SRC:.cpp=.o)
 
 # Headers
 LEXER_HDRS = $(LEXER_DIR)/Helpers.hpp $(LEXER_DIR)/Lexer.hpp $(LEXER_DIR)/Token.hpp $(LEXER_DIR)/Types.hpp
-PARSER_HDRS = $(PARSER_DIR)/Parser.hpp
+PARSER_HDRS = $(PARSER_DIR)/Node.hpp $(PARSER_DIR)/Parser.hpp $(PARSER_DIR)/StackAllocator.hpp
 
 # Target executable
 TARGET = a.out

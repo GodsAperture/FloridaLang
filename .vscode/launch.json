@@ -10,7 +10,7 @@
             "miDebuggerPath": "/usr/bin/gdb",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceRoot}/build/main",
+            "program": "${workspaceRoot}/main",
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
             "environment": [],

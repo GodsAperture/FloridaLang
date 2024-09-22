@@ -367,6 +367,8 @@ Token Lexer::next() {
 
 					inToken.append('t');
 					continue;
+				} else {
+					continue;//This gets rid of the [-Wimplict-fallthrough=] error.
 				}
 			default:
 				inToken.append(currChar);

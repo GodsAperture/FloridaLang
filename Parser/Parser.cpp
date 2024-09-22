@@ -1,49 +1,149 @@
 #include "Parser.hpp"
+#include "Node.hpp"
+#include "StackAllocator.hpp"
 
-bool Parser::parse() {
-    return this->p0() && iter == this->given.size();
+bool Parser::parse(){
+    //If it's not the nullptr, then it's successful.
+    Node* tree = this->p0();
+    bool isSuccessful = (tree != nullptr);
+    //Print the statement back out to see if it even works.
+    //I sure hope it does.
+    std::cout << tree->ToString();
+    return isSuccessful && iter == this->given.size();
 };
 
 // || is a short circuiting boolean or, in other words
 // given a || b if expression a is met then b is never evaluated
-bool Parser::p0() {
-    return add() || subtract() || p1();
+Node* Parser::p0(){
+
+    Node* thisNode;
+
+    thisNode = add();
+    if(thisNode != nullptr){
+        return thisNode;
+    }
+
+    thisNode = subtract();
+    if(thisNode != nullptr){
+        return thisNode;
+    }
+
+    thisNode = p1();
+    if(thisNode != nullptr){
+        return thisNode;
+    }
+
+    return nullptr;
 }
 
-bool Parser::p1() {
-    return multiply() || divide() || p2();
+Node* Parser::p1(){
+    Node* thisNode = nullptr;
+
+    thisNode = multiply();
+    if(thisNode != nullptr){
+        return thisNode;
+    }
+
+    thisNode = divide();
+    if(thisNode != nullptr){
+        return thisNode;
+    }
+
+    if(thisNode != nullptr){
+        return thisNode;
+    }
+
+    return nullptr;
 }
 
-bool Parser::p2() {
-    return exponent() || p3();
+Node* Parser::p2(){
+    Node* thisNode = nullptr; 
+
+    thisNode = exponent();
+    if(thisNode != nullptr){
+        return thisNode;
+    }
+    
+    thisNode = p3();
+    if(thisNode != nullptr){
+        return thisNode;
+    }
+
+    return nullptr;
 }
 
-bool Parser::p3() {
-    return factorial() || p4();
+Node* Parser::p3(){
+    Node* thisNode = nullptr;
+
+    thisNode = factorial();
+    if(thisNode != nullptr){
+        return thisNode;
+    }
+
+    thisNode = p4();
+    if(thisNode != nullptr){
+        return thisNode;
+    }
+
+    return nullptr;
 }
 
-bool Parser::p4() {
-    return parentheses() || /*brackets() || curly() ||*/ negate() || p5();
+Node* Parser::p4(){
+    Node* thisNode = nullptr;
+
+    thisNode = parentheses();
+    if(thisNode != nullptr){
+        return thisNode;
+    }
+
+    // thisNode = brackets();
+    // if(thisNode != nullptr){
+    //     return thisNode;
+    // }
+
+    // thisNode = curly();
+    // if(thisNode != nullptr){
+    //     return thisNode;
+    // }
+
+    thisNode = negate();
+    if(thisNode != nullptr){
+        return thisNode;
+    }
+
+    thisNode = p5();
+    if(thisNode != nullptr){
+        return thisNode;
+    }
+
+    return nullptr;
 }
 
-bool Parser::p5(){
-    if(given[iter].getType() != FloridaType::fix8)
-        return false;
+Node* Parser::p5(){
+    if(given[iter].getType() != FloridaType::fix8){
+        return nullptr;
+    }   
 
     iter++;
-    return true;
+    return stack->alloc<fixed64>(given[iter].getName());
 }
 
 
 //Priority 0
-bool Parser::add(){
+Node* Parser::add(){
     const uint64_t initial = iter;
-    //Check if this program has reached the end of the token stream.
-    if((int64_t) (given.size() - iter) <= 2)
-        goto fail;
+    Node* thisNode = stack->peek<Node>();
+    Node* left = nullptr;
+    Node* right = nullptr;
 
+    //Check if this program has reached the end of the token stream.
+    if((int64_t) (given.size() - iter) <= 2){
+        goto fail;
+    }
+
+    left = p1();
     //Check if left is a valid subexpression.
-    if(!p1()){
+    if(left == nullptr){
         goto fail;
     }
 
@@ -57,25 +157,34 @@ bool Parser::add(){
         goto fail;
     }
 
+    right = p0();
     //Check if right is a valid subexpression.
-    if(!p0()){
+    if(right == nullptr){
         goto fail;
     }
 
-    return true;
+    return stack->alloc<Add>(left, right);
+
 fail:
     iter = initial;
-    return false;
+    stack->dealloc<Node>(thisNode);
+    return nullptr;
 }
 
-bool Parser::subtract(){
+Node* Parser::subtract(){
     const uint64_t initial = iter;
-    //Check if this program has reached the end of the token stream.
-    if((int64_t) (given.size() - iter) <= 2)
-        goto fail;
+    Node* thisNode = stack->peek<Node>();
+    Node* left = nullptr;
+    Node* right = nullptr;
 
+    //Check if this program has reached the end of the token stream.
+    if((int64_t) (given.size() - iter) <= 2){
+        goto fail;
+    }
+
+    left = p1();
     //Check if left is a valid subexpression.
-    if(!p1()){
+    if(left == nullptr){
         goto fail;
     }
 
@@ -90,22 +199,29 @@ bool Parser::subtract(){
         goto fail;
     }
 
-    return true;
+    return stack->alloc<Subtract>(left, right);
 fail:
     iter = initial;
-    return false;
+    stack->dealloc<Node>(thisNode);
+    return nullptr;
 }
 
 
 //Priority 1
-bool Parser::multiply(){
+Node* Parser::multiply(){
     const uint64_t initial = iter;
-    //Check if this program has reached the end of the token stream.
-    if((int64_t) (given.size() - iter) <= 2)
-        goto fail;
+    Node* thisNode = stack->peek<Node>();
+    Node* left = nullptr;
+    Node* right = nullptr;
 
+    //Check if this program has reached the end of the token stream.
+    if((int64_t) (given.size() - iter) <= 2){
+        goto fail;
+    }
+
+    left = p2();
     //Check if left is a valid subexpression.
-    if(!p2()){
+    if(left == nullptr){
         goto fail;
     }
 
@@ -119,19 +235,25 @@ bool Parser::multiply(){
         goto fail;
     }
 
+    right = p1();
     //Check if right is a valid subexpression.
-    if(!p1()){
+    if(right == nullptr){
         goto fail;
     }
 
-    return true;
+    return stack->alloc<Multiply>(left, right);
 fail:
     iter = initial;
-    return false;
+    stack->dealloc(thisNode);
+    return nullptr;
 }
 
-bool Parser::divide(){
+Node* Parser::divide(){
     const uint64_t initial = iter;
+    Node* thisNode = stack->peek<Node>();
+    Node* left = nullptr;
+    Node* right = nullptr;
+
     //Check if this program has reached the end of the token stream.
     if((int64_t) (given.size() - iter) <= 2)
         goto fail;
@@ -142,32 +264,40 @@ bool Parser::divide(){
     }
     iter++;
 
+    left = p2();
     //Check if left is a valid subexpression.
-    if(!p2()){
+    if(left == nullptr){
         goto fail;
     }
 
+    right = p1();
     //Check if right is a valid subexpression.
-    if(!p1()){
+    if(right == nullptr){
         goto fail;
     }
 
-    return true;
+    return stack->alloc<Multiply>(left, right);
 fail:
     iter = initial;
-    return false;
+    stack->dealloc(thisNode);
+    return nullptr;
 }
 
 
 //Priority 2
-bool Parser::exponent(){
+Node* Parser::exponent(){
     const uint64_t initial = iter;
+    Node* thisNode = stack->peek<Node>();
+    Node* base = nullptr;
+    Node* exponent = nullptr;
+
     //Check if this program has reached the end of the token stream.
     if((int64_t) (given.size() - iter) <= 2)
         goto fail;
 
+    base = p5();
     //Check if left is a valid subexpression.
-    if(!p5()){
+    if(base == nullptr){
         goto fail;
     }
 
@@ -177,27 +307,34 @@ bool Parser::exponent(){
     }    
     iter++;
 
+    exponent = p3();
     //Check if right is a valid subexpression.
-    if(!p3()){
+    if(exponent == nullptr){
         goto fail;
     }
 
-    return true;
+    return stack->alloc<Exponent>(base, exponent);
 fail:
     iter = initial;
-    return false;
+    stack->dealloc(thisNode);
+    return nullptr;
 }
 
 
 //Priority 3
-bool Parser::factorial(){
+Node* Parser::factorial(){
     const uint64_t initial = iter;
-    //Check if this program has reached the end of the token stream.
-    if((int64_t) (given.size() - iter) <= 1)
-        goto fail;
+    Node* thisNode = stack->peek<Node>();
+    Node* base = nullptr;
 
+    //Check if this program has reached the end of the token stream.
+    if((int64_t) (given.size() - iter) <= 1){
+        goto fail;
+    }
+
+    base = p5();
     //Check if left is a valid subexpression.
-    if(!p5()){
+    if(base == nullptr){
         goto fail;
     }
 
@@ -207,16 +344,20 @@ bool Parser::factorial(){
     }
     iter++;
 
-    return true;
+    return stack->alloc<Factorial>(base);
 fail:
     iter = initial;
-    return false;
+    stack->dealloc(thisNode);
+    return nullptr;
 }
 
 
 //Priority 4
-bool Parser::parentheses(){
+Node* Parser::parentheses(){
     const uint64_t initial = iter;
+    Node* thisNode = stack->peek<Node>();
+    Node* subexpression = nullptr;
+
     //Check if this program has reached the end of the token stream.
     if((int64_t) (given.size() - iter) <= 2)
         goto fail;
@@ -227,6 +368,7 @@ bool Parser::parentheses(){
     }
     iter++;
 
+    subexpression = p0();
     //Check if left is a valid subexpression.
     if(!p0()){
         goto fail;
@@ -238,10 +380,11 @@ bool Parser::parentheses(){
     }
     iter++;
 
-    return true;
+    return stack->alloc<Parnetheses>(subexpression);
 fail:
     iter = initial;
-    return false;
+    stack->dealloc<Node>(thisNode);
+    return nullptr;
 }
 
 // bool Parser::brackets(){
@@ -304,25 +447,29 @@ fail:
 //     return false;
 // }
 
-bool Parser::negate(){
+Node* Parser::negate(){
     uint64_t initial = iter;
-    if((int64_t) (given.size() - iter) <= 1)
-        goto fail;
+    Node* thisNode = stack->peek<Node>();
+    Node* subexpression = nullptr;
+
+    if((int64_t) (given.size() - iter) <= 1){
+        goto fail;  
+    }
 
     if(given[iter].getName() != "-"){
-        return false;
         goto fail;
     }
     iter++;
 
+    subexpression = p1();
     if(!p1()){
-        return false;
         goto fail;
     }
 
-    return true;
+    return stack->alloc<Negative>(subexpression);
 
 fail:
     iter = initial;
-    return false;
+    stack->dealloc<Node>(thisNode);
+    return nullptr;
 }
