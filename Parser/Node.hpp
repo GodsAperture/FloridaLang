@@ -1,5 +1,4 @@
-#ifndef Node_h__
-#define Node_h__
+#pragma once
 #include <string>
 
 //This just exists.
@@ -8,7 +7,8 @@ public:
     Node(){
         //Exists for the sake of the default constructor.    
     }
-    virtual std::string ToString();
+    virtual std::string ToString() = 0;
+    virtual ~Node() {}
 };
 
 class Add : public Node{
@@ -137,4 +137,3 @@ public:
         return value;
     }
 };
-#endif
