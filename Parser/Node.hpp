@@ -7,6 +7,10 @@ public:
     Node(){
         //Exists for the sake of the default constructor.    
     }
+    Node(const Node&) = delete;
+    Node& operator=(const Node&) = delete;
+    Node(const Node&&) = delete;
+    Node& operator=(const Node&&) = delete;
     virtual std::string ToString() = 0;
     virtual ~Node() {}
 };
