@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <utility>
 #include <new>
+#include <iostream>
 
 class StackAllocator{
 private:
@@ -33,9 +34,9 @@ public:
     // Deallocates one object that is assumed to be at the top of the stack
     template<typename T>
     void dealloc(T* ptr) {
-        if (ptr) {
+        if (ptr != head) {
+            current = (void*) ((long long) current - sizeof(ptr));
             ptr->~T(); // Call the destructor explicitly
-            current = ptr;
         }
     }
 

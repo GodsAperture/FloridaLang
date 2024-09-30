@@ -1,4 +1,5 @@
-#pragma once
+#ifndef Node_h__
+#define Node_h__
 #include <string>
 
 //This just exists.
@@ -12,7 +13,7 @@ public:
     Node(const Node&&) = delete;
     Node& operator=(const Node&&) = delete;
     virtual std::string ToString() = 0;
-    virtual ~Node() {}
+    virtual ~Node(){}
 };
 
 class Add : public Node{
@@ -107,6 +108,10 @@ class Parnetheses : public Node{
 private:
     Node* subexpression;
 public:
+    Parnetheses(){
+        subexpression = nullptr;
+    }
+
     Parnetheses(Node* input){
         subexpression = input;
     }
@@ -114,6 +119,11 @@ public:
     std::string ToString() override {
         return "(" + subexpression->ToString() + ")";
     }
+
+    ~Parnetheses() override {
+        delete subexpression;
+    }
+
 };
 
 class Negative : public Node{
@@ -141,3 +151,4 @@ public:
         return value;
     }
 };
+#endif
