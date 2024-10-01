@@ -356,7 +356,6 @@ fail:
 //Priority 4
 Node* Parser::parentheses(){
     const uint64_t initial = iter;
-    Parnetheses* thisNode = stack->alloc<Parnetheses>(nullptr);
     Node* subexpression = nullptr;
 
     //Check if this program has reached the end of the token stream.
@@ -381,10 +380,9 @@ Node* Parser::parentheses(){
     }
     iter++;
 
-    return new (thisNode) Parnetheses(subexpression);
+    return stack->alloc<Parenthesis>(subexpression);
 fail:
     iter = initial;
-    stack->dealloc(thisNode);
     return nullptr;
 }
 

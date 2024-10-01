@@ -104,15 +104,15 @@ public:
     }
 };
 
-class Parnetheses : public Node{
+class Parenthesis : public Node{
 private:
     Node* subexpression;
 public:
-    Parnetheses(){
+    Parenthesis(){
         subexpression = nullptr;
     }
 
-    Parnetheses(Node* input){
+    Parenthesis(Node* input){
         subexpression = input;
     }
 
@@ -120,7 +120,7 @@ public:
         return "(" + subexpression->ToString() + ")";
     }
 
-    ~Parnetheses() override {
+    ~Parenthesis() override {
         delete subexpression;
     }
 
