@@ -17,10 +17,10 @@ public:
 };
 
 class Add : public Node{
-private: 
+public:
     Node* left;
     Node* right;
-public:
+
     Add(Node* LHE, Node* RHE){
         left = LHE;
         right = RHE;
@@ -32,10 +32,10 @@ public:
 };
 
 class Subtract : public Node{
-private: 
+public:
     Node* left;
     Node* right;
-public:
+
     Subtract(Node* LHE, Node* RHE){
         left = LHE;
         right = RHE;
@@ -47,10 +47,10 @@ public:
 };
 
 class Multiply : public Node {
-private: 
+public: 
     Node* left;
     Node* right;
-public:
+
     Multiply(Node* LHE, Node* RHE){
         left = LHE;
         right = RHE;
@@ -62,10 +62,10 @@ public:
 };
 
 class Divide : public Node{
-private: 
+public: 
     Node* left;
     Node* right;
-public:
+
     Divide(Node* LHE, Node* RHE){
         left = LHE;
         right = RHE;
@@ -77,10 +77,10 @@ public:
 };
 
 class Exponent : public Node{
-private:
+public:
     Node* left;
     Node* right;
-public:
+
     Exponent(Node* LHE, Node* RHE){
         left = LHE;
         right = RHE;
@@ -92,27 +92,23 @@ public:
 };
 
 class Factorial : public Node{
-private:
-    Node* base;
 public:
+    Node* left;
+
     Factorial(Node* input){
-        base = input;
+        left = input;
     }
 
     std::string ToString() override {
-        return base->ToString() + "!";
+        return left->ToString() + "!";
     }
 };
 
-class Parenthesis : public Node{
-private:
-    Node* subexpression;
+class Parnetheses : public Node{
 public:
-    Parenthesis(){
-        subexpression = nullptr;
-    }
+    Node* subexpression;
 
-    Parenthesis(Node* input){
+    Parnetheses(Node* input){
         subexpression = input;
     }
 
@@ -120,22 +116,22 @@ public:
         return "(" + subexpression->ToString() + ")";
     }
 
-    ~Parenthesis() override {
+    ~Parnetheses() override {
         delete subexpression;
     }
 
 };
 
 class Negative : public Node{
-private:
-    Node* subexpression;
 public:
+    Node* right;
+
     Negative(Node* input){
-        subexpression = input;
+        right = input;
     }
 
     std::string ToString() override {
-        return "-" + subexpression->ToString();
+        return "-" + right->ToString();
     }
 };
 
