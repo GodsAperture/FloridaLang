@@ -27,7 +27,7 @@ int main(){
 	}
 
 	//Parse over the list and make sure that the 
-	Parser FloridaParser = Parser(theList, 512);
+	Parser FloridaParser = Parser(theList, 100000);
 
 	bool result = FloridaParser.parse();
 

@@ -41,6 +41,11 @@ public:
     }
 
     template<typename T>
+    void mdealloc(T* ptr){
+        current = (void*) ((long long) current - sizeof(ptr));
+    }
+
+    template<typename T>
     T* peek(){
         return (T*) current;
     }
