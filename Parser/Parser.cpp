@@ -49,6 +49,7 @@ Node* Parser::p1(){
         return thisNode;
     }
 
+    thisNode = p2();
     if(thisNode != nullptr){
         return thisNode;
     }
@@ -122,7 +123,7 @@ Node* Parser::p4(){
 Node* Parser::p5(){
     if(given[iter].getType() != FloridaType::fix8){
         return nullptr;
-    }   
+    }
 
     iter++;
     return stack->alloc<fixed64>(given[iter].getName());
@@ -132,18 +133,16 @@ Node* Parser::p5(){
 //Priority 0
 Node* Parser::add(){
     const uint64_t initial = iter;
-    Node* thisNode = stack->peek<Node>();
-    Node* left = nullptr;
-    Node* right = nullptr;
+    Add* thisNode = stack->alloc<Add>(nullptr, nullptr);
 
     //Check if this program has reached the end of the token stream.
     if((int64_t) (given.size() - iter) <= 2){
         goto fail;
     }
 
-    left = p1();
+    thisNode->left = p1();
     //Check if left is a valid subexpression.
-    if(left == nullptr){
+    if(thisNode->left == nullptr){
         goto fail;
     }
 
@@ -157,34 +156,32 @@ Node* Parser::add(){
         goto fail;
     }
 
-    right = p0();
+    thisNode->right = p0();
     //Check if right is a valid subexpression.
-    if(right == nullptr){
+    if(thisNode->right == nullptr){
         goto fail;
     }
 
-    return stack->alloc<Add>(left, right);
+    return thisNode;
 
 fail:
     iter = initial;
-    stack->dealloc<Node>(thisNode);
+    stack->dealloc<Add>(thisNode);
     return nullptr;
 }
 
 Node* Parser::subtract(){
     const uint64_t initial = iter;
-    Node* thisNode = stack->peek<Node>();
-    Node* left = nullptr;
-    Node* right = nullptr;
+    Subtract* thisNode = stack->alloc<Subtract>(nullptr, nullptr);
 
     //Check if this program has reached the end of the token stream.
     if((int64_t) (given.size() - iter) <= 2){
         goto fail;
     }
 
-    left = p1();
+    thisNode->left = p1();
     //Check if left is a valid subexpression.
-    if(left == nullptr){
+    if(thisNode->left == nullptr){
         goto fail;
     }
 
@@ -194,15 +191,16 @@ Node* Parser::subtract(){
     }
     iter++;
 
+    thisNode->right = p0();
     //Check if right is a valid subexpression.
-    if(!p0()){
+    if(thisNode->right == nullptr){
         goto fail;
     }
 
-    return stack->alloc<Subtract>(left, right);
+    return thisNode;
 fail:
     iter = initial;
-    stack->dealloc<Node>(thisNode);
+    stack->dealloc<Subtract>(thisNode);
     return nullptr;
 }
 
@@ -210,18 +208,16 @@ fail:
 //Priority 1
 Node* Parser::multiply(){
     const uint64_t initial = iter;
-    Node* thisNode = stack->peek<Node>();
-    Node* left = nullptr;
-    Node* right = nullptr;
+    Multiply* thisNode = stack->alloc<Multiply>(nullptr, nullptr);
 
     //Check if this program has reached the end of the token stream.
     if((int64_t) (given.size() - iter) <= 2){
         goto fail;
     }
 
-    left = p2();
+    thisNode->left = p2();
     //Check if left is a valid subexpression.
-    if(left == nullptr){
+    if(thisNode->left == nullptr){
         goto fail;
     }
 
@@ -235,24 +231,22 @@ Node* Parser::multiply(){
         goto fail;
     }
 
-    right = p1();
+    thisNode->right = p1();
     //Check if right is a valid subexpression.
-    if(right == nullptr){
+    if(thisNode->right == nullptr){
         goto fail;
     }
 
-    return stack->alloc<Multiply>(left, right);
+    return thisNode;
 fail:
     iter = initial;
-    stack->dealloc(thisNode);
+    stack->dealloc<Multiply>(thisNode);
     return nullptr;
 }
 
 Node* Parser::divide(){
     const uint64_t initial = iter;
-    Node* thisNode = stack->peek<Node>();
-    Node* left = nullptr;
-    Node* right = nullptr;
+    Divide* thisNode = stack->alloc<Divide>(nullptr, nullptr);
 
     //Check if this program has reached the end of the token stream.
     if((int64_t) (given.size() - iter) <= 2)
@@ -264,22 +258,22 @@ Node* Parser::divide(){
     }
     iter++;
 
-    left = p2();
+    thisNode->left = p2();
     //Check if left is a valid subexpression.
-    if(left == nullptr){
+    if(thisNode->left == nullptr){
         goto fail;
     }
 
-    right = p1();
+    thisNode->right = p1();
     //Check if right is a valid subexpression.
-    if(right == nullptr){
+    if(thisNode->right == nullptr){
         goto fail;
     }
 
-    return stack->alloc<Multiply>(left, right);
+    return thisNode;
 fail:
     iter = initial;
-    stack->dealloc(thisNode);
+    stack->dealloc<Divide>(thisNode);
     return nullptr;
 }
 
@@ -287,17 +281,15 @@ fail:
 //Priority 2
 Node* Parser::exponent(){
     const uint64_t initial = iter;
-    Node* thisNode = stack->peek<Node>();
-    Node* base = nullptr;
-    Node* exponent = nullptr;
+    Exponent* thisNode = stack->alloc<Exponent>(nullptr, nullptr);
 
     //Check if this program has reached the end of the token stream.
     if((int64_t) (given.size() - iter) <= 2)
         goto fail;
 
-    base = p5();
+    thisNode->left = p5();
     //Check if left is a valid subexpression.
-    if(base == nullptr){
+    if(thisNode->left == nullptr){
         goto fail;
     }
 
@@ -307,16 +299,16 @@ Node* Parser::exponent(){
     }    
     iter++;
 
-    exponent = p3();
+    thisNode->right = p3();
     //Check if right is a valid subexpression.
-    if(exponent == nullptr){
+    if(thisNode->right == nullptr){
         goto fail;
     }
 
-    return stack->alloc<Exponent>(base, exponent);
+    return thisNode;
 fail:
     iter = initial;
-    stack->dealloc(thisNode);
+    stack->dealloc<Exponent>(thisNode);
     return nullptr;
 }
 
@@ -324,17 +316,16 @@ fail:
 //Priority 3
 Node* Parser::factorial(){
     const uint64_t initial = iter;
-    Node* thisNode = stack->peek<Node>();
-    Node* base = nullptr;
+    Factorial* thisNode = stack->alloc<Factorial>(nullptr);
 
     //Check if this program has reached the end of the token stream.
     if((int64_t) (given.size() - iter) <= 1){
         goto fail;
     }
 
-    base = p5();
+    thisNode->left = p5();
     //Check if left is a valid subexpression.
-    if(base == nullptr){
+    if(thisNode->left == nullptr){
         goto fail;
     }
 
@@ -344,10 +335,10 @@ Node* Parser::factorial(){
     }
     iter++;
 
-    return stack->alloc<Factorial>(base);
+    return thisNode;
 fail:
     iter = initial;
-    stack->dealloc(thisNode);
+    stack->dealloc<Factorial>(thisNode);
     return nullptr;
 }
 
@@ -356,7 +347,7 @@ fail:
 //Priority 4
 Node* Parser::parentheses(){
     const uint64_t initial = iter;
-    Node* subexpression = nullptr;
+    Parnetheses* thisNode = stack->alloc<Parnetheses>(nullptr);
 
     //Check if this program has reached the end of the token stream.
     if((int64_t) (given.size() - iter) <= 2)
@@ -368,7 +359,7 @@ Node* Parser::parentheses(){
     }
     iter++;
 
-    subexpression = p0();
+    thisNode->subexpression = p0();
     //Check if left is a valid subexpression.
     if(!p0()){
         goto fail;
@@ -380,9 +371,10 @@ Node* Parser::parentheses(){
     }
     iter++;
 
-    return stack->alloc<Parenthesis>(subexpression);
+    return thisNode;
 fail:
     iter = initial;
+    stack->dealloc<Parnetheses>(thisNode);
     return nullptr;
 }
 
@@ -448,11 +440,10 @@ fail:
 
 Node* Parser::negate(){
     uint64_t initial = iter;
-    Node* thisNode = stack->peek<Node>();
-    Node* subexpression = nullptr;
+    Negative* thisNode = stack->alloc<Negative>(nullptr);
 
     if((int64_t) (given.size() - iter) <= 1){
-        goto fail;  
+        goto fail;
     }
 
     if(given[iter].getName() != "-"){
@@ -460,15 +451,15 @@ Node* Parser::negate(){
     }
     iter++;
 
-    subexpression = p1();
+    thisNode->right = p1();
     if(!p1()){
         goto fail;
     }
 
-    return stack->alloc<Negative>(subexpression);
+    return thisNode;
 
 fail:
     iter = initial;
-    stack->dealloc<Node>(thisNode);
+    stack->dealloc<Negative>(thisNode);
     return nullptr;
 }
