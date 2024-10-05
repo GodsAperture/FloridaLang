@@ -13,6 +13,7 @@ public:
     Node(const Node&&) = delete;
     Node& operator=(const Node&&) = delete;
     virtual std::string ToString() = 0;
+    virtual std::string ToPostfix() = 0;
     virtual ~Node(){}
 };
 
@@ -27,8 +28,13 @@ public:
     }
 
     std::string ToString() override {
-        return left->ToString() + " + " + right ->ToString();
+        return left->ToString() + " + " + right->ToString();
     }
+
+    std::string ToPostfix() override {
+        return left->ToPostfix() + right->ToPostfix() + "+ ";
+    }
+
 };
 
 class Subtract : public Node{
@@ -42,7 +48,11 @@ public:
     }
 
     std::string ToString() override {
-        return left->ToString() + " - " + right ->ToString();
+        return left->ToString() + " - " + right->ToString();
+    }
+
+    std::string ToPostfix() override {
+        return left->ToPostfix() + right->ToPostfix() + "- ";
     }
 };
 
@@ -57,8 +67,12 @@ public:
     }
 
     std::string ToString() override {
-        return left->ToString() + " * " + right ->ToString();
+        return left->ToString() + " * " + right->ToString();
     }
+
+    std::string ToPostfix() override {
+        return left->ToPostfix() + right->ToPostfix() + "* ";
+    }    
 };
 
 class Divide : public Node{
@@ -72,7 +86,11 @@ public:
     }
 
     std::string ToString() override {
-        return left->ToString() + " / " + right ->ToString();
+        return left->ToString() + " / " + right->ToString();
+    }
+
+    std::string ToPostfix() override {
+        return left->ToPostfix() + right->ToPostfix() + "/ ";
     }
 };
 
@@ -87,7 +105,11 @@ public:
     }
 
     std::string ToString() override {
-        return left->ToString() + "^" + right ->ToString();
+        return left->ToString() + "^" + right->ToString();
+    }
+
+    std::string ToPostfix() override {
+        return left->ToPostfix() + right->ToPostfix() + "^ ";
     }
 };
 
@@ -101,6 +123,10 @@ public:
 
     std::string ToString() override {
         return left->ToString() + "!";
+    }
+
+    std::string ToPostfix() override {
+        return left->ToPostfix() + "! ";
     }
 };
 
@@ -116,8 +142,8 @@ public:
         return "(" + subexpression->ToString() + ")";
     }
 
-    ~Parnetheses() override {
-        delete subexpression;
+    std::string ToPostfix() override {
+        return subexpression->ToPostfix();
     }
 
 };
@@ -133,6 +159,10 @@ public:
     std::string ToString() override {
         return "-" + right->ToString();
     }
+
+    std::string ToPostfix() override {
+        return "0 " + right->ToPostfix() + "- ";
+    }
 };
 
 class fixed64 : public Node{
@@ -145,6 +175,10 @@ public:
 
     std::string ToString() override {
         return value;
+    }
+
+    std::string ToPostfix() override {
+        return value + " ";
     }
 };
 #endif

@@ -1,6 +1,7 @@
 #include "Parser.hpp"
 #include "Node.hpp"
 #include "StackAllocator.hpp"
+#include <iostream>
 
 bool Parser::parse(){
     //If it's not the nullptr, then it's successful.
@@ -8,8 +9,10 @@ bool Parser::parse(){
     bool isSuccessful = (tree != nullptr);
     //Print the statement back out to see if it even works.
     //I sure hope it does.
-    std::cout << tree->ToString();
-    return isSuccessful && iter == this->given.size();
+    std::string result1 = tree->ToString() + "\n";
+    std::string result2 = tree->ToPostfix() + "\n";
+    std::cout << result1 << result2;
+    return isSuccessful;
 };
 
 // || is a short circuiting boolean or, in other words
@@ -126,7 +129,7 @@ Node* Parser::p5(){
     }
 
     iter++;
-    return stack->alloc<fixed64>(given[iter].getName());
+    return stack->alloc<fixed64>(given[iter - 1].getName());
 }
 
 
@@ -252,17 +255,17 @@ Node* Parser::divide(){
     if((int64_t) (given.size() - iter) <= 2)
         goto fail;
 
-    //Check if the center of this subexpression is the "+" operator.
-    if(given[iter + 1].getName() != "/"){
-        goto fail;
-    }
-    iter++;
-
     thisNode->left = p2();
     //Check if left is a valid subexpression.
     if(thisNode->left == nullptr){
         goto fail;
     }
+
+    //Check if the center of this subexpression is the "+" operator.
+    if(given[iter].getName() != "/"){
+        goto fail;
+    }
+    iter++;
 
     thisNode->right = p1();
     //Check if right is a valid subexpression.
@@ -341,7 +344,6 @@ fail:
     stack->dealloc<Factorial>(thisNode);
     return nullptr;
 }
-
 
 
 //Priority 4
@@ -452,7 +454,7 @@ Node* Parser::negate(){
     iter++;
 
     thisNode->right = p1();
-    if(!p1()){
+    if(thisNode->right == nullptr){
         goto fail;
     }
 

@@ -31,9 +31,9 @@ int main(){
 
 	bool result = FloridaParser.parse();
 
-	std::cout << result;
-
 	printf("\n");
+
+	std::cout << result;
 
 	return 0;
 }
