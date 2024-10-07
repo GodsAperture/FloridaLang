@@ -25,12 +25,12 @@ LEXER_HDRS = $(LEXER_DIR)/Helpers.hpp $(LEXER_DIR)/Lexer.hpp $(LEXER_DIR)/Token.
 PARSER_HDRS = $(PARSER_DIR)/Node.hpp $(PARSER_DIR)/Parser.hpp $(PARSER_DIR)/StackAllocator.hpp
 
 # Target executable
-TARGET = a.out
+TARGET = main
 SANITIZE_TARGET = a_sanitize.out
 
 # Default rule
 all: $(TARGET)
-	./a.out
+	./main
 
 # Rule to build the target executable
 $(TARGET): $(LEXER_OBJS) $(PARSER_OBJS) $(MAIN_OBJ)

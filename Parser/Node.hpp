@@ -161,7 +161,7 @@ public:
     }
 
     std::string ToPostfix() override {
-        return "0 " + right->ToPostfix() + "- ";
+        return right->ToPostfix() + "NEG ";
     }
 };
 

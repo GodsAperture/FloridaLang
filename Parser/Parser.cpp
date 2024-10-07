@@ -15,8 +15,6 @@ bool Parser::parse(){
     return isSuccessful;
 };
 
-// || is a short circuiting boolean or, in other words
-// given a || b if expression a is met then b is never evaluated
 Node* Parser::p0(){
 
     Node* thisNode;
@@ -61,38 +59,6 @@ Node* Parser::p1(){
 }
 
 Node* Parser::p2(){
-    Node* thisNode = nullptr; 
-
-    thisNode = exponent();
-    if(thisNode != nullptr){
-        return thisNode;
-    }
-    
-    thisNode = p3();
-    if(thisNode != nullptr){
-        return thisNode;
-    }
-
-    return nullptr;
-}
-
-Node* Parser::p3(){
-    Node* thisNode = nullptr;
-
-    thisNode = factorial();
-    if(thisNode != nullptr){
-        return thisNode;
-    }
-
-    thisNode = p4();
-    if(thisNode != nullptr){
-        return thisNode;
-    }
-
-    return nullptr;
-}
-
-Node* Parser::p4(){
     Node* thisNode = nullptr;
 
     thisNode = parentheses();
@@ -110,12 +76,7 @@ Node* Parser::p4(){
     //     return thisNode;
     // }
 
-    thisNode = negate();
-    if(thisNode != nullptr){
-        return thisNode;
-    }
-
-    thisNode = p5();
+    thisNode = p3();
     if(thisNode != nullptr){
         return thisNode;
     }
@@ -123,7 +84,7 @@ Node* Parser::p4(){
     return nullptr;
 }
 
-Node* Parser::p5(){
+Node* Parser::p3(){
     if(given[iter].getType() != FloridaType::fix8){
         return nullptr;
     }
@@ -240,6 +201,7 @@ Node* Parser::multiply(){
         goto fail;
     }
 
+
     return thisNode;
 fail:
     iter = initial;
@@ -280,73 +242,7 @@ fail:
     return nullptr;
 }
 
-
 //Priority 2
-Node* Parser::exponent(){
-    const uint64_t initial = iter;
-    Exponent* thisNode = stack->alloc<Exponent>(nullptr, nullptr);
-
-    //Check if this program has reached the end of the token stream.
-    if((int64_t) (given.size() - iter) <= 2)
-        goto fail;
-
-    thisNode->left = p5();
-    //Check if left is a valid subexpression.
-    if(thisNode->left == nullptr){
-        goto fail;
-    }
-
-    //Check if the center of this subexpression is the "+" operator.
-    if(given[iter].getName() != "^"){
-        goto fail;
-    }    
-    iter++;
-
-    thisNode->right = p3();
-    //Check if right is a valid subexpression.
-    if(thisNode->right == nullptr){
-        goto fail;
-    }
-
-    return thisNode;
-fail:
-    iter = initial;
-    stack->dealloc<Exponent>(thisNode);
-    return nullptr;
-}
-
-
-//Priority 3
-Node* Parser::factorial(){
-    const uint64_t initial = iter;
-    Factorial* thisNode = stack->alloc<Factorial>(nullptr);
-
-    //Check if this program has reached the end of the token stream.
-    if((int64_t) (given.size() - iter) <= 1){
-        goto fail;
-    }
-
-    thisNode->left = p5();
-    //Check if left is a valid subexpression.
-    if(thisNode->left == nullptr){
-        goto fail;
-    }
-
-    //Check for the "!" operator.
-    if(given[iter].getName() != "!"){
-        goto fail;
-    }
-    iter++;
-
-    return thisNode;
-fail:
-    iter = initial;
-    stack->dealloc<Factorial>(thisNode);
-    return nullptr;
-}
-
-
-//Priority 4
 Node* Parser::parentheses(){
     const uint64_t initial = iter;
     Parnetheses* thisNode = stack->alloc<Parnetheses>(nullptr);
@@ -439,29 +335,3 @@ fail:
 //     iter = initial;
 //     return false;
 // }
-
-Node* Parser::negate(){
-    uint64_t initial = iter;
-    Negative* thisNode = stack->alloc<Negative>(nullptr);
-
-    if((int64_t) (given.size() - iter) <= 1){
-        goto fail;
-    }
-
-    if(given[iter].getName() != "-"){
-        goto fail;
-    }
-    iter++;
-
-    thisNode->right = p1();
-    if(thisNode->right == nullptr){
-        goto fail;
-    }
-
-    return thisNode;
-
-fail:
-    iter = initial;
-    stack->dealloc<Negative>(thisNode);
-    return nullptr;
-}

@@ -6,3 +6,4 @@ Garbage/
 Lexer/*.o
 Parser/*.o
 main.o
+main
