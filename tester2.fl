@@ -1,0 +1,10 @@
+(*Test to see the unsigned fixed point types*)
+12u8 256u16 102u32 56u64
+(*Test to see the fixed point types*)
+12i8 256i16 102i32 56i64
+(*Test to see the floating point types*)
+3.14f32 2.718281828459045u64
+(*Test to see the scientific notation*)
+0.314e1 27.18281828459045e-1
+(*Test to see the variable scientific notation*)
+0.314E1 27.18281828459045E-1

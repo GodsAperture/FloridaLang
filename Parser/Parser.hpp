@@ -42,7 +42,7 @@ public:
         stack = new StackAllocator(size);
     }
 
-bool parse();
+Node* parse();
 
 };
 #endif

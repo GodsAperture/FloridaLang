@@ -6,12 +6,11 @@
 #include <cinttypes>
 
 class Token {
-private:
+public:
 	FloridaType type;
 	unsigned long row;
 	unsigned long column;
 
-public:
 	std::string name;
 
 	Token();

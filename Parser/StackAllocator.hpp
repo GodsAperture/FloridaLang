@@ -35,14 +35,14 @@ public:
     template<typename T>
     void dealloc(T* ptr) {
         if (ptr != head) {
-            current = (void*) ((long long) current - sizeof(ptr));
+            current = (void*) ((long long) current - sizeof(T));
             ptr->~T(); // Call the destructor explicitly
         }
     }
 
     template<typename T>
     void mdealloc(T* ptr){
-        current = (void*) ((long long) current - sizeof(ptr));
+        current = (void*) ((long long) current - sizeof(T));
     }
 
     template<typename T>

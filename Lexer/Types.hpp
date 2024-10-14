@@ -13,10 +13,11 @@ enum FloridaType{
     Hash,
 
     //Numbers
-    fix2, fix4, fix8, fixn, 
-    float4, float8, floatn, 
+    ufix8, ufix16, ufix32, ufix64, ufixn,
+    fix8, fix16, fix32, fix64, fixn,
+    float32, float64, floatn,
     //scifix numbers are scientific notation numbers such as 2.718e0 and 1.234E32
-    scifix8, scifixn,
+    scifix64, scifixn,
     imaginary,
 
     //Quotations marks will not be overloadable. They are exclusively for strings.
@@ -44,7 +45,7 @@ enum FloridaType{
     //Non-overloadable characters.
     Comma, Semicolon,
 
-    //Bad tokens, only exist to make the lexer not shit itself.
+    //Bad tokens, only exists to make the lexer not shit itself.
     BadToken
 };
 

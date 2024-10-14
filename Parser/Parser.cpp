@@ -3,16 +3,9 @@
 #include "StackAllocator.hpp"
 #include <iostream>
 
-bool Parser::parse(){
+Node* Parser::parse(){
     //If it's not the nullptr, then it's successful.
-    Node* tree = this->p0();
-    bool isSuccessful = (tree != nullptr);
-    //Print the statement back out to see if it even works.
-    //I sure hope it does.
-    std::string result1 = tree->ToString() + "\n";
-    std::string result2 = tree->ToPostfix() + "\n";
-    std::cout << result1 << result2;
-    return isSuccessful;
+    return this->p0();
 };
 
 Node* Parser::p0(){

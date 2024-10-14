@@ -12,7 +12,7 @@ PARSER_DIR = $(SRC_DIR)/Parser
 
 # Source files
 LEXER_SRCS = $(LEXER_DIR)/Helpers.cpp $(LEXER_DIR)/Lexer.cpp $(LEXER_DIR)/Token.cpp
-PARSER_SRCS = $(PARSER_DIR)/Parser.cpp 
+PARSER_SRCS = $(PARSER_DIR)/Parser.cpp $(PARSER_DIR)/Instruction.cpp
 MAIN_SRC = $(SRC_DIR)/main.cpp
 
 # Object files
@@ -22,7 +22,7 @@ MAIN_OBJ = $(MAIN_SRC:.cpp=.o)
 
 # Headers
 LEXER_HDRS = $(LEXER_DIR)/Helpers.hpp $(LEXER_DIR)/Lexer.hpp $(LEXER_DIR)/Token.hpp $(LEXER_DIR)/Types.hpp
-PARSER_HDRS = $(PARSER_DIR)/Node.hpp $(PARSER_DIR)/Parser.hpp $(PARSER_DIR)/StackAllocator.hpp
+PARSER_HDRS =  $(PARSER_DIR)/Node.hpp $(PARSER_DIR)/Parser.hpp $(PARSER_DIR)/StackAllocator.hpp 
 
 # Target executable
 TARGET = main
@@ -53,7 +53,7 @@ sanitize: $(LEXER_OBJS) $(PARSER_OBJS) $(MAIN_OBJ)
 
 # Clean rule
 clean:
-	rm -f $(LEXER_OBJS) $(PARSER_OBJS) $(MAIN_OBJ) $(TARGET) $(SANITIZE_TARGET)
+	rm -f $(LEXER_OBJS) $(PARSER_OBJS) $(MAIN_OBJ) $(TARGET) $(SANITIZE_TARGET) 
 
 # Phony targets
 .PHONY: all clean
