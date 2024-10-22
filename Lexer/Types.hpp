@@ -1,9 +1,11 @@
 #ifndef Types_h__
 #define Types_h__
+enum FloridaType{
+    //Default type, for errors;
+    Null,
 
-enum FloridaType{   
-    //Null objects, mainly for the BaseOperator, until I write a better BaseOperator class.
-    null,
+    //Keywords
+    If, For, Break, While, Return, Object, Try, Catch,
 
     //Pesky fucking comments.
     Comment,
@@ -48,5 +50,4 @@ enum FloridaType{
     //Bad tokens, only exists to make the lexer not shit itself.
     BadToken
 };
-
 #endif

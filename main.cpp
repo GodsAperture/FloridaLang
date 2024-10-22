@@ -1,5 +1,7 @@
 #include <iostream>
 #include <vector>
+#include <chrono>
+#include <typeinfo>
 #include "Lexer/Lexer.hpp"
 #include "Parser/Parser.hpp"
 
@@ -27,69 +29,78 @@ int main(){
 	}
 
 	//Parse over the list and make sure that the expression is acceptable.
-	Parser FloridaParser = Parser(theList, 1000);
-
+	Parser FloridaParser = Parser(theList, 10000);
 	Node* result = FloridaParser.parse();
 
-	printf("\n");
+	std::cout << (result == nullptr) << "\n";
 
-	std::cout << result->ToPostfix() << "\n\n";
-	std::vector<Instruction> thisVector;
-	std::stack<int64_t> thisStack;
-	result->FLVMCodeGen(thisVector);
-	int64_t left;
-	int64_t right;
+	//if statement is only to disable code execution;
+	if(false){
+		//Begin making the instruction vector;
+		std::vector<Instruction> thisVector;
+		std::stack<int64_t> thisStack;
+		result->FLVMCodeGen(thisVector);
+		int64_t left;
+		int64_t right;
 
-	for(size_t i = 0; i < thisVector.size(); i++){
-		switch (thisVector.at(i).instruction){
-			case Operation::push:
-				thisStack.push(thisVector.at(i).literal);
-				continue;
-			case Operation::add:
-				right = thisStack.top();
-				thisStack.pop();
-				//Get the left operand
-				left = thisStack.top();
-				thisStack.pop();
-				//Operate and push
-				thisStack.push(left + right);
-				continue;
-			case Operation::subtract:
-				//Get the right operand
-				right = thisStack.top();
-				thisStack.pop();
-				//Get the left operand
-				left = thisStack.top();
-				thisStack.pop();
-				//Operate and push
-				thisStack.push(left - right);
-				continue;
-			case Operation::multiply:
-				//Get the right operand
-				right = thisStack.top();
-				thisStack.pop();
-				//Get the left operand
-				left = thisStack.top();
-				thisStack.pop();
-				//Operate and push
-				thisStack.push(left * right);
-				continue;
-			case Operation::divide:
-				//Get the right operand
-				right = thisStack.top();
-				thisStack.pop();
-				//Get the left operand
-				left = thisStack.top();
-				thisStack.pop();
-				//Operate and push
-				thisStack.push(left / right);
-				continue;
-			default:
-				break;
+
+		for(size_t i = 0; i < thisVector.size(); i++){
+			Operation currInst = thisVector[i].oper;
+			switch (currInst){
+				case Operation::push:
+					thisStack.push(currInst);
+					continue;
+				case Operation::add:
+					right = thisStack.top();
+					thisStack.pop();
+					//Get the left operand
+					left = thisStack.top();
+					thisStack.pop();
+					//Operate and push
+					thisStack.push(left + right);
+					continue;
+				case Operation::subtract:
+					//Get the right operand
+					right = thisStack.top();
+					thisStack.pop();
+					//Get the left operand
+					left = thisStack.top();
+					thisStack.pop();
+					//Operate and push
+					thisStack.push(left - right);
+					continue;
+				case Operation::negate:
+					//Get the right operand
+					right = thisStack.top();
+					thisStack.pop();
+					//Operate and push
+					thisStack.push(- right);
+					continue;
+				case Operation::multiply:
+					//Get the right operand
+					right = thisStack.top();
+					thisStack.pop();
+					//Get the left operand
+					left = thisStack.top();
+					thisStack.pop();
+					//Operate and push
+					thisStack.push(left * right);
+					continue;
+				case Operation::divide:
+					//Get the right operand
+					right = thisStack.top();
+					thisStack.pop();
+					//Get the left operand
+					left = thisStack.top();
+					thisStack.pop();
+					//Operate and push
+					thisStack.push(left / right);
+					continue;
+				default:
+					break;
+			}
 		}
 	}
-
-	std::cout << "Result: " << thisStack.top() << "\n";
 
 	return 0;
 }

@@ -3,26 +3,27 @@
 #include <stdint.h>
 
 enum Operation{
+    initialize,
+    assign,
     push,
     multiply,
     divide,
     add,
-    subtract
+    subtract,
+    negate
 };
 
 class Instruction{
 public:
-    Operation instruction;
+    Operation oper;
     int64_t literal;
 
+    Instruction(Operation input){
+        oper = input;
+    }
+
     Instruction(int64_t input){
-        instruction = push;
         literal = input;
     }
-
-    Instruction(Operation input){
-        instruction = input;
-    }
-
 };
 #endif

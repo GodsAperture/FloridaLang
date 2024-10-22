@@ -5,6 +5,7 @@
 #include <stack>
 #include <vector>
 #include "Instruction.cpp"
+#include "../Lexer/Types.hpp"
 
 //This just exists.
 class Node{
@@ -12,17 +13,62 @@ public:
     Node(){
         //Exists for the sake of the default constructor.    
     }
+
     Node(const Node&) = delete;
     Node& operator=(const Node&) = delete;
     Node(const Node&&) = delete;
     Node& operator=(const Node&&) = delete;
+
     virtual std::string ToString() = 0;
     virtual std::string ToPostfix() = 0;
-    virtual std::string ToRPN() = 0;//These have parentheses, ToPostfix() does not.
-    virtual void ToStack(std::stack<long long>& inStack) = 0;
     virtual void FLVMCodeGen(std::vector<Instruction>& inVector) = 0;
-    virtual long long ToEvaluate() = 0;
+
     virtual ~Node(){};
+};
+
+class Statement : public Node{
+public:
+    Node* subexpression;
+
+    Statement(Node* input){
+        subexpression = input;
+    }
+
+    std::string ToString() override {
+        return subexpression->ToString() + ";";
+    }
+
+    std::string ToPostfix() override {
+        return subexpression->ToPostfix() + ";\n";
+    }
+
+    void FLVMCodeGen(std::vector<Instruction>& inVector){
+        subexpression->FLVMCodeGen(inVector);
+    }
+};
+
+class Assignment : public Node{
+public:
+    Node* left;
+    Node* right;
+
+    Assignment(Node* inLeft, Node* inRight){
+        left = inLeft;
+        right = inRight;
+    }
+
+    std::string ToString() override {
+        return left->ToString() + " = " + right->ToString() + ";";
+    }
+
+    std::string ToPostfix() override {
+        return left->ToPostfix() + right->ToPostfix() + "= ";
+    }
+
+    void FLVMCodeGen(std::vector<Instruction>& inVector){
+        right->FLVMCodeGen(inVector);
+        inVector.push_back(Instruction(Operation::assign));
+    }
 };
 
 class Add : public Node{
@@ -41,24 +87,6 @@ public:
 
     std::string ToPostfix() override {
         return left->ToPostfix() + right->ToPostfix() + "+ ";
-    }
-
-    std::string ToRPN() override {
-        return "(" + left->ToRPN() + ") (" + right->ToRPN() + ") + ";
-    }
-
-    long long ToEvaluate() override {
-        return left->ToEvaluate() + right->ToEvaluate();
-    }
-
-    void ToStack(std::stack<long long>& inStack) override {
-        left->ToStack(inStack);
-        right->ToStack(inStack);
-        long long val1 = inStack.top();
-        inStack.pop();
-        long long val2 = inStack.top();
-        inStack.pop();
-        inStack.push(val2 + val1);
     }
 
     void FLVMCodeGen(std::vector<Instruction>& inVector) override {
@@ -87,30 +115,14 @@ public:
         return left->ToPostfix() + right->ToPostfix() + "- ";
     }
 
-    std::string ToRPN() override {
-        return "(" + left->ToRPN() + ") (" + right->ToRPN() + ") - ";
-    }
-
-    long long ToEvaluate() override {
-        return left->ToEvaluate() - right->ToEvaluate();
-    }
-
-    void ToStack(std::stack<long long>& inStack) override {
-        left->ToStack(inStack);
-        right->ToStack(inStack);
-        long long val1 = inStack.top();
-        inStack.pop();
-        long long val2 = inStack.top();
-        inStack.pop();
-        inStack.push(val2 - val1);
-    }
-
     void FLVMCodeGen(std::vector<Instruction>& inVector) override {
         left->FLVMCodeGen(inVector);
         right->FLVMCodeGen(inVector);
         inVector.push_back(Instruction(Operation::subtract));
     }
 };
+
+
 
 class Multiply : public Node {
 public: 
@@ -129,24 +141,6 @@ public:
     std::string ToPostfix() override {
         return left->ToPostfix() + right->ToPostfix() + "* ";
     }    
-
-    std::string ToRPN() override {
-        return "(" + left->ToRPN() + ") (" + right->ToRPN() + ") * ";
-    }
-    
-    long long ToEvaluate() override {
-        return left->ToEvaluate() * right->ToEvaluate();
-    }
-
-    void ToStack(std::stack<long long>& inStack) override {
-        left->ToStack(inStack);
-        right->ToStack(inStack);
-        long long val1 = inStack.top();
-        inStack.pop();
-        long long val2 = inStack.top();
-        inStack.pop();
-        inStack.push(val2 * val1);
-    }
 
     void FLVMCodeGen(std::vector<Instruction>& inVector) override {
         left->FLVMCodeGen(inVector);
@@ -173,30 +167,14 @@ public:
         return left->ToPostfix() + right->ToPostfix() + "/ ";
     }
 
-    std::string ToRPN() override {
-        return "(" + left->ToRPN() + ") (" + right->ToRPN() + ") / ";
-    }
-
-    long long ToEvaluate() override {
-        return left->ToEvaluate() / right->ToEvaluate();
-    }
-
-    void ToStack(std::stack<long long>& inStack) override {
-        left->ToStack(inStack);
-        right->ToStack(inStack);
-        long long val1 = inStack.top();
-        inStack.pop();
-        long long val2 = inStack.top();
-        inStack.pop();
-        inStack.push(val2 / val1);
-    }
-
     void FLVMCodeGen(std::vector<Instruction>& inVector) override {
         left->FLVMCodeGen(inVector);
         right->FLVMCodeGen(inVector);
         inVector.push_back(Instruction(Operation::divide));
     }
 };
+
+
 
 class Exponent : public Node{
 public:
@@ -212,25 +190,13 @@ public:
         return left->ToString() + "^" + right->ToString();
     }
 
-    std::string ToRPN() override {
-        return "(" + left->ToRPN() + right->ToRPN() + ") ^ ";
-    }
-
     std::string ToPostfix() override {
         return left->ToPostfix() + right->ToPostfix() + "^ ";
     }
 
-    void ToStack(std::stack<long long>& inStack) override {
-        left->ToStack(inStack);
-        right->ToStack(inStack);
-        long long val1 = inStack.top();
-        inStack.pop();
-        long long val2 = inStack.top();
-        inStack.pop();
-        inStack.push(pow(val2, val1));
-    }
-
 };
+
+
 
 class Factorial : public Node{
 public:
@@ -244,16 +210,8 @@ public:
         return left->ToString() + "!";
     }
 
-    std::string ToRPN() override {
-        return "(" + left->ToRPN() + ") ! ";
-    }
-
     std::string ToPostfix() override {
         return left->ToPostfix() + "! ";
-    }
-
-    void ToStack(std::stack<long long>& inStack) override {
-        left->ToStack(inStack);
     }
 };
 
@@ -269,16 +227,12 @@ public:
         return "(" + subexpression->ToString() + ")";
     }
 
-    std::string ToRPN() override {
-        return subexpression->ToRPN();
-    }
-
     std::string ToPostfix() override {
         return subexpression->ToPostfix();
     }
 
-    void ToStack(std::stack<long long>& inStack) override {
-        subexpression->ToStack(inStack);
+    void FLVMCodeGen(std::vector<Instruction>& inVector) override {
+        subexpression->FLVMCodeGen(inVector);
     }
 };
 
@@ -294,22 +248,52 @@ public:
         return "-" + right->ToString();
     }
 
-    std::string ToRPN() override {
-        return "(" + right->ToPostfix() + ") - ";
-    }
-
     std::string ToPostfix() override {
         return right->ToPostfix() + "NEG ";
     }
 
-    void ToStack(std::stack<long long>& inStack) override {
-        right->ToStack(inStack);
+    void FLVMCodeGen(std::vector<Instruction>& inVector){
+        right->FLVMCodeGen(inVector);
+        inVector.push_back(Instruction(Operation::negate));
+    }
+};
+
+
+
+class Variable : public Node{
+public:
+    std::string name;
+
+    Variable(){
+        name = "";
+    }
+
+    Variable(std::string input){
+        name = input;
+    }
+
+    std::string ToString() override {
+        return name;
+    }
+
+    std::string ToPostfix() override {
+        return name;
+    }
+
+    void FLVMCodeGen(std::vector<Instruction>& inVector) override {
+        //Null lmfaoooooooo
+    }
+
+    Variable& operator=(Variable& right){
+        name = right.name;
+
+        return *this;
     }
 };
 
 class fixed64 : public Node{
 public:
-    long long value;
+    int64_t value;
 
     fixed64(std::string input){
         value = std::stoll(input);
@@ -321,18 +305,6 @@ public:
 
     std::string ToPostfix() override {
         return std::to_string(value) + " ";
-    }
-
-    std::string ToRPN() override {
-        return std::to_string(value) + " ";
-    }
-
-    long long ToEvaluate() override {
-        return value;
-    }
-
-    void ToStack(std::stack<long long>& inStack) override {
-        inStack.push(value);
     }
 
     void FLVMCodeGen(std::vector<Instruction>& inVector) override {
@@ -357,8 +329,5 @@ public:
         return std::to_string(value) + " ";
     }
 
-    std::string ToRPN() override {
-        return std::to_string(value) + " ";
-    }
 };
 #endif
