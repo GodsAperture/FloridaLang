@@ -21,9 +21,7 @@ public:
     template<typename T, typename... Args>
     T* alloc(Args&&... args) {
         std::size_t bytes_needed = sizeof(T);
-        if(bytes_needed % 8 != 0){
-            bytes_needed += 8 - bytes_needed;
-        }
+        bytes_needed += 8 - (bytes_needed % 8);
         if ((std::size_t) current + bytes_needed >= (std::size_t) end) {
             throw std::bad_alloc(); // Not enough memory
         }

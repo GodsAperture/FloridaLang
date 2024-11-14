@@ -143,7 +143,7 @@ Token Lexer::next() {
 	// Deal with numbers
 	if (NumberQ(currChar)) {
 		//Assuming a simple string of numbers, fix64 will be the default type.
-		inToken = Token(FloridaType::fix64, currChar, row, column);
+		inToken = Token(FloridaType::fixed64, currChar, row, column);
 		this->get(currChar);
 
 		while (!this->isEOF()) {
@@ -178,7 +178,7 @@ Token Lexer::next() {
 				//Check to see if it's 8;
 				if(this->peek() == '8'){
 					this->get();
-					inToken.changeType(FloridaType::ufix8);
+					inToken.changeType(FloridaType::ufixed8);
 
 					return inToken;
 				}
@@ -187,7 +187,7 @@ Token Lexer::next() {
 					this->get();
 					if(this->peek() == '6'){
 						this->get();
-						inToken.changeType(FloridaType::ufix16);
+						inToken.changeType(FloridaType::ufixed16);
 						
 						return inToken;
 					} else {
@@ -199,7 +199,7 @@ Token Lexer::next() {
 					this->get();
 					if(this->peek() == '2'){
 						this->get();
-						inToken.changeType(FloridaType::ufix32);
+						inToken.changeType(FloridaType::ufixed32);
 
 						return inToken;
 					} else {
@@ -211,7 +211,7 @@ Token Lexer::next() {
 					this->get();
 					if(this->peek() == '4'){
 						this->get();
-						inToken.changeType(FloridaType::ufix64);
+						inToken.changeType(FloridaType::ufixed64);
 
 						return inToken;
 					} else {
@@ -253,7 +253,7 @@ Token Lexer::next() {
 				//Check to see if it's 8;
 				if(this->peek() == '8'){
 					this->get();
-					inToken.changeType(FloridaType::fix8);
+					inToken.changeType(FloridaType::fixed8);
 
 					return inToken;
 				}
@@ -262,7 +262,7 @@ Token Lexer::next() {
 					this->get();
 					if(this->peek() == '6'){
 						this->get();
-						inToken.changeType(FloridaType::fix16);
+						inToken.changeType(FloridaType::fixed16);
 
 						return inToken;
 					} else {
@@ -274,7 +274,7 @@ Token Lexer::next() {
 					this->get();
 					if(this->peek() == '2'){
 						this->get();
-						inToken.changeType(FloridaType::fix32);
+						inToken.changeType(FloridaType::fixed32);
 
 						return inToken;
 					} else {
@@ -286,7 +286,7 @@ Token Lexer::next() {
 					this->get();
 					if(this->peek() == '4'){
 						this->get();
-						inToken.changeType(FloridaType::fix64);
+						inToken.changeType(FloridaType::fixed64);
 
 						return inToken;
 					} else {
@@ -393,7 +393,7 @@ Token Lexer::next() {
 		this->get(currChar);
 
 		//While every consecutive character is an operator character add them to the token.
-		while(OperatorQ(currChar) && !this->isEOF()){
+		while(OperatorQ(currChar) && !this->isEOF() && currChar != '(' && currChar != ')'){
 			inToken.append(currChar);
 
 			this->get(currChar);

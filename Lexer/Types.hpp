@@ -15,9 +15,11 @@ enum FloridaType{
     Hash,
 
     //Numbers
-    ufix8, ufix16, ufix32, ufix64, ufixn,
-    fix8, fix16, fix32, fix64, fixn,
-    float32, float64, floatn,
+    ufixed8, ufixed16, ufixed32, ufixed64,
+    fixed8, fixed16, fixed32, fixed64,
+    float32, float64,
+    ufixedn, fixedn, floatn,
+
     //scifix numbers are scientific notation numbers such as 2.718e0 and 1.234E32
     scifix64, scifixn,
     imaginary,

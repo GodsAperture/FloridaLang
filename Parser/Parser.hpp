@@ -22,6 +22,7 @@ public:
     Node* program();        //Composed of lots of assignments and stuff;
 
 //Statements??
+    Node* initialize();     //left: keyword, right: std::string;
     Node* assignment();     //left: declaration(), right: expression();
     Node* expression();     //subexpession: p0();
 

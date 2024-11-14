@@ -11,6 +11,7 @@
 		return val;
 	}
 
+
 int main(){
 	
 	//Load the sample file into a string.
@@ -21,7 +22,7 @@ int main(){
 	Token thisToken = FloridaLexer.next();
 	std::vector<Token> theList;
 
-	// Generate tokens up until a semicolon or EOF is reached.
+	// Generate tokens up until EOF is reached.
 	while(thisToken.getType() != FloridaType::eof) {
 		theList.push_back(thisToken);
 		//std::cout << "Lexed token: " << thisToken.name << " type: " << thisToken.getType() << "\n";
@@ -32,75 +33,85 @@ int main(){
 	Parser FloridaParser = Parser(theList, 10000);
 	Node* result = FloridaParser.parse();
 
-	std::cout << (result == nullptr) << "\n";
+	std::cout << result->ToString() << "\n";
+
+	//Parse the trees for variables.
+	std::vector<Association> variableVector;
+	result->GetVariables(variableVector);
+
+	std::vector<Instruction> instructionVector;
+	std::vector<types> computationVector;
+	computationVector.resize(32);
+	size_t position = 0;
 
 	//if statement is only to disable code execution;
 	if(false){
 		//Begin making the instruction vector;
-		std::vector<Instruction> thisVector;
-		std::stack<int64_t> thisStack;
-		result->FLVMCodeGen(thisVector);
-		int64_t left;
-		int64_t right;
+		result->FLVMCodeGen(instructionVector);
+		types left;
+		types right;
 
-
-		for(size_t i = 0; i < thisVector.size(); i++){
-			Operation currInst = thisVector[i].oper;
+		//x++ returns x + 1;
+		//++x returns x;
+		for(size_t i = 0; i < instructionVector.size(); i++){
+			Operation currInst = instructionVector[i].oper;
 			switch (currInst){
+				case Operation::fetch:
+					continue;
+				case Operation::pop:
+					position--;
+					continue;
+				case Operation::initialize:
+					//Nothing, for now;
+					continue;
+				case Operation::assign:
+					
+					continue;
 				case Operation::push:
-					thisStack.push(currInst);
+					computationVector[position++] = instructionVector[i].literal;
 					continue;
 				case Operation::add:
-					right = thisStack.top();
-					thisStack.pop();
-					//Get the left operand
-					left = thisStack.top();
-					thisStack.pop();
-					//Operate and push
-					thisStack.push(left + right);
+					//Get the right operand;
+					right = computationVector[--position];
+					//Get the left operand;
+					left = computationVector[--position];
+					//Operate and push;
+					computationVector[position++].fixed64 = left.fixed64 + right.fixed64;
 					continue;
 				case Operation::subtract:
-					//Get the right operand
-					right = thisStack.top();
-					thisStack.pop();
-					//Get the left operand
-					left = thisStack.top();
-					thisStack.pop();
-					//Operate and push
-					thisStack.push(left - right);
+					//Get the right operand;
+					right = computationVector[--position];
+					//Get the left operand;
+					left = computationVector[--position];
+					//Operate and push;
+					computationVector[position++].fixed64 = left.fixed64 - right.fixed64;
 					continue;
 				case Operation::negate:
-					//Get the right operand
-					right = thisStack.top();
-					thisStack.pop();
-					//Operate and push
-					thisStack.push(- right);
-					continue;
+					//Negate the value;
+					computationVector[position].fixed64 = -computationVector[position].fixed64;
 				case Operation::multiply:
-					//Get the right operand
-					right = thisStack.top();
-					thisStack.pop();
-					//Get the left operand
-					left = thisStack.top();
-					thisStack.pop();
-					//Operate and push
-					thisStack.push(left * right);
+					//Get the right operand;
+					right = computationVector[--position];
+					//Get the left operand;
+					left = computationVector[--position];
+					//Operate and push;
+					computationVector[position++].fixed64 = left.fixed64 * right.fixed64;
 					continue;
 				case Operation::divide:
-					//Get the right operand
-					right = thisStack.top();
-					thisStack.pop();
-					//Get the left operand
-					left = thisStack.top();
-					thisStack.pop();
-					//Operate and push
-					thisStack.push(left / right);
+					//Get the right operand;
+					right = computationVector[--position];
+					//Get the left operand;
+					left = computationVector[--position];
+					//Operate and push;
+					computationVector[position++].fixed64 = left.fixed64 / right.fixed64;
 					continue;
 				default:
 					break;
 			}
 		}
 	}
+
+	std::cout << computationVector[position - 1].fixed16 << "\n";
 
 	return 0;
 }

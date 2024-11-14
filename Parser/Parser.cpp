@@ -10,45 +10,101 @@ Node* Parser::parse(){
 
 Node* Parser::program(){
     Node* thisNode = nullptr;
-    Node* start = stack->peek<Node>();
+    Program* start = stack->alloc<Program>(nullptr);
+    Program* current = start;
+    bool passed = false;
 
-    do{
+    //Check for an assignment;
+    if(!passed){
+        thisNode = assignment();
+        if(thisNode != nullptr){
+            passed = true;
+            thisNode = current->head = stack->alloc<Program>(thisNode);
+            while(given[iter].getName() == ";"){
+                iter++;
+            }
+        }
+    }
+    //Check for an expression;
+    if(!passed){
+        thisNode = p0();
+        if(thisNode != nullptr){
+            passed = true;
+            thisNode = current->head = stack->alloc<Program>(thisNode);
+            while(given[iter].getName() == ";"){
+                iter++;
+            }
+        }
+    }
+
+    while(thisNode != nullptr){
         thisNode = nullptr;
+        if(given.size() == iter){
+            break;
+        }
         //Check for an assignment;
         thisNode = assignment();
         if(thisNode != nullptr){
+            current->Append(stack->alloc<Program>(thisNode));
+            current = current->next;
+            while(given[iter].getName() == ";"){
+                iter++;
+            }
             continue;
         }
         //Check for an expression;
         thisNode = p0();
         if(thisNode != nullptr){
+            current->Append(stack->alloc<Program>(thisNode));
+            current = current->next;
+            while(given[iter].getName() == ";"){
+                iter++;
+            }
             continue;
         }
-
-        if(thisNode == nullptr){
-            break;
-        }
-
-    }while(thisNode != nullptr);
+    }
 
     return start;
 
 }
 
 Node* Parser::assignment(){
-    Node* left;
+    Node* left = initialize();
     Node* right = nullptr;
-    std::string current = given[iter].getName();
+    Node* initial = stack->peek<Node>();
 
+    //Handle assignments with initializations.
+    if(given[iter].type == FloridaType::Identifier){
+        //If there is an assignment alongside the initialization, then assign it.
+        //Otherwise, just return the initialization.
+        if(given[iter].getName() == "="){
+            iter++;
+            //Put the expression on the stack
+            right = p0();
+            if(right != nullptr){
+                left = stack->alloc<Assignment>(left, right);
+                return left;
+            } 
+        } else {
+            return left;
+        }
+    }
+
+    //Handle assignments without initializations.
     if(given[iter].getType() == FloridaType::Identifier){
         //Put the variable on the stack
-        left = stack->alloc<Variable>(given[iter].getName());
-        //Put the expression on the stack
-        right = p0();
-        if(right != nullptr){
-            left = stack->alloc<Assignment>(left, right);
+        iter++;
+        if(given[iter].getName() == "="){
+            iter++;
+            //Put the expression on the stack;
+            right = p0();
+            if(right != nullptr){
+                left = stack->alloc<Assignment>(left, right);
+                return left;
+            }
         } else {
-            return nullptr;
+            iter--;
+            stack->dealloc(initial);
         }
     }
 
@@ -56,68 +112,67 @@ Node* Parser::assignment(){
 
 }
 
+Node* Parser::initialize(){
+    std::vector<std::string> strings = std::vector<std::string>();
+    while(given[iter].type == FloridaType::Identifier){
+        //Append identifiers until there isn't an identifier.
+        strings.push_back(given[iter].name);
+        iter++;
+    }
+
+    std::string type = "";
+
+    //Get all identifiers leading up to the variable name.
+    for(size_t i = 0; i < strings.size() - 2; i++){
+        type += strings[i];
+    }
+
+    return stack->alloc<Initialize>(type, given[iter].name);
+}
+
 //Mathy stuff
 Node* Parser::p0(){
-    Node* initial = stack->peek<Node>();
-    int start = iter;
-
     Node* left = p1();
     std::string current = given[iter].getName();
 
     while(current == "+" || current == "-"){
         iter++;
         Node* right = p1();
-        //Check for nullptrs;
-        if(right == nullptr){
-            stack->dealloc(initial);
-            iter = start;
-
-            return nullptr;
-        }
         if(current == "+"){
             left = stack->alloc<Add>(left, right);
+            current = given[iter].getName();
+            continue;
         }
         if(current == "-"){
             left = stack->alloc<Subtract>(left, right);
+            current = given[iter].getName();
+            continue;
         }
-        current = given[iter].getName();
     }
 
     return left;    
 }
 
 Node* Parser::p1(){
-    Node* initial = stack->peek<Node>();
-    int start = iter;
-
     Node* left = p2();
     std::string current = given[iter].getName();
-
-    if(left == nullptr){
-        return nullptr;
-    }
 
     while(current == "*" || current == "/"){
         iter++;
         Node* right = p2();
-        //Check for nullptrs;
-        if(right == nullptr){
-            stack->dealloc(initial);
-            iter = start;
-
-            return nullptr;
-        }
         if(current == "*"){
             left = stack->alloc<Multiply>(left, right);
+            current = given[iter].getName();
+            continue;
         }
         if(current == "/"){
             left = stack->alloc<Divide>(left, right);
+            current = given[iter].getName();
+            continue;
         }
-
-        current = given[iter].getName();
     }
 
-    return nullptr;
+    return left;
 
 }
 
@@ -125,7 +180,7 @@ Node* Parser::p2(){
     std::string current = given[iter].getName();
     if(current == "-"){
         Node* expression;
-        //Increment for the left parenthesis;
+        //Increment for the minus sign;
         iter++;
         expression = stack->alloc<Negative>(p1());
 
@@ -141,8 +196,14 @@ Node* Parser::p2(){
 
         return expression;
     }
-    if(given[iter].getType() == FloridaType::fix64){
-        fixed64* number = stack->alloc<fixed64>(given[iter].getName());
+    if(given[iter].getType() == FloridaType::Identifier){
+        Variable* thisVariable = stack->alloc<Variable>(FloridaType::Null, given[iter].getName());
+        iter++;     
+
+        return thisVariable;
+    }
+    if(given[iter].type == FloridaType::fixed64){
+        Fixed64* number = stack->alloc<Fixed64>(given[iter].getName());
         iter++;
 
         return number;
