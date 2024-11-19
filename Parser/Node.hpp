@@ -1,16 +1,25 @@
 #ifndef Node_h__
 #define Node_h__
 
-#include <math.h>
-#include <string>
-#include <stack>
-#include <vector>
-#include "Association.hpp"
 #include "Instruction.cpp"
 #include "../Lexer/Types.hpp"
-import Association;
+#include <string>
+#include <vector>
 
 //These just exist.
+class Association{
+public:
+    std::string adjective;
+    std::string name;
+    int64_t position;
+
+    Association(std::string inAdjective, std::string inName, int64_t inPosition){
+        adjective = inAdjective;
+        name = inName;
+        position = inPosition;
+    }
+};
+
 class Node{
 public:
     Node(){
@@ -24,8 +33,8 @@ public:
 
     virtual std::string ToString() = 0;
     virtual std::string ToPostfix() = 0;
-    virtual void GetVariables(std::vector<Association>& inVector) = 0;
-    virtual void FLVMCodeGen(std::vector<Instruction>& inVector) = 0;
+    virtual void GetVariables(std::vector<Association>& inAssociation) = 0;
+    virtual void FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables) = 0;
 
     virtual ~Node(){};
 };
@@ -37,74 +46,12 @@ public:
     Node* head;
     Program* next;
 
-    Program(Node* inHead){
-        head = inHead;
-        next = nullptr;
-    }
-
-    void Append(Program* inProgram){
-        this->next = inProgram;
-    }
-
-    std::string ToString() override {
-        if(head == nullptr && next != nullptr){
-            return next->ToString() + ";\n";
-        }
-        if(head != nullptr && next == nullptr){
-            return head->ToString();
-        } else {
-            return head->ToString() + ";\n" + next->ToString();
-        }
-    }
-
-    std::string ToPostfix() override {
-        return head->ToPostfix() + "\n" + next->ToPostfix();
-    }
-
-    void GetVariables(std::vector<Association>& inVector) override {
-        head->GetVariables(inVector);
-        if(next != nullptr){
-            next->GetVariables(inVector);
-        }
-    }
-
-    void FLVMCodeGen(std::vector<Instruction>& inVector){
-        head->FLVMCodeGen(inVector);
-        if(next != nullptr){
-            inVector.push_back(Operation::pop);
-            next->FLVMCodeGen(inVector);
-        }
-    }
-
-};
-
-class Assignment : public Node{
-public:
-    Node* left;
-    Node* right;
-
-    Assignment(Node* inLeft, Node* inRight){
-        left = inLeft;
-        right = inRight;
-    }
-
-    std::string ToString() override {
-        return left->ToString() + " = " + right->ToString();
-    }
-
-    std::string ToPostfix() override {
-        return left->ToPostfix() + right->ToPostfix() + "= ";
-    }
-
-    void GetVariables(std::vector<Association>& inVector){
-        left->GetVariables(inVector);
-        right->GetVariables(inVector);
-    }
-
-    void FLVMCodeGen(std::vector<Instruction>& inVector){
-        right->FLVMCodeGen(inVector);
-        inVector.push_back(Instruction(Operation::assign));
-    }
+    Program(Node* inHead);
+    void Append(Program* inProgram);
+    std::string ToString() override;
+    std::string ToPostfix() override;
+    void GetVariables(std::vector<Association>& inVector) override;
+    void FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables) override;
 };
 
 class Add : public Node{
@@ -112,30 +59,11 @@ public:
     Node* left;
     Node* right;
 
-    Add(Node* LHE, Node* RHE){
-        left = LHE;
-        right = RHE;
-    }
-
-    std::string ToString() override {
-        return left->ToString() + " + " + right->ToString();
-    }
-
-    std::string ToPostfix() override {
-        return left->ToPostfix() + right->ToPostfix() + "+ ";
-    }
-
-    void GetVariables(std::vector<Association>& inVector){
-        left->GetVariables(inVector);
-        right->GetVariables(inVector);
-    }
-
-    void FLVMCodeGen(std::vector<Instruction>& inVector) override {
-        left->FLVMCodeGen(inVector);
-        right->FLVMCodeGen(inVector);
-        inVector.push_back(Instruction(Operation::add));
-    }
-
+    Add(Node* LHE, Node* RHE);
+    std::string ToString() override;
+    std::string ToPostfix() override;
+    void GetVariables(std::vector<Association>& inVector) override;
+    void FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables) override;
 };
 
 class Subtract : public Node{
@@ -143,29 +71,11 @@ public:
     Node* left;
     Node* right;
 
-    Subtract(Node* LHE, Node* RHE){
-        left = LHE;
-        right = RHE;
-    }
-
-    std::string ToString() override {
-        return left->ToString() + " - " + right->ToString();
-    }
-
-    std::string ToPostfix() override {
-        return left->ToPostfix() + right->ToPostfix() + "- ";
-    }
-
-    void GetVariables(std::vector<Association>& inVector) override {
-        left->GetVariables(inVector);
-        right->GetVariables(inVector);
-    }
-
-    void FLVMCodeGen(std::vector<Instruction>& inVector) override {
-        left->FLVMCodeGen(inVector);
-        right->FLVMCodeGen(inVector);
-        inVector.push_back(Instruction(Operation::subtract));
-    }
+    Subtract(Node* LHE, Node* RHE);
+    std::string ToString() override;
+    std::string ToPostfix() override;
+    void GetVariables(std::vector<Association>& inVector) override;
+    void FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables) override;
 };
 
 
@@ -175,29 +85,11 @@ public:
     Node* left;
     Node* right;
 
-    Multiply(Node* LHE, Node* RHE){
-        left = LHE;
-        right = RHE;
-    }
-
-    std::string ToString() override {
-        return left->ToString() + " * " + right->ToString();
-    }
-
-    std::string ToPostfix() override {
-        return left->ToPostfix() + right->ToPostfix() + "* ";
-    }    
-
-    void GetVariables(std::vector<Association>& inVector) override {
-        left->GetVariables(inVector);
-        right->GetVariables(inVector);
-    }
-
-    void FLVMCodeGen(std::vector<Instruction>& inVector) override {
-        left->FLVMCodeGen(inVector);
-        right->FLVMCodeGen(inVector);
-        inVector.push_back(Instruction(Operation::multiply));
-    }
+    Multiply(Node* LHE, Node* RHE);
+    std::string ToString() override;
+    std::string ToPostfix() override;
+    void GetVariables(std::vector<Association>& inVector) override;
+    void FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables) override;
 };
 
 class Divide : public Node{
@@ -205,29 +97,11 @@ public:
     Node* left;
     Node* right;
 
-    Divide(Node* LHE, Node* RHE){
-        left = LHE;
-        right = RHE;
-    }
-
-    std::string ToString() override {
-        return left->ToString() + " / " + right->ToString();
-    }
-
-    std::string ToPostfix() override {
-        return left->ToPostfix() + right->ToPostfix() + "/ ";
-    }
-
-    void GetVariables(std::vector<Association>& inVector) override {
-        left->GetVariables(inVector);
-        right->GetVariables(inVector);
-    }
-
-    void FLVMCodeGen(std::vector<Instruction>& inVector) override {
-        left->FLVMCodeGen(inVector);
-        right->FLVMCodeGen(inVector);
-        inVector.push_back(Instruction(Operation::divide));
-    }
+    Divide(Node* LHE, Node* RHE);
+    std::string ToString() override;
+    std::string ToPostfix() override;
+    void GetVariables(std::vector<Association>& inVector) override;
+    void FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables) override;
 };
 
 
@@ -277,11 +151,11 @@ public:
     }
 };
 
-class Parnetheses : public Node{
+class Parentheses : public Node{
 public:
     Node* subexpression;
 
-    Parnetheses(Node* input){
+    Parentheses(Node* input){
         subexpression = input;
     }
 
@@ -297,8 +171,8 @@ public:
         subexpression->GetVariables(inVector);
     }
 
-    void FLVMCodeGen(std::vector<Instruction>& inVector) override {
-        subexpression->FLVMCodeGen(inVector);
+    virtual void FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables) override {
+        subexpression->FLVMCodeGen(inInstructions, inVariables);
     }
 };
 
@@ -322,9 +196,9 @@ public:
         right->GetVariables(inVector);
     }
 
-    void FLVMCodeGen(std::vector<Instruction>& inVector){
-        right->FLVMCodeGen(inVector);
-        inVector.push_back(Instruction(Operation::negate));
+    virtual void FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables){
+        right->FLVMCodeGen(inInstructions, inVariables);
+        inInstructions.push_back(Instruction(Operation::negate));
     }
 };
 
@@ -352,8 +226,17 @@ public:
         return name;
     }
 
-    void FLVMCodeGen(std::vector<Instruction>& inVector) override {
-        inVector.push_back(Instruction(Operation::fetch));
+    virtual void FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables) override {
+        int position = -1;
+        //Search for the variable in the symbols table.
+        //Get its position and assign it to that variable.
+        for(size_t i = 0; i < inVariables.size(); i++){
+            if(inVariables[i].name == this->name){
+                position = inVariables[i].position;
+                break;
+            }
+        }
+        inInstructions.push_back(Instruction(Operation::fetch, position));
     }
 
     void GetVariables(std::vector<Association>& inVector) override {
@@ -366,6 +249,18 @@ public:
 
         return *this;
     }
+};
+
+class Assignment : public Node{
+public:
+    Node* left; 
+    Node* right;
+
+    Assignment(Node* inLeft, Node* inRight);
+    std::string ToString() override;
+    std::string ToPostfix() override;
+    void GetVariables(std::vector<Association>& inVector) override;
+    void FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables) override;
 };
 
 class Initialize : public Node{
@@ -391,17 +286,13 @@ public:
         return name;
     }
 
-    void FLVMCodeGen(std::vector<Instruction>& inVector) override {
-        inVector.push_back(Instruction(Operation::varPush));
-        inVector.push_back(Instruction(Operation::initialize));
+    virtual void FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables) override {
+        inInstructions.push_back(Instruction(Operation::initialize));
     }
 
     void GetVariables(std::vector<Association>& inVector) override {
-        types value;
-        value.fixed64 = -1;
-        size_t i;
-        for(i = 0; i < inVector.size(); i++){
-            if(inVector[i].token.name == name){
+        for(size_t i = 0; i < inVector.size(); i++){
+            if(inVector[i].name == name){
                 //If the same variable name appears, throw an error.
                 //Note: Figure out how to set up errors.
                 //For now, just return to avoid adding again.
@@ -409,7 +300,7 @@ public:
             }
         }
         //Ignore the right side, because I'm not doing chained initializations for now.
-        inVector.push_back(Association(Variable(adjective, name), -1));
+        inVector.push_back(Association(adjective, name, inVector.size()));
     }
 
     Initialize& operator=(Initialize& right){
@@ -440,8 +331,8 @@ public:
         //Null
     }
 
-    void FLVMCodeGen(std::vector<Instruction>& inVector) override {
-        inVector.push_back(Instruction(value));
+    virtual void FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables) override {
+        inInstructions.push_back(Instruction(value));
     }
 
 };

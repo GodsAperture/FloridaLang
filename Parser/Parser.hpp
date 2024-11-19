@@ -46,8 +46,8 @@ public:
     //3 priority
     Node* p3();             //numbers...for now.
 
-    Parser(std::vector<Token> input, long size){
-        given = input;
+    Parser(std::vector<Token> inTokens, long size){
+        given = inTokens;
         stack = new StackAllocator(size);
     }
 

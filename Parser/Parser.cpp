@@ -69,65 +69,51 @@ Node* Parser::program(){
 }
 
 Node* Parser::assignment(){
-    Node* left = initialize();
+    Node* left = initialize();        
     Node* right = nullptr;
     Node* initial = stack->peek<Node>();
 
-    //Handle assignments with initializations.
-    if(given[iter].type == FloridaType::Identifier){
-        //If there is an assignment alongside the initialization, then assign it.
-        //Otherwise, just return the initialization.
-        if(given[iter].getName() == "="){
-            iter++;
-            //Put the expression on the stack
-            right = p0();
-            if(right != nullptr){
-                left = stack->alloc<Assignment>(left, right);
-                return left;
-            } 
-        } else {
-            return left;
-        }
-    }
-
-    //Handle assignments without initializations.
-    if(given[iter].getType() == FloridaType::Identifier){
-        //Put the variable on the stack
+    //if an assignment is found, then generate a 
+    if(given[iter].name == "="){
         iter++;
-        if(given[iter].getName() == "="){
-            iter++;
-            //Put the expression on the stack;
-            right = p0();
-            if(right != nullptr){
-                left = stack->alloc<Assignment>(left, right);
-                return left;
-            }
+        //Increment the iterator, and then get p0().
+        right = p0();
+        if(right == nullptr){
+            std::cout << "Error: No assignable expression was found.";
         } else {
-            iter--;
-            stack->dealloc(initial);
+            return stack->alloc<Assignment>(left, right);
         }
+    } else {
+        //If an assignment is not found, then return the initialization.
+        return left;
     }
 
+    stack->dealloc(initial);
     return nullptr;
 
 }
 
 Node* Parser::initialize(){
-    std::vector<std::string> strings = std::vector<std::string>();
-    while(given[iter].type == FloridaType::Identifier){
-        //Append identifiers until there isn't an identifier.
-        strings.push_back(given[iter].name);
+    //If there's not an identifier, then return a nullptr.
+    if(given[iter].type != FloridaType::Identifier){
+        return nullptr;
+    }
+    //Otherwise, try to find an initialization or an identifier.
+
+    std::string adjective = given[iter].name;
+    iter++;
+
+    //Check for a second identifier, otherwise it's an error.
+    if(given[iter].type == FloridaType::Identifier){
+        std::string name = given[iter].name;
         iter++;
+
+        return stack->alloc<Initialize>(adjective, name);
+    } else {
+        //This will be an error.
+        return nullptr;
     }
 
-    std::string type = "";
-
-    //Get all identifiers leading up to the variable name.
-    for(size_t i = 0; i < strings.size() - 2; i++){
-        type += strings[i];
-    }
-
-    return stack->alloc<Initialize>(type, given[iter].name);
 }
 
 //Mathy stuff
@@ -190,14 +176,14 @@ Node* Parser::p2(){
         Node* expression;
         //Increment for the left parenthesis;
         iter++;
-        expression = stack->alloc<Parnetheses>(p0());
+        expression = stack->alloc<Parentheses>(p0());
         //Increment for the right parenthesis;
         iter++;
 
         return expression;
     }
     if(given[iter].getType() == FloridaType::Identifier){
-        Variable* thisVariable = stack->alloc<Variable>(FloridaType::Null, given[iter].getName());
+        Variable* thisVariable = stack->alloc<Variable>("Null", given[iter].getName());
         iter++;     
 
         return thisVariable;

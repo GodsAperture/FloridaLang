@@ -45,9 +45,9 @@ int main(){
 	size_t position = 0;
 
 	//if statement is only to disable code execution;
-	if(false){
+	if(true){
 		//Begin making the instruction vector;
-		result->FLVMCodeGen(instructionVector);
+		result->FLVMCodeGen(instructionVector, variableVector);
 		types left;
 		types right;
 
@@ -57,6 +57,8 @@ int main(){
 			Operation currInst = instructionVector[i].oper;
 			switch (currInst){
 				case Operation::fetch:
+					//Push the value into the stack.
+					computationVector[position++] = computationVector[instructionVector[i].literal.fixed64];
 					continue;
 				case Operation::pop:
 					position--;
@@ -65,7 +67,7 @@ int main(){
 					//Nothing, for now;
 					continue;
 				case Operation::assign:
-					
+					computationVector[instructionVector[i].literal.fixed64] = computationVector[position - 1];
 					continue;
 				case Operation::push:
 					computationVector[position++] = instructionVector[i].literal;

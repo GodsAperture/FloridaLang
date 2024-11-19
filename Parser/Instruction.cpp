@@ -9,7 +9,6 @@ enum Operation{
     initialize,
     assign,
     pop,
-    varPush,
     push,
     multiply,
     divide,
@@ -42,14 +41,14 @@ public:
     Operation oper;
     types literal;
 
-    Instruction(Operation input){
-        oper = input;
-        literal.fixed64 = 0;
+    Instruction(Operation inOper, int64_t inPosition){
+        oper = inOper;
+        literal.fixed64 = inPosition;
     }
 
     Instruction(FloridaType inType, types inLiteral){
         type = inType;
-        oper = Operation::varPush;
+        oper = Operation::fetch;
         literal = inLiteral;
     }
 
