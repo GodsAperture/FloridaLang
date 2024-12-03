@@ -52,10 +52,5 @@ public:
         literal = inLiteral;
     }
 
-    Instruction(int64_t input){
-        oper = Operation::push;
-        literal.fixed64 = input;
-    }
-
 };
 #endif

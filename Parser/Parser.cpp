@@ -73,7 +73,13 @@ Node* Parser::assignment(){
     Node* right = nullptr;
     Node* initial = stack->peek<Node>();
 
-    //if an assignment is found, then generate a 
+    //Check for a basic reassignment to an existing variable.
+    if(left == nullptr && given[iter].type == FloridaType::Identifier){
+        left = stack->alloc<Variable>("Null", given[iter].name);
+        iter++;
+    }
+
+    //if an assignment is found
     if(given[iter].name == "="){
         iter++;
         //Increment the iterator, and then get p0().
@@ -103,14 +109,14 @@ Node* Parser::initialize(){
     std::string adjective = given[iter].name;
     iter++;
 
-    //Check for a second identifier, otherwise it's an error.
+    //Check for a second identifier, otherwise it's a reassignment.
     if(given[iter].type == FloridaType::Identifier){
         std::string name = given[iter].name;
         iter++;
 
         return stack->alloc<Initialize>(adjective, name);
     } else {
-        //This will be an error.
+        iter--;
         return nullptr;
     }
 

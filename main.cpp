@@ -11,6 +11,15 @@
 		return val;
 	}
 
+	std::string printValues(std::vector<types>& inInstructions, std::vector<Association>& inVariables){
+		std::string finalString = "";
+		for(size_t i = 0; i < inVariables.size(); i++){
+			finalString += inVariables[i].name + " = " + std::to_string(inInstructions[inVariables[i].position].fixed64) + ";\n";
+		}
+
+		return finalString;
+	}
+
 
 int main(){
 	
@@ -32,8 +41,6 @@ int main(){
 	//Parse over the list and make sure that the expression is acceptable.
 	Parser FloridaParser = Parser(theList, 10000);
 	Node* result = FloridaParser.parse();
-
-	std::cout << result->ToString() << "\n";
 
 	//Parse the trees for variables.
 	std::vector<Association> variableVector;
@@ -63,10 +70,10 @@ int main(){
 				case Operation::pop:
 					position--;
 					continue;
-				case Operation::initialize:
-					//Nothing, for now;
-					continue;
 				case Operation::assign:
+					if(instructionVector[i].literal.fixed64 == -1){
+						printf("\nError: bad assignment position\n");
+					}
 					computationVector[instructionVector[i].literal.fixed64] = computationVector[position - 1];
 					continue;
 				case Operation::push:
@@ -113,7 +120,7 @@ int main(){
 		}
 	}
 
-	std::cout << computationVector[position - 1].fixed16 << "\n";
+	std::cout << printValues(computationVector, variableVector) << "\n";
 
 	return 0;
 }
