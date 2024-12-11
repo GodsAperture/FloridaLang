@@ -31,7 +31,7 @@ int main(){
 	Token thisToken = FloridaLexer.next();
 	std::vector<Token> theList;
 
-	// Generate tokens up until EOF is reached.
+	//Generate tokens up until EOF is reached.
 	while(thisToken.getType() != FloridaType::eof) {
 		theList.push_back(thisToken);
 		//std::cout << "Lexed token: " << thisToken.name << " type: " << thisToken.getType() << "\n";
@@ -46,10 +46,12 @@ int main(){
 	std::vector<Association> variableVector;
 	result->GetVariables(variableVector);
 
+	//Generate the instructions vector.
 	std::vector<Instruction> instructionVector;
 	std::vector<types> computationVector;
 	computationVector.resize(32);
-	size_t position = 0;
+	//The stack will start at the offset to not disrupt the variables.
+	size_t position = variableVector.size();
 
 	//if statement is only to disable code execution;
 	if(true){
@@ -72,7 +74,8 @@ int main(){
 					continue;
 				case Operation::assign:
 					if(instructionVector[i].literal.fixed64 == -1){
-						printf("\nError: bad assignment position\n");
+						printf("Error: bad assignment position\n");
+						return -1;
 					}
 					computationVector[instructionVector[i].literal.fixed64] = computationVector[position - 1];
 					continue;
@@ -115,6 +118,7 @@ int main(){
 					computationVector[position++].fixed64 = left.fixed64 / right.fixed64;
 					continue;
 				default:
+					printf("Error: Unknown instruction given.\n");
 					break;
 			}
 		}

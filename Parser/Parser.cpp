@@ -8,8 +8,39 @@ Node* Parser::parse(){
     return this->program();
 };
 
+//List of all statements that can exist in a program.
+Program* Parser::programList(){
+    Node* thisNode = nullptr;
+    Program* thisProgram = nullptr;
+
+    //Check for an assignment.
+    thisNode = assignment();
+    if(thisNode != nullptr){
+        thisProgram = stack->alloc<Program>(thisNode);
+        while(given[iter].getName() == ";"){
+            iter++;
+        }
+        return thisProgram;
+    }
+
+    //Check for an expression.
+    thisNode = p0();
+    if(thisNode != nullptr){
+        thisNode = stack->alloc<Program>(thisNode);
+        while(given[iter].getName() == ";"){
+            iter++;
+        }
+        return thisProgram;
+    }
+
+    //If nothing works, then there's an error. Return a nullptr.
+    return thisProgram;
+
+}
+
 Node* Parser::program(){
     Node* thisNode = nullptr;
+    Program* thisProgram = nullptr;
     Program* start = stack->alloc<Program>(nullptr);
     Program* current = start;
     bool passed = false;
@@ -18,49 +49,43 @@ Node* Parser::program(){
     if(!passed){
         thisNode = assignment();
         if(thisNode != nullptr){
-            passed = true;
-            thisNode = current->head = stack->alloc<Program>(thisNode);
+            current->head = thisProgram = stack->alloc<Program>(thisNode);
             while(given[iter].getName() == ";"){
                 iter++;
             }
-        }
-    }
-    //Check for an expression;
-    if(!passed){
-        thisNode = p0();
-        if(thisNode != nullptr){
             passed = true;
-            thisNode = current->head = stack->alloc<Program>(thisNode);
-            while(given[iter].getName() == ";"){
-                iter++;
-            }
         }
     }
 
-    while(thisNode != nullptr){
-        thisNode = nullptr;
+    //Check for an expression;
+    if(!passed){
+        thisNode = p0();
+        if(!passed && thisNode != nullptr){
+            current->head = thisProgram = stack->alloc<Program>(thisNode);
+            while(given[iter].getName() == ";"){
+                iter++;
+            }
+            passed = true;
+        }
+    }
+    
+    while(thisProgram != nullptr){
+        //If all tokens have been consumed, then terminate parsing.
         if(given.size() == iter){
             break;
         }
-        //Check for an assignment;
-        thisNode = assignment();
-        if(thisNode != nullptr){
-            current->Append(stack->alloc<Program>(thisNode));
+        thisProgram = nullptr;
+
+        //Check for another statement.
+        //A nullptr means there has been an error.
+        thisProgram = programList();
+        if(thisProgram != nullptr){
+            current->Append(thisProgram);
             current = current->next;
-            while(given[iter].getName() == ";"){
-                iter++;
-            }
-            continue;
-        }
-        //Check for an expression;
-        thisNode = p0();
-        if(thisNode != nullptr){
-            current->Append(stack->alloc<Program>(thisNode));
-            current = current->next;
-            while(given[iter].getName() == ";"){
-                iter++;
-            }
-            continue;
+        } else {
+            printf("There has been an error in the parser.\nCheck Parser::program()");
+            //An error has occured in the parser.
+            return nullptr;
         }
     }
 
@@ -121,6 +146,8 @@ Node* Parser::initialize(){
     }
 
 }
+
+
 
 //Mathy stuff
 Node* Parser::p0(){
@@ -203,3 +230,6 @@ Node* Parser::p2(){
 
     return nullptr;
 }
+
+
+

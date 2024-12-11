@@ -184,6 +184,7 @@ public:
 };
 
 
+
 class Variable : public Node{
 public:
     std::string adjective;
@@ -269,5 +270,19 @@ public:
         return std::to_string(value) + " ";
     }
 
+};
+
+
+
+class Goto : public Node{
+    std::string name;
+    std::string where;
+
+    Goto(std::string inName, std::string inWhere);
+    std::string ToString() override;
+    std::string ToPostfix() override;
+    void GetVariables(std::vector<Association>& inVector) override;
+    void FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables) override;
+    int64_t GetPosition(std::vector<Association>& inVariables) override;
 };
 #endif

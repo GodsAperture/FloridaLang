@@ -6,6 +6,7 @@
 
 enum Operation{
     fetch,
+    jump,
     initialize,
     assign,
     pop,

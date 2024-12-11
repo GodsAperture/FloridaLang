@@ -1,3 +1,4 @@
 (*The fixed64 adjective isn't necessary*)
 fixed64 x = 6;
-fixed64 y = x * x + x;x = 16;
+fixed64 y = x * x + x;
+x = 16;

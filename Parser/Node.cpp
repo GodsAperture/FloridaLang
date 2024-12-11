@@ -259,7 +259,6 @@
 
 
 //Variable
-
     Variable::Variable(){
         adjective = "";
         name = "";
@@ -309,7 +308,6 @@
 
 
 //Initialize
-
     Initialize::Initialize(){
         adjective = "";
         name = "";
@@ -358,7 +356,6 @@
 
 
 //Fixed64
-
     Fixed64::Fixed64(std::string input){
         value = std::stoll(input);
     }
@@ -382,3 +379,41 @@
     int64_t Fixed64::GetPosition(std::vector<Association>& inVariables){
         return -1;
     }
+
+
+
+//Goto
+    Goto::Goto(std::string inName, std::string inWhere){
+        name = inName;
+        where = inWhere;
+    }
+
+    std::string Goto::ToString(){
+        return name + ": ";
+    }
+
+    std::string Goto::ToPostfix(){
+        return "Jump(" + where + ")";
+    }
+
+    void Goto::GetVariables(std::vector<Association>& inVector){
+        inVector.push_back(Association("Null", name, inVector.size()));
+    }
+
+    void Goto::FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables){
+        int64_t position = -1;
+        for(size_t i = 0; i < inVariables.size(); i++){
+            if(inVariables[i].name == name){
+                position = i;
+                break;
+            }
+        }
+
+        //Create an instruction that goes to a specific place in the symbols table.
+        inInstructions.push_back(Instruction(Operation::jump, position));
+    }
+
+    int64_t Goto::GetPosition(std::vector<Association>& inVariables){
+        return -1;
+    }
+    

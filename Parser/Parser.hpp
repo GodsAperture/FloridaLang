@@ -18,6 +18,7 @@ public:
 //are solely so I can build the parser properly.
 
 //Program
+    Program* programList();
     Node* parse();
     Node* program();        //Composed of lots of assignments and stuff;
 
@@ -25,6 +26,13 @@ public:
     Node* initialize();     //left: keyword, right: std::string;
     Node* assignment();     //left: declaration(), right: expression();
     Node* expression();     //subexpession: p0();
+
+//Branching statements and jumps
+    Node* jump();           //where: std::string.
+    Node* jumpIf();         //where: std::string, condition: boolean.
+    Node* If();             //condition: boolean, body: program().
+    Node* For();            //
+    Node* While();
 
 //Mathematical expressions
     //0 priority
