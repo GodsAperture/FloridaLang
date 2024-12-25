@@ -12,6 +12,7 @@ class Parser{
 public:
 //Iterator points to current token
     uint64_t iter = 0;
+    bool error = false;
     std::vector<Token> given;
     StackAllocator* stack = nullptr;
 //Comments on the rightmost parts of the functions
@@ -20,15 +21,17 @@ public:
 //Program
     Program* programList();
     Node* parse();
-    Node* program();        //Composed of lots of assignments and stuff;
+    Node* program();        //Composed of lots of statements.
 
-//Statements??
-    Node* initialize();     //left: keyword, right: std::string;
-    Node* assignment();     //left: declaration(), right: expression();
-    Node* expression();     //subexpession: p0();
+//Statements
+    Node* initialize();     //left: keyword, right: std::string.
+    Node* variable();       //member: ???
+    Node* assignment();     //left: declaration(), right: expression().
+    Node* expression();     //subexpession: p0().
 
 //Branching statements and jumps
-    Node* jump();           //where: std::string.
+    Node* jump();           //name: std::string.
+    Node* landing();        //where: std::string.
     Node* jumpIf();         //where: std::string, condition: boolean.
     Node* If();             //condition: boolean, body: program().
     Node* For();            //

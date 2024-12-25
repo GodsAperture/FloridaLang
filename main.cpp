@@ -42,6 +42,13 @@ int main(){
 	Parser FloridaParser = Parser(theList, 10000);
 	Node* result = FloridaParser.parse();
 
+	//If the error flag has been raised, then
+	//terminate the program and print out the errors.
+	if(FloridaParser.error){
+		//TODO: Set up error handler.
+		return -1;
+	}
+
 	//Parse the trees for variables.
 	std::vector<Association> variableVector;
 	result->GetVariables(variableVector);
@@ -53,78 +60,78 @@ int main(){
 	//The stack will start at the offset to not disrupt the variables.
 	size_t position = variableVector.size();
 
-	//if statement is only to disable code execution;
-	if(true){
-		//Begin making the instruction vector;
-		result->FLVMCodeGen(instructionVector, variableVector);
-		types left;
-		types right;
+	//Begin making the instruction vector;
+	result->FLVMCodeGen(instructionVector, variableVector);
+	types left;
+	types right;
 
-		//x++ returns x + 1;
-		//++x returns x;
-		for(size_t i = 0; i < instructionVector.size(); i++){
-			Operation currInst = instructionVector[i].oper;
-			switch (currInst){
-				case Operation::fetch:
-					//Push the value into the stack.
-					computationVector[position++] = computationVector[instructionVector[i].literal.fixed64];
-					continue;
-				case Operation::pop:
-					position--;
-					continue;
-				case Operation::assign:
-					if(instructionVector[i].literal.fixed64 == -1){
-						printf("Error: bad assignment position\n");
-						return -1;
-					}
-					computationVector[instructionVector[i].literal.fixed64] = computationVector[position - 1];
-					continue;
-				case Operation::push:
-					computationVector[position++] = instructionVector[i].literal;
-					continue;
-				case Operation::add:
-					//Get the right operand;
-					right = computationVector[--position];
-					//Get the left operand;
-					left = computationVector[--position];
-					//Operate and push;
-					computationVector[position++].fixed64 = left.fixed64 + right.fixed64;
-					continue;
-				case Operation::subtract:
-					//Get the right operand;
-					right = computationVector[--position];
-					//Get the left operand;
-					left = computationVector[--position];
-					//Operate and push;
-					computationVector[position++].fixed64 = left.fixed64 - right.fixed64;
-					continue;
-				case Operation::negate:
-					//Negate the value;
-					computationVector[position].fixed64 = -computationVector[position].fixed64;
-				case Operation::multiply:
-					//Get the right operand;
-					right = computationVector[--position];
-					//Get the left operand;
-					left = computationVector[--position];
-					//Operate and push;
-					computationVector[position++].fixed64 = left.fixed64 * right.fixed64;
-					continue;
-				case Operation::divide:
-					//Get the right operand;
-					right = computationVector[--position];
-					//Get the left operand;
-					left = computationVector[--position];
-					//Operate and push;
-					computationVector[position++].fixed64 = left.fixed64 / right.fixed64;
-					continue;
-				default:
-					printf("Error: Unknown instruction given.\n");
-					break;
-			}
+	//x++ returns x + 1;
+	//++x returns x;
+	for(size_t i = 0; i < instructionVector.size(); i++){
+		Operation currInst = instructionVector[i].oper;
+		switch (currInst){
+			case Operation::jump:
+
+				continue;
+			case Operation::fetch:
+				//Push the value into the stack.
+				computationVector[position++] = computationVector[instructionVector[i].literal.fixed64];
+				continue;
+			case Operation::pop:
+				position--;
+				continue;
+			case Operation::assign:
+				if(instructionVector[i].literal.fixed64 == -1){
+					printf("Error: bad assignment position\n");
+					return -1;
+				}
+				computationVector[instructionVector[i].literal.fixed64] = computationVector[position - 1];
+				continue;
+			case Operation::push:
+				computationVector[position++] = instructionVector[i].literal;
+				continue;
+			case Operation::add:
+				//Get the right operand;
+				right = computationVector[--position];
+				//Get the left operand;
+				left = computationVector[--position];
+				//Operate and push;
+				computationVector[position++].fixed64 = left.fixed64 + right.fixed64;
+				continue;
+			case Operation::subtract:
+				//Get the right operand;
+				right = computationVector[--position];
+				//Get the left operand;
+				left = computationVector[--position];
+				//Operate and push;
+				computationVector[position++].fixed64 = left.fixed64 - right.fixed64;
+				continue;
+			case Operation::negate:
+				//Negate the value;
+				computationVector[position].fixed64 = -computationVector[position].fixed64;
+			case Operation::multiply:
+				//Get the right operand;
+				right = computationVector[--position];
+				//Get the left operand;
+				left = computationVector[--position];
+				//Operate and push;
+				computationVector[position++].fixed64 = left.fixed64 * right.fixed64;
+				continue;
+			case Operation::divide:
+				//Get the right operand;
+				right = computationVector[--position];
+				//Get the left operand;
+				left = computationVector[--position];
+				//Operate and push;
+				computationVector[position++].fixed64 = left.fixed64 / right.fixed64;
+				continue;
+			default:
+				printf("Error: Unknown instruction given.\n");
+				break;
 		}
 	}
 
-	std::cout << printValues(computationVector, variableVector) << "\n";
+
 
 	return 0;
 }

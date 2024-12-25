@@ -11,65 +11,53 @@ Node* Parser::parse(){
 //List of all statements that can exist in a program.
 Program* Parser::programList(){
     Node* thisNode = nullptr;
-    Program* thisProgram = nullptr;
+
+    //Check for a jump statement.
+    thisNode = jump();
+    if(thisNode != nullptr){
+        return stack->alloc<Program>(thisNode);
+    }
 
     //Check for an assignment.
     thisNode = assignment();
     if(thisNode != nullptr){
-        thisProgram = stack->alloc<Program>(thisNode);
-        while(given[iter].getName() == ";"){
-            iter++;
-        }
-        return thisProgram;
+        return stack->alloc<Program>(thisNode);
     }
 
-    //Check for an expression.
-    thisNode = p0();
+    //Check for a landing point (for jump statements).
+    thisNode = landing();
     if(thisNode != nullptr){
-        thisNode = stack->alloc<Program>(thisNode);
-        while(given[iter].getName() == ";"){
-            iter++;
-        }
-        return thisProgram;
+        return stack->alloc<Program>(thisNode);
     }
+
+    // //Check for an expression.
+    // thisNode = p0();
+    // if(thisNode != nullptr){
+    //     return stack->alloc<Program>(thisNode);
+    // }
 
     //If nothing works, then there's an error. Return a nullptr.
-    return thisProgram;
+    return nullptr;
 
 }
 
 Node* Parser::program(){
-    Node* thisNode = nullptr;
     Program* thisProgram = nullptr;
     Program* start = stack->alloc<Program>(nullptr);
     Program* current = start;
-    bool passed = false;
 
-    //Check for an assignment;
-    if(!passed){
-        thisNode = assignment();
-        if(thisNode != nullptr){
-            current->head = thisProgram = stack->alloc<Program>(thisNode);
-            while(given[iter].getName() == ";"){
-                iter++;
-            }
-            passed = true;
-        }
+    //Get the first statement in the program.
+    current->head = thisProgram = programList();
+    int statement = 1;
+
+    //Extremely basic debugger.
+    if(thisProgram == nullptr){
+        std::cout << "There has been an error in the parser.\nCheck the " + std::to_string(statement) + "th statement.\n";
+        return nullptr;
     }
 
-    //Check for an expression;
-    if(!passed){
-        thisNode = p0();
-        if(!passed && thisNode != nullptr){
-            current->head = thisProgram = stack->alloc<Program>(thisNode);
-            while(given[iter].getName() == ";"){
-                iter++;
-            }
-            passed = true;
-        }
-    }
-    
-    while(thisProgram != nullptr){
+    //Get all statements in the program.
+    while(thisProgram != nullptr){  
         //If all tokens have been consumed, then terminate parsing.
         if(given.size() == iter){
             break;
@@ -79,13 +67,10 @@ Node* Parser::program(){
         //Check for another statement.
         //A nullptr means there has been an error.
         thisProgram = programList();
+        statement++;
         if(thisProgram != nullptr){
             current->Append(thisProgram);
             current = current->next;
-        } else {
-            printf("There has been an error in the parser.\nCheck Parser::program()");
-            //An error has occured in the parser.
-            return nullptr;
         }
     }
 
@@ -94,14 +79,27 @@ Node* Parser::program(){
 }
 
 Node* Parser::assignment(){
-    Node* left = initialize();        
+    Node* left = nullptr;        
     Node* right = nullptr;
     Node* initial = stack->peek<Node>();
+    int current = iter;
 
-    //Check for a basic reassignment to an existing variable.
-    if(left == nullptr && given[iter].type == FloridaType::Identifier){
-        left = stack->alloc<Variable>("Null", given[iter].name);
+    left = initialize();
+    //Check for and increment for the semicolon if there is one.
+    if(left != nullptr && given[iter].name == ";"){
         iter++;
+        return left;
+    }
+
+    //If it is not an initialization, then it should be a variable.
+    if(left == nullptr){
+        left = variable();
+    }
+
+    //If it's still a nullptr, then it's not an assignment at all.
+    //Rewind the parser and try for another statement.
+    if(left == nullptr){
+        return nullptr;
     }
 
     //if an assignment is found
@@ -109,44 +107,97 @@ Node* Parser::assignment(){
         iter++;
         //Increment the iterator, and then get p0().
         right = p0();
-        if(right == nullptr){
-            std::cout << "Error: No assignable expression was found.";
+        if(right != nullptr){
+            //Check for and increment for the semicolon if there is one.
+            //Otherwise, there is an error.
+            if(given[iter].name == ";"){
+                iter++;
+                return stack->alloc<Assignment>(left, right);
+            } else {
+                stack->dealloc(left);
+                std::cout << "Error: [Line: " + std::to_string(given[iter - 1].row) + "]\n\tMissing semicolon.";
+                return nullptr;
+            }
         } else {
-            return stack->alloc<Assignment>(left, right);
+            std::cout << "Error: [Line: " + std::to_string(given[iter - 1].row) + "]\n\tNo assignable expression was found.";
+            stack->dealloc(initial);
+            return nullptr;
         }
-    } else {
-        //If an assignment is not found, then return the initialization.
+    } 
+
+    //Increment for the semicolon, otherwise there's an error.
+    if(given[iter].name == ";"){
+        iter++;
         return left;
+    } else {
+        stack->dealloc(left);
+        std::cout << "Error: [Line: " + std::to_string(given[iter - 1].row) + "]\n\tMissing semicolon.";
+        return nullptr;
     }
 
     stack->dealloc(initial);
+    iter = current;
     return nullptr;
 
 }
 
-Node* Parser::initialize(){
-    //If there's not an identifier, then return a nullptr.
-    if(given[iter].type != FloridaType::Identifier){
+Node* Parser::variable(){
+    //Check for the edge case that it is a landing point in code.
+    if(given[iter].type == FloridaType::Identifier && given[iter + 1].type != FloridaType::Identifier && given[iter + 1].name != ":"){
+        //Increment for the variable.
+        iter++;
+        return stack->alloc<Variable>(given[iter - 1].name);
+    } else {
         return nullptr;
     }
-    //Otherwise, try to find an initialization or an identifier.
+}
 
-    std::string adjective = given[iter].name;
-    iter++;
-
-    //Check for a second identifier, otherwise it's a reassignment.
-    if(given[iter].type == FloridaType::Identifier){
-        std::string name = given[iter].name;
+Node* Parser::initialize(){
+    //Check to see if there are two identifiers,
+    //otherwise it is not an initialization.
+    if(given[iter].type == FloridaType::Identifier && given[iter + 1].type == FloridaType::Identifier){
+        //Increment for the adjective.
         iter++;
-
-        return stack->alloc<Initialize>(adjective, name);
+        //Increment for the variable name.
+        iter++;
+        return stack->alloc<Initialize>(given[iter - 2].name, given[iter - 1].name);
     } else {
-        iter--;
         return nullptr;
     }
 
 }
 
+Node* Parser::jump(){
+    if((given[iter].name == "goto") && (given[iter + 1].type == FloridaType::Identifier) && given[iter + 2].name == ";"){
+        //Increment for seeing goto.
+        iter++;
+        //Increment for seeing the landing line.
+        iter++;
+        //Increment for the semicolon.
+        iter++;
+
+        return stack->alloc<Goto>(given[iter - 2].name);
+
+    }
+
+    //Something went wrong somewhere.
+    return nullptr;
+}
+
+Node* Parser::landing(){
+    if((given[iter].type == FloridaType::Identifier) & (given[iter + 1].name == ":")){
+        //Increment for the identifier.
+        iter++;
+        //Increment for the colon.
+        iter++;
+
+        return stack->alloc<Landing>(given[iter - 2].name);
+
+    }
+
+    //Something has gone wrong.
+    return nullptr;
+}
 
 
 //Mathy stuff
@@ -154,9 +205,14 @@ Node* Parser::p0(){
     Node* left = p1();
     std::string current = given[iter].getName();
 
+    //Check for + or - operators between p1() expressions.
     while(current == "+" || current == "-"){
         iter++;
         Node* right = p1();
+        //Check for any errors in the subexpression.
+        if(right == nullptr){
+            return nullptr;
+        }
         if(current == "+"){
             left = stack->alloc<Add>(left, right);
             current = given[iter].getName();
@@ -169,7 +225,8 @@ Node* Parser::p0(){
         }
     }
 
-    return left;    
+    return left;
+
 }
 
 Node* Parser::p1(){
@@ -216,7 +273,7 @@ Node* Parser::p2(){
         return expression;
     }
     if(given[iter].getType() == FloridaType::Identifier){
-        Variable* thisVariable = stack->alloc<Variable>("Null", given[iter].getName());
+        Variable* thisVariable = stack->alloc<Variable>(given[iter].getName());
         iter++;     
 
         return thisVariable;

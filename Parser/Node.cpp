@@ -25,10 +25,6 @@
         }
     }
 
-    std::string Program::ToPostfix(){
-        return head->ToPostfix() + "\n" + next->ToPostfix();
-    }
-
     void Program::GetVariables(std::vector<Association>& inVector){
         head->GetVariables(inVector);
         if(next != nullptr){
@@ -59,10 +55,6 @@
         return left->ToString() + " = " + right->ToString();
     }
 
-    std::string Assignment::ToPostfix(){
-        return left->ToPostfix() + right->ToPostfix() + "= ";
-    }
-
     void Assignment::GetVariables(std::vector<Association>& inVector){
         left->GetVariables(inVector);
         right->GetVariables(inVector);
@@ -87,10 +79,6 @@
 
     std::string Add::ToString(){
         return left->ToString() + " + " + right->ToString();
-    }
-
-    std::string Add::ToPostfix(){
-        return left->ToPostfix() + right->ToPostfix() + "+ ";
     }
 
     void Add::GetVariables(std::vector<Association>& inVector){
@@ -120,10 +108,6 @@
         return left->ToString() + " - " + right->ToString();
     }
 
-    std::string Subtract::ToPostfix(){
-        return left->ToPostfix() + right->ToPostfix() + "- ";
-    }
-
     void Subtract::GetVariables(std::vector<Association>& inVector){    
         left->GetVariables(inVector);
         right->GetVariables(inVector);
@@ -150,10 +134,6 @@
     std::string Multiply::ToString(){
         return left->ToString() + " * " + right->ToString();
     }
-
-    std::string Multiply::ToPostfix(){
-        return left->ToPostfix() + right->ToPostfix() + "* ";
-    } 
 
     void Multiply::GetVariables(std::vector<Association>& inVector){
         left->GetVariables(inVector);
@@ -182,10 +162,6 @@
         return left->ToString() + " / " + right->ToString();
     }
 
-    std::string Divide::ToPostfix(){
-        return left->ToPostfix() + right->ToPostfix() + "/ ";
-    }
-
     void Divide::GetVariables(std::vector<Association>& inVector){
         left->GetVariables(inVector);
         right->GetVariables(inVector);
@@ -212,10 +188,6 @@
         return "(" + subexpression->ToString() + ")";
     }
 
-    std::string Parentheses::ToPostfix(){
-        return subexpression->ToPostfix();
-    }
-
     void Parentheses::GetVariables(std::vector<Association>& inVector){
         subexpression->GetVariables(inVector);
     }
@@ -239,10 +211,6 @@
         return "-" + right->ToString();
     }
 
-    std::string Negative::ToPostfix(){
-        return right->ToPostfix() + "NEG ";
-    }
-
     void Negative::GetVariables(std::vector<Association>& inVector){
         right->GetVariables(inVector);
     }
@@ -260,20 +228,14 @@
 
 //Variable
     Variable::Variable(){
-        adjective = "";
         name = "";
     }
 
-    Variable::Variable(std::string inAdjective, std::string inString){
-        adjective = inAdjective;
+    Variable::Variable(std::string inString){
         name = inString;
     }
 
     std::string Variable::ToString(){
-        return name;
-    }
-
-    std::string Variable::ToPostfix(){
         return name;
     }
 
@@ -322,10 +284,6 @@
         return name;
     }
 
-    std::string Initialize::ToPostfix(){
-        return name;
-    }
-
     void Initialize::FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables){
         //Null
     }
@@ -364,10 +322,6 @@
         return std::to_string(value);
     }
 
-    std::string Fixed64::ToPostfix(){
-        return std::to_string(value) + " ";
-    }
-
     void Fixed64::GetVariables(std::vector<Association>& inVector){
         //Null
     }
@@ -383,17 +337,12 @@
 
 
 //Goto
-    Goto::Goto(std::string inName, std::string inWhere){
+    Goto::Goto(std::string inName){
         name = inName;
-        where = inWhere;
     }
 
     std::string Goto::ToString(){
         return name + ": ";
-    }
-
-    std::string Goto::ToPostfix(){
-        return "Jump(" + where + ")";
     }
 
     void Goto::GetVariables(std::vector<Association>& inVector){
@@ -402,9 +351,11 @@
 
     void Goto::FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables){
         int64_t position = -1;
+        //Find the variable in the symbols table and adjust its position.
         for(size_t i = 0; i < inVariables.size(); i++){
             if(inVariables[i].name == name){
-                position = i;
+                position = inInstructions.size();
+                inVariables[i].position = position;
                 break;
             }
         }
@@ -416,4 +367,43 @@
     int64_t Goto::GetPosition(std::vector<Association>& inVariables){
         return -1;
     }
-    
+
+
+
+
+//Landing
+    Landing::Landing(std::string inName){
+        name = inName;
+    }
+
+    std::string Landing::ToString(){
+        return name + ":";
+    }
+
+    void Landing::GetVariables(std::vector<Association>& inVector){
+        inVector.push_back(Association("Null", name, -1));
+    }
+
+    void Landing::FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables){
+        int64_t position = -1;
+        for(size_t i = 0; i < inVariables.size(); i++){
+            if(name == inVariables[i].name){
+                position = i;
+                break;
+            }
+        }
+        //If the position is not found, an error has occured.
+        if(position == -1){
+            printf("Error: A goto landing point wasn't registered.\n");
+            inInstructions.clear();
+            return;
+        }
+
+        //Adjust the landing point in the symbols table.
+        inVariables[position].position = inInstructions.size(); 
+
+    }
+
+    int64_t Landing::GetPosition(std::vector<Association>& inVariables){
+        return -1;
+    }

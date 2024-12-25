@@ -1,4 +1,6 @@
 (*The fixed64 adjective isn't necessary*)
+here:
 fixed64 x = 6;
 fixed64 y = x * x + x;
 x = 16;
+goto here;

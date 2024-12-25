@@ -35,7 +35,9 @@ public:
     template<typename T>
     void dealloc(T* ptr) {
         if (ptr != head) {
-            current = (void*) ((long long) current - sizeof(T));
+            std::size_t bytes_needed = sizeof(T);
+            bytes_needed += 8 - (bytes_needed % 8);
+            current = (void*) ((std::size_t) current - bytes_needed);
             ptr->~T(); // Call the destructor explicitly
         }
     }
