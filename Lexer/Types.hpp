@@ -14,6 +14,9 @@ enum FloridaType{
     //Compiler commands will let the users have some control over the compiler(s).
     Hash,
 
+    //Booleans
+    Bool,
+
     //Numbers
     ufixed8, ufixed16, ufixed32, ufixed64,
     fixed8, fixed16, fixed32, fixed64,

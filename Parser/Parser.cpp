@@ -18,6 +18,12 @@ Program* Parser::programList(){
         return stack->alloc<Program>(thisNode);
     }
 
+    //Check for an if statement.
+    thisNode = If();
+    if(thisNode != nullptr){
+        return stack->alloc<Program>(thisNode);
+    }
+
     //Check for an assignment.
     thisNode = assignment();
     if(thisNode != nullptr){
@@ -184,6 +190,49 @@ Node* Parser::jump(){
     return nullptr;
 }
 
+Node* Parser::If(){
+    if(given[iter].name == "if"){
+        //Increment for the if.
+        iter++;
+
+        bool condition = false;
+        Node* body = nullptr;
+
+        //Set up the condition.
+        if((given[iter].name == "True") || (given[iter].name == "False")){
+            if(given[iter].name == "True"){
+                //Increment for ).
+                iter++;
+                condition = true;
+            } else {
+                //Increment for ).
+                iter++;
+                condition = false;
+            }
+        } else {
+            //Decrement for the error.
+            iter--;
+            iter--;
+            return nullptr;
+        }
+
+        //Check for the body.   
+        if(given[iter].name == "{"){
+            iter++;
+            body = programList();
+            if(body != nullptr){
+                return stack->alloc<IfObject>(condition, body);
+            }
+        } else {
+            return nullptr;
+        }
+
+
+    }
+}
+
+
+
 Node* Parser::landing(){
     if((given[iter].type == FloridaType::Identifier) & (given[iter + 1].name == ":")){
         //Increment for the identifier.
@@ -253,6 +302,7 @@ Node* Parser::p1(){
 }
 
 Node* Parser::p2(){
+    //Check for negations
     std::string current = given[iter].getName();
     if(current == "-"){
         Node* expression;
@@ -262,6 +312,7 @@ Node* Parser::p2(){
 
         return expression;
     }
+    //Check for expression within parentheses.
     if(current == "("){
         Node* expression;
         //Increment for the left parenthesis;
@@ -272,17 +323,27 @@ Node* Parser::p2(){
 
         return expression;
     }
+    //Check for variables.
     if(given[iter].getType() == FloridaType::Identifier){
         Variable* thisVariable = stack->alloc<Variable>(given[iter].getName());
         iter++;     
 
         return thisVariable;
     }
+    //Check for numbers.
     if(given[iter].type == FloridaType::fixed64){
         Fixed64* number = stack->alloc<Fixed64>(given[iter].getName());
         iter++;
 
         return number;
+    }
+    //Check for booleans.
+    if(given[iter].name == "True" || given[iter].name == "False"){
+        if(given[iter].name == "True"){
+            stack->alloc<Boolean>(true);
+        } else {
+            stack->alloc<Boolean>(false);
+        }
     }
 
     return nullptr;

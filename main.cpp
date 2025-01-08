@@ -71,14 +71,12 @@ int main(){
 		Operation currInst = instructionVector[i].oper;
 		switch (currInst){
 			case Operation::jump:
-
+				//Subtract one, because of the i++.
+				i = instructionVector[i].literal.fixed64 - 1;
 				continue;
 			case Operation::fetch:
 				//Push the value into the stack.
 				computationVector[position++] = computationVector[instructionVector[i].literal.fixed64];
-				continue;
-			case Operation::pop:
-				position--;
 				continue;
 			case Operation::assign:
 				if(instructionVector[i].literal.fixed64 == -1){

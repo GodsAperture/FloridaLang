@@ -313,24 +313,27 @@
 
 
 
-//Fixed64
-    Fixed64::Fixed64(std::string input){
-        value = std::stoll(input);
+//If
+    IfObject::IfObject(Node* inCondition, Node* inBody){
+        condition = inCondition;
+        body = inBody;
     }
 
-    std::string Fixed64::ToString(){
-        return std::to_string(value);
+    std::string IfObject::ToString(){
+        return "if(" + condition->ToString() + "){\n\t" + body->ToString() + "\n}";
     }
 
-    void Fixed64::GetVariables(std::vector<Association>& inVector){
-        //Null
+    void IfObject::FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables){
+        condition->FLVMCodeGen(inInstructions, inVariables);
+        inInstructions.push_back(Instruction(cjump, -1));
+        body->FLVMCodeGen(inInstructions, inVariables);
     }
 
-    void Fixed64::FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables){
-        inInstructions.push_back(Instruction(Operation::push, value));
+    void IfObject::GetVariables(std::vector<Association>& inVector){
+        //Do nothing.
     }
 
-    int64_t Fixed64::GetPosition(std::vector<Association>& inVariables){
+    int64_t IfObject::GetPosition(std::vector<Association>& inVariables){
         return -1;
     }
 
@@ -346,7 +349,7 @@
     }
 
     void Goto::GetVariables(std::vector<Association>& inVector){
-        inVector.push_back(Association("Null", name, inVector.size()));
+        //Do nothing
     }
 
     void Goto::FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables){
@@ -354,8 +357,7 @@
         //Find the variable in the symbols table and adjust its position.
         for(size_t i = 0; i < inVariables.size(); i++){
             if(inVariables[i].name == name){
-                position = inInstructions.size();
-                inVariables[i].position = position;
+                position = inVariables[i].position;
                 break;
             }
         }
@@ -368,6 +370,31 @@
         return -1;
     }
 
+
+
+//Cgoto
+    Cgoto::Cgoto(Node* inCondition, Node* inBody){
+        condition = inCondition;
+        body = inBody;
+    }
+
+    std::string Cgoto::ToString(){
+        return "";
+    }
+
+    void Cgoto::GetVariables(std::vector<Association>& inVector){
+        //Do nothing.
+    }
+
+    void Cgoto::FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables){
+        condition->FLVMCodeGen(inInstructions, inVariables);
+        inInstructions.push_back(Instruction(Operation::cjump, -1));
+        body->FLVMCodeGen(inInstructions, inVariables);
+    }
+
+    int64_t Cgoto::GetPosition(std::vector<Association>& inVariables){
+        return -1;
+    }
 
 
 
@@ -386,6 +413,7 @@
 
     void Landing::FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables){
         int64_t position = -1;
+        //
         for(size_t i = 0; i < inVariables.size(); i++){
             if(name == inVariables[i].name){
                 position = i;

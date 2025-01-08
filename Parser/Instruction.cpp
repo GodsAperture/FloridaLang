@@ -6,10 +6,10 @@
 
 enum Operation{
     fetch,
+    cjump,
     jump,
     initialize,
     assign,
-    pop,
     push,
     multiply,
     divide,
@@ -19,6 +19,9 @@ enum Operation{
 };
 
 union types{
+    //Booleans.
+    bool boolean;
+
     //Floating point values;
     double float64;
     float float32;

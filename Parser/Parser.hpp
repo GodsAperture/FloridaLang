@@ -34,8 +34,11 @@ public:
     Node* landing();        //where: std::string.
     Node* jumpIf();         //where: std::string, condition: boolean.
     Node* If();             //condition: boolean, body: program().
-    Node* For();            //
-    Node* While();
+    Node* For();            //statements: Node*, body: Node*.
+    Node* While();          //condition: Node*, body: Node*.
+
+//Boolean statements
+    Node* If();             //condition: Node*, body: Node*.
 
 //Mathematical expressions
     //0 priority
@@ -49,13 +52,10 @@ public:
     Node* divide();         //left: p2(), right: p1();
 
     //2 priority
-    Node* p2();
+    Node* p2();             //numbers, booleans.
     Node* parentheses();    //subexpression: p0();
     // Node* brackets();
     // Node* curly();
-
-    //3 priority
-    Node* p3();             //numbers...for now.
 
     Parser(std::vector<Token> inTokens, long size){
         given = inTokens;

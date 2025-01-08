@@ -247,13 +247,47 @@ public:
 
 };
 
+class Boolean : public Node{
+public:
+    bool value;
 
+    Boolean(bool inBool);
+    std::string ToString() override;
+    void GetVariables(std::vector<Association>& inVector) override;
+    void FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables) override;
+    int64_t GetPosition(std::vector<Association>& inVariables) override;
+};
+
+
+
+class IfObject : public Node{
+public:
+    Node* condition;
+    Node* body;
+
+    IfObject(Node* inCondition, Node* inBody);
+    std::string ToString() override;
+    void GetVariables(std::vector<Association>& inVector) override;
+    void FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables) override;
+    int64_t GetPosition(std::vector<Association>& inVariables) override;
+};
 
 class Goto : public Node{
 public:
     std::string name;
 
     Goto(std::string inName);
+    std::string ToString() override;
+    void GetVariables(std::vector<Association>& inVector) override;
+    void FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables) override;
+    int64_t GetPosition(std::vector<Association>& inVariables) override;
+};
+
+class Cgoto : public Node{
+    Node* condition;
+    Node* body;
+
+    Cgoto(Node* inCondition, Node* inBody);
     std::string ToString() override;
     void GetVariables(std::vector<Association>& inVector) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables) override;

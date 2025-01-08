@@ -1,6 +1,10 @@
-(*The fixed64 adjective isn't necessary*)
-here:
-fixed64 x = 6;
-fixed64 y = x * x + x;
-x = 16;
-goto here;
+fixed8 x = 20;
+fixed8 y = 0;
+boolean z = True;
+
+y = y + 1;
+x = x - 2;
+
+if(z){
+    x = x + y;
+}
