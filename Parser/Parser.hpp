@@ -37,9 +37,6 @@ public:
     Node* For();            //statements: Node*, body: Node*.
     Node* While();          //condition: Node*, body: Node*.
 
-//Boolean statements
-    Node* If();             //condition: Node*, body: Node*.
-
 //Mathematical expressions
     //0 priority
     Node* p0();

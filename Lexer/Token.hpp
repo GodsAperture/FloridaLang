@@ -15,6 +15,7 @@ public:
 
 	Token();
 	Token(FloridaType inType, char inChar, unsigned long inRow, unsigned long inColumn);
+	Token(FloridaType inType, std::string inName, unsigned long inRow, unsigned long inColumn);
 	
 	FloridaType getType();
 	std::string getName();

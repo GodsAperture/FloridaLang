@@ -3,6 +3,23 @@
 #include "StackAllocator.hpp"
 #include <iostream>
 
+bool isObject(FloridaType inType){
+	switch(inType){
+		case Bool:
+			return true;
+		case fixed1:
+			return true;
+		case fixed2:
+			return true;
+		case fixed4:
+			return true;
+		case fixed8:
+			return true;
+		default:
+			return false;
+	}
+}
+
 Node* Parser::parse(){
     //If it's not the nullptr, then it's successful.
     return this->program();
@@ -121,11 +138,11 @@ Node* Parser::assignment(){
                 return stack->alloc<Assignment>(left, right);
             } else {
                 stack->dealloc(left);
-                std::cout << "Error: [Line: " + std::to_string(given[iter - 1].row) + "]\n\tMissing semicolon.";
+                std::cout << "Error: [Line: " + std::to_string(given[iter - 1].row) + "]\n\tMissing semicolon.\n";
                 return nullptr;
             }
         } else {
-            std::cout << "Error: [Line: " + std::to_string(given[iter - 1].row) + "]\n\tNo assignable expression was found.";
+            std::cout << "Error: [Line: " + std::to_string(given[iter - 1].row) + "]\n\tNo assignable expression was found.\n";
             stack->dealloc(initial);
             return nullptr;
         }
@@ -135,10 +152,6 @@ Node* Parser::assignment(){
     if(given[iter].name == ";"){
         iter++;
         return left;
-    } else {
-        stack->dealloc(left);
-        std::cout << "Error: [Line: " + std::to_string(given[iter - 1].row) + "]\n\tMissing semicolon.";
-        return nullptr;
     }
 
     stack->dealloc(initial);
@@ -159,9 +172,9 @@ Node* Parser::variable(){
 }
 
 Node* Parser::initialize(){
-    //Check to see if there are two identifiers,
+    //Check to see if there is an object and an identifier,
     //otherwise it is not an initialization.
-    if(given[iter].type == FloridaType::Identifier && given[iter + 1].type == FloridaType::Identifier){
+    if(isObject(given[iter].type) && given[iter + 1].type == FloridaType::Identifier){
         //Increment for the adjective.
         iter++;
         //Increment for the variable name.
@@ -191,44 +204,47 @@ Node* Parser::jump(){
 }
 
 Node* Parser::If(){
-    if(given[iter].name == "if"){
-        //Increment for the if.
+    Node* current = stack->peek<Node>();
+
+    if(given[iter].name == "if" && given[iter + 1].name == "("){
+        //Increment for the if and (.
+        iter++;
         iter++;
 
-        bool condition = false;
-        Node* body = nullptr;
+        Node* condition = p0();
+        //Increment for the ).
+        iter++;
+        Program* body = nullptr;
 
-        //Set up the condition.
-        if((given[iter].name == "True") || (given[iter].name == "False")){
-            if(given[iter].name == "True"){
-                //Increment for ).
-                iter++;
-                condition = true;
-            } else {
-                //Increment for ).
-                iter++;
-                condition = false;
-            }
-        } else {
-            //Decrement for the error.
-            iter--;
-            iter--;
+        //Check to see if the condition is a statement.
+        if(condition == nullptr){
             return nullptr;
         }
 
         //Check for the body.   
         if(given[iter].name == "{"){
             iter++;
+
             body = programList();
-            if(body != nullptr){
-                return stack->alloc<IfObject>(condition, body);
+            Program* secondBody = body;
+            //Check for all statements.
+            while(secondBody != nullptr){
+                secondBody->Append(programList());
+                secondBody = secondBody->next;
             }
-        } else {
-            return nullptr;
+
+            return stack->alloc<IfObject>(condition, body);
+
         }
 
+        //If nothing works, this isn't the in the correct format.
+        stack->dealloc(current);
+        return nullptr;
 
     }
+
+    return nullptr;
+
 }
 
 
@@ -331,18 +347,20 @@ Node* Parser::p2(){
         return thisVariable;
     }
     //Check for numbers.
-    if(given[iter].type == FloridaType::fixed64){
-        Fixed64* number = stack->alloc<Fixed64>(given[iter].getName());
+    if(given[iter].type == FloridaType::fixed8){ 
+        Fixed8* number = stack->alloc<Fixed8>(given[iter].getName());
         iter++;
 
         return number;
     }
     //Check for booleans.
-    if(given[iter].name == "True" || given[iter].name == "False"){
+    if(given[iter].type == FloridaType::Bool){
         if(given[iter].name == "True"){
-            stack->alloc<Boolean>(true);
+            iter++;
+            return stack->alloc<Boolean>(true);
         } else {
-            stack->alloc<Boolean>(false);
+            iter++;
+            return stack->alloc<Boolean>(false);
         }
     }
 

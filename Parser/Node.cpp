@@ -320,13 +320,27 @@
     }
 
     std::string IfObject::ToString(){
-        return "if(" + condition->ToString() + "){\n\t" + body->ToString() + "\n}";
+        return "if(" + condition->ToString() + "){\n" + body->ToString() + "\n}";
     }
 
     void IfObject::FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables){
+        size_t start;
+        size_t end;
+        
         condition->FLVMCodeGen(inInstructions, inVariables);
         inInstructions.push_back(Instruction(cjump, -1));
+        //Find the start of the if statement in the instruction set.
+        start = inInstructions.size();
+
+        
         body->FLVMCodeGen(inInstructions, inVariables);
+        //Find the end of the if statement in the instruction set.
+        end = inInstructions.size();
+
+        //Adjust the size of the body, so that I can jump to
+        //the correct place in the instruction set.
+        //Subtract one because the VM will increment.
+        inInstructions[start - 1] = Instruction(cjump, end - start);
     }
 
     void IfObject::GetVariables(std::vector<Association>& inVector){

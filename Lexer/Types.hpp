@@ -18,13 +18,13 @@ enum FloridaType{
     Bool,
 
     //Numbers
-    ufixed8, ufixed16, ufixed32, ufixed64,
-    fixed8, fixed16, fixed32, fixed64,
-    float32, float64,
+    ufixed1, ufixed2, ufixed4, ufixed8,
+    fixed1, fixed2, fixed4, fixed8,
+    float4, float8,
     ufixedn, fixedn, floatn,
 
     //scifix numbers are scientific notation numbers such as 2.718e0 and 1.234E32
-    scifix64, scifixn,
+    scifix8, scifixn,
     imaginary,
 
     //Quotations marks will not be overloadable. They are exclusively for strings.
@@ -33,7 +33,7 @@ enum FloridaType{
     //Another example is that if A is a matrix, |A| will return the absolute values of
     //its entries, but ||A|| will return the determinant.
     
-    //Paired Operators: (, ), [, ], {, }, |, "
+    //Paired Operators: (, ), [, ], {, }, |
     POperatorL, POperatorR,
 
     //Operators are strings of non-alphanumerical characters. 

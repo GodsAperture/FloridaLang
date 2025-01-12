@@ -20,7 +20,6 @@
 		return finalString;
 	}
 
-
 int main(){
 	
 	//Load the sample file into a string.
@@ -46,6 +45,7 @@ int main(){
 	//terminate the program and print out the errors.
 	if(FloridaParser.error){
 		//TODO: Set up error handler.
+		printf("There was an error.");
 		return -1;
 	}
 
@@ -65,11 +65,20 @@ int main(){
 	types left;
 	types right;
 
+	std::cout << result->ToString() << "\n";
+
 	//x++ returns x + 1;
 	//++x returns x;
 	for(size_t i = 0; i < instructionVector.size(); i++){
 		Operation currInst = instructionVector[i].oper;
 		switch (currInst){
+			case Operation::cjump:
+				//If it's true, then don't skip
+				if(!computationVector[position - 1].boolean){
+					//This 
+					i += instructionVector[i].literal.fixed64;
+				}
+				continue;
 			case Operation::jump:
 				//Subtract one, because of the i++.
 				i = instructionVector[i].literal.fixed64 - 1;
@@ -128,8 +137,6 @@ int main(){
 				break;
 		}
 	}
-
-
 
 	return 0;
 }

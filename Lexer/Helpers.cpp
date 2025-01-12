@@ -74,5 +74,5 @@ bool PagerQ(char in){
 
 //Check if the given character is any of the operator characters.
 bool OperatorQ(char in){
-    return !AlphaQ(in) && !NumberQ(in) && !PagerQ(in) && in != ';' && in != ',' && in != '_' && in != '"';
+    return !AlphaQ(in) && !NumberQ(in) && !PagerQ(in) && !POperatorLQ(in) && !POperatorRQ(in) && in != ';' && in != ',' && in != '_' && in != '"';
 }

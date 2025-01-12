@@ -221,11 +221,11 @@ public:
 
 };
 
-class Fixed64 : public Node{
+class Fixed8 : public Node{
 public:
     int64_t value;
 
-    Fixed64(std::string input);
+    Fixed8(std::string input);
     std::string ToString() override;
     void GetVariables(std::vector<Association>& inVector) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables) override;

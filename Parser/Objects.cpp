@@ -1,23 +1,23 @@
 #include "Node.hpp"
 
 //Fixed64
-    Fixed64::Fixed64(std::string input){
+    Fixed8::Fixed8(std::string input){
         value = std::stoll(input);
     }
 
-    std::string Fixed64::ToString(){
+    std::string Fixed8::ToString(){
         return std::to_string(value);
     }
 
-    void Fixed64::GetVariables(std::vector<Association>& inVector){
+    void Fixed8::GetVariables(std::vector<Association>& inVector){
         //Null
     }
 
-    void Fixed64::FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables){
+    void Fixed8::FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables){
         inInstructions.push_back(Instruction(Operation::push, value));
     }
 
-    int64_t Fixed64::GetPosition(std::vector<Association>& inVariables){
+    int64_t Fixed8::GetPosition(std::vector<Association>& inVariables){
         return -1;
     }
 
@@ -40,7 +40,7 @@
         types thing;
         thing.boolean = value;
 
-        inInstructions.push_back(Instruction(FloridaType::Bool, thing));
+        inInstructions.push_back(Instruction(FloridaType::Bool, Operation::push, thing));
     }
 
     int64_t Boolean::GetPosition(std::vector<Association>& inVariables){

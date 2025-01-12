@@ -56,5 +56,11 @@ public:
         literal = inLiteral;
     }
 
+    Instruction(FloridaType inType, Operation inOperation, types inLiteral){
+        type = inType;
+        oper = inOperation;
+        literal = inLiteral;
+    }
+
 };
 #endif

@@ -2,9 +2,7 @@ fixed8 x = 20;
 fixed8 y = 0;
 boolean z = True;
 
-y = y + 1;
-x = x - 2;
-
 if(z){
     x = x + y;
+    y = 2 * x;
 }

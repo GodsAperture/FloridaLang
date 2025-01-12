@@ -20,6 +20,14 @@ Token::Token(FloridaType inType, char inChar, unsigned long inRow, unsigned long
 
 };
 
+//Tertiary Token constructor.
+Token::Token(FloridaType inType, std::string inName, unsigned long inRow, unsigned long inColumn){
+    type = inType;
+    name = inName;
+    row = inRow;
+    column = inColumn;
+}
+
 
 
 //Return the Token's 'type'.

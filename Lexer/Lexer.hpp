@@ -20,6 +20,7 @@ public:
 	//Grabs the next character.
 	char get();
 	void get(char& inChar);
+	bool compare(std::string inString);
 	void unget();
 	char peek();
 };
