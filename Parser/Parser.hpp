@@ -34,6 +34,8 @@ public:
     Node* landing();        //where: std::string.
     Node* jumpIf();         //where: std::string, condition: boolean.
     Node* If();             //condition: boolean, body: program().
+
+//Loops
     Node* For();            //statements: Node*, body: Node*.
     Node* While();          //condition: Node*, body: Node*.
 

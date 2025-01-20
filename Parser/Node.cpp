@@ -323,6 +323,10 @@
         return "if(" + condition->ToString() + "){\n" + body->ToString() + "\n}";
     }
 
+    void IfObject::GetVariables(std::vector<Association>& inVector){
+        //Do nothing.
+    }
+
     void IfObject::FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables){
         size_t start;
         size_t end;
@@ -331,7 +335,6 @@
         inInstructions.push_back(Instruction(cjump, -1));
         //Find the start of the if statement in the instruction set.
         start = inInstructions.size();
-
         
         body->FLVMCodeGen(inInstructions, inVariables);
         //Find the end of the if statement in the instruction set.
@@ -340,14 +343,77 @@
         //Adjust the size of the body, so that I can jump to
         //the correct place in the instruction set.
         //Subtract one because the VM will increment.
-        inInstructions[start - 1] = Instruction(cjump, end - start);
-    }
-
-    void IfObject::GetVariables(std::vector<Association>& inVector){
-        //Do nothing.
+        inInstructions[start - 1] = Instruction(cjump, end);
     }
 
     int64_t IfObject::GetPosition(std::vector<Association>& inVariables){
+        return -1;
+    }
+
+
+
+//For
+    ForLoop::ForLoop(Node* inInitialization, Node* inCondition, Node* inIncrement, Node* inBody){
+        initialization = inInitialization;
+        condition = inCondition;
+        increment = inIncrement;
+        body = inBody;
+    }
+
+    std::string ForLoop::ToString(){
+        std::string part1 = "";
+        std::string part2 = "";
+        std::string part3 = "";
+
+        if(initialization != nullptr){
+            part1 = initialization->ToString();
+        }
+
+        if(condition != nullptr){
+            part2 = " " + body->ToString();
+        }
+
+        if(increment != nullptr){
+            part3 = " " + increment->ToString();
+        }
+
+        return "for(" + part1 + ";" + part2 + ";" + part3 + ")\n{\n" + body->ToString() + "\n}";
+    }
+
+    void ForLoop::GetVariables(std::vector<Association>& inVector){
+        //Do nothing.
+    }
+
+    void ForLoop::FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables){
+        size_t start = inInstructions.size();
+        size_t middle = 0;
+        
+        if(initialization != nullptr){
+            initialization->FLVMCodeGen(inInstructions, inVariables);
+        }
+
+        if(increment != nullptr){
+            increment->FLVMCodeGen(inInstructions, inVariables);
+        }
+
+        //If there's not a condition, then append true.
+        if(condition != nullptr){
+            condition->FLVMCodeGen(inInstructions, inVariables);
+            inInstructions.push_back(Instruction(Operation::cjump, 0));
+            middle = inInstructions.size();
+        }
+
+        body->FLVMCodeGen(inInstructions, inVariables);
+
+        size_t end = inInstructions.size();
+
+        inInstructions[middle - 1].literal.fixed64 = end;
+
+        inInstructions.push_back(Instruction(Operation::jump, start));
+
+    }
+
+    int64_t ForLoop::GetPosition(std::vector<Association>& inVariables){
         return -1;
     }
 

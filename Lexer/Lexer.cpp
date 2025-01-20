@@ -44,6 +44,12 @@ bool Lexer::compare(std::string inString){
 		}
 	}
 
+	//Catch edge cases like such as:
+	//forLoop is not the same as for.
+	if(isalnum(file[count])){
+		return false;
+	}
+
 	//Increment count and row by the size of the string.
 	count += inString.size();
 	row += inString.size();
@@ -264,6 +270,8 @@ Token Lexer::next() {
 					inToken.changeType(FloridaType::ufixed8);
 
 					return inToken;
+				} else {
+					throw new BadNumberFormatException(inToken.getName() + "u8", column, row);
 				}
 			//This case handles floating point values.
 			case 'f':
@@ -280,6 +288,8 @@ Token Lexer::next() {
 					inToken.changeType(FloridaType::float8);
 
 					return inToken;
+				} else {
+					throw new BadNumberFormatException(inToken.getName() + "f8", column, row);
 				}
 			//This case handles fixed point values.
 			case 'i':
@@ -297,20 +307,22 @@ Token Lexer::next() {
 
 					return inToken;
 				}
-				//Check to see if it's 32;
-				if(this->peek() == '3'){
+				//Check to see if it's 4;
+				if(this->peek() == '4'){
 					this->get();
 
 					inToken.changeType(FloridaType::fixed4);
 
 					return inToken;
 				}
-				//Check to see if it's 64;
-				if(this->peek() == '6'){
+				//Check to see if it's 8;
+				if(this->peek() == '8'){
 					this->get();
 					inToken.changeType(FloridaType::fixed8);
 
 					return inToken;
+				} else {
+					throw new BadNumberFormatException(inToken.getName() + "i4", column, row);
 				}
 			case 'e':
 				if(AlphaQ(this->peek()) || this->peek() == '-'){

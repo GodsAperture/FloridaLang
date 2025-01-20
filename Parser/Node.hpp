@@ -272,6 +272,22 @@ public:
     int64_t GetPosition(std::vector<Association>& inVariables) override;
 };
 
+class ForLoop : public Node{
+public:
+    Node* initialization;
+    Node* condition;
+    Node* increment;
+    Node* body;
+
+    ForLoop(Node* inInitialization, Node* inCondition, Node* inIncrement, Node* inBody);
+    std::string ToString() override;
+    void GetVariables(std::vector<Association>& inVector) override;
+    void FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables) override;
+    int64_t GetPosition(std::vector<Association>& inVariables) override;
+
+
+};
+
 class Goto : public Node{
 public:
     std::string name;

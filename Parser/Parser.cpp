@@ -35,6 +35,12 @@ Program* Parser::programList(){
         return stack->alloc<Program>(thisNode);
     }
 
+    //Check for a for loop.
+    thisNode = For();
+    if(thisNode != nullptr){
+        return stack->alloc<Program>(thisNode);
+    }
+
     //Check for an if statement.
     thisNode = If();
     if(thisNode != nullptr){
@@ -60,6 +66,7 @@ Program* Parser::programList(){
     // }
 
     //If nothing works, then there's an error. Return a nullptr.
+    std::cout << "There was an unparseable expression.\n";
     return nullptr;
 
 }
@@ -74,10 +81,10 @@ Node* Parser::program(){
     int statement = 1;
 
     //Extremely basic debugger.
-    if(thisProgram == nullptr){
-        std::cout << "There has been an error in the parser.\nCheck the " + std::to_string(statement) + "th statement.\n";
-        return nullptr;
-    }
+    // if(thisProgram == nullptr){
+    //     std::cout << "There has been an error in the parser.\nCheck the " + std::to_string(statement) + "th statement.\n";
+    //     return nullptr;
+    // }
 
     //Get all statements in the program.
     while(thisProgram != nullptr){  
@@ -101,6 +108,8 @@ Node* Parser::program(){
 
 }
 
+
+
 Node* Parser::assignment(){
     Node* left = nullptr;        
     Node* right = nullptr;
@@ -108,9 +117,8 @@ Node* Parser::assignment(){
     int current = iter;
 
     left = initialize();
-    //Check for and increment for the semicolon if there is one.
+    //Check for the semicolon if there is one.
     if(left != nullptr && given[iter].name == ";"){
-        iter++;
         return left;
     }
 
@@ -131,28 +139,14 @@ Node* Parser::assignment(){
         //Increment the iterator, and then get p0().
         right = p0();
         if(right != nullptr){
-            //Check for and increment for the semicolon if there is one.
-            //Otherwise, there is an error.
-            if(given[iter].name == ";"){
-                iter++;
-                return stack->alloc<Assignment>(left, right);
-            } else {
-                stack->dealloc(left);
-                std::cout << "Error: [Line: " + std::to_string(given[iter - 1].row) + "]\n\tMissing semicolon.\n";
-                return nullptr;
-            }
+            iter++;
+            return stack->alloc<Assignment>(left, right);
         } else {
             std::cout << "Error: [Line: " + std::to_string(given[iter - 1].row) + "]\n\tNo assignable expression was found.\n";
             stack->dealloc(initial);
             return nullptr;
         }
     } 
-
-    //Increment for the semicolon, otherwise there's an error.
-    if(given[iter].name == ";"){
-        iter++;
-        return left;
-    }
 
     stack->dealloc(initial);
     iter = current;
@@ -244,6 +238,47 @@ Node* Parser::If(){
     }
 
     return nullptr;
+
+}
+
+
+
+Node* Parser::For(){
+    //init is short for initialization.
+    Node* init = nullptr;
+    Node* condition = nullptr;
+    Node* increment = nullptr;
+    Node* body = nullptr;
+
+    if(given[iter].name != "for" || given[iter + 1].name != "("){
+        return nullptr;
+    }
+    //Incremente for the `for` and `(`.
+    iter++;
+    iter++;
+
+    //Check for an initilization/assignment.
+    init = assignment();
+    //Check for a condition.
+    condition = p0();
+    //Create the incrementer.
+    increment = assignment();
+    //Increment for the ')' and '{'.
+    iter++;
+    iter++;
+
+    //Get the body of the for loop.
+    body = programList();
+
+
+
+    if(body == nullptr){
+        printf("The body of the for loop is malformed.");
+        return nullptr;
+    } else {
+        //This is a full for loop.
+        return stack->alloc<ForLoop>(init, condition, increment, body);
+    }
 
 }
 
@@ -363,6 +398,9 @@ Node* Parser::p2(){
             return stack->alloc<Boolean>(false);
         }
     }
+    //Undetectable object found.
+    std::cout << given[iter].name + " is not an identifiable object.\nType number: " + std::to_string(given[iter].type) + "\n";
+    error = true;
 
     return nullptr;
 }

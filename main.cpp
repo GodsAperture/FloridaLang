@@ -45,7 +45,6 @@ int main(){
 	//terminate the program and print out the errors.
 	if(FloridaParser.error){
 		//TODO: Set up error handler.
-		printf("There was an error.");
 		return -1;
 	}
 
@@ -69,33 +68,33 @@ int main(){
 
 	//x++ returns x + 1;
 	//++x returns x;
-	for(size_t i = 0; i < instructionVector.size(); i++){
-		Operation currInst = instructionVector[i].oper;
+	for(size_t instNum = 0; instNum < instructionVector.size(); instNum++){
+		Operation currInst = instructionVector[instNum].oper;
 		switch (currInst){
 			case Operation::cjump:
 				//If it's true, then don't skip
 				if(!computationVector[position - 1].boolean){
-					//This 
-					i += instructionVector[i].literal.fixed64;
+					//This is to adjust the position of the instruction number.
+					instNum = instructionVector[instNum].literal.fixed64;
 				}
 				continue;
 			case Operation::jump:
 				//Subtract one, because of the i++.
-				i = instructionVector[i].literal.fixed64 - 1;
+				instNum = instructionVector[instNum].literal.fixed64 - 1;
 				continue;
 			case Operation::fetch:
 				//Push the value into the stack.
-				computationVector[position++] = computationVector[instructionVector[i].literal.fixed64];
+				computationVector[position++] = computationVector[instructionVector[instNum].literal.fixed64];
 				continue;
 			case Operation::assign:
-				if(instructionVector[i].literal.fixed64 == -1){
+				if(instructionVector[instNum].literal.fixed64 == -1){
 					printf("Error: bad assignment position\n");
 					return -1;
 				}
-				computationVector[instructionVector[i].literal.fixed64] = computationVector[position - 1];
+				computationVector[instructionVector[instNum].literal.fixed64] = computationVector[position - 1];
 				continue;
 			case Operation::push:
-				computationVector[position++] = instructionVector[i].literal;
+				computationVector[position++] = instructionVector[instNum].literal;
 				continue;
 			case Operation::add:
 				//Get the right operand;
@@ -129,14 +128,15 @@ int main(){
 				right = computationVector[--position];
 				//Get the left operand;
 				left = computationVector[--position];
-				//Operate and push;
+				//Operate and push;	
 				computationVector[position++].fixed64 = left.fixed64 / right.fixed64;
 				continue;
 			default:
-				printf("Error: Unknown instruction given.\n");
-				break;
+				std::cout << "Error: Unknown instruction given.\nThe instruction number is " + currInst;
+				return -1;
 		}
 	}
 
 	return 0;
+
 }
