@@ -46,7 +46,7 @@ bool Lexer::compare(std::string inString){
 
 	//Catch edge cases like such as:
 	//forLoop is not the same as for.
-	if(isalnum(file[count])){
+	if(isalnum(file[count + inString.size()])){
 		return false;
 	}
 
@@ -146,6 +146,14 @@ Token Lexer::next() {
 
 	if(compare("boolean")){
 		return Token(FloridaType::Bool, "boolean", row, column - 7);
+	}
+
+	if(compare("true")){
+		return Token(FloridaType::Bool, "true", row, column - 3);
+	}
+
+	if(compare("false")){
+		return Token(FloridaType::Bool, "false", row, column - 4);
 	}
 
 	// Grab the first character, and then decide what to do with it.

@@ -14,14 +14,14 @@
         this->next = inProgram;
     }
 
-    std::string Program::ToString(){
+    std::string Program::ToString(std::string inString){
         if(head == nullptr && next != nullptr){
-            return next->ToString() + ";\n";
+            return next->ToString(inString);
         }
         if(head != nullptr && next == nullptr){
-            return head->ToString();
+            return head->ToString(inString);
         } else {
-            return head->ToString() + ";\n" + next->ToString();
+            return head->ToString(inString) + "\n" + next->ToString(inString);
         }
     }
 
@@ -51,8 +51,8 @@
         right = inRight;
     }
 
-    std::string Assignment::ToString(){
-        return left->ToString() + " = " + right->ToString();
+    std::string Assignment::ToString(std::string inString){
+        return inString + left->ToString(inString) + " = " + right->ToString(inString) + ";";
     }
 
     void Assignment::GetVariables(std::vector<Association>& inVector){
@@ -77,8 +77,8 @@
         right = RHE;
     }
 
-    std::string Add::ToString(){
-        return left->ToString() + " + " + right->ToString();
+    std::string Add::ToString(std::string inString){
+        return left->ToString(inString) + " + " + right->ToString(inString);
     }
 
     void Add::GetVariables(std::vector<Association>& inVector){
@@ -104,8 +104,8 @@
         right = RHE;
     }
 
-    std::string Subtract::ToString(){
-        return left->ToString() + " - " + right->ToString();
+    std::string Subtract::ToString(std::string inString){
+        return left->ToString(inString) + " - " + right->ToString(inString);
     }
 
     void Subtract::GetVariables(std::vector<Association>& inVector){    
@@ -131,8 +131,8 @@
         right = RHE;
     }
 
-    std::string Multiply::ToString(){
-        return left->ToString() + " * " + right->ToString();
+    std::string Multiply::ToString(std::string inString){
+        return left->ToString(inString) + " * " + right->ToString(inString);
     }
 
     void Multiply::GetVariables(std::vector<Association>& inVector){
@@ -158,8 +158,8 @@
         right = RHE;
     }
 
-    std::string Divide::ToString(){
-        return left->ToString() + " / " + right->ToString();
+    std::string Divide::ToString(std::string inString){
+        return left->ToString(inString) + " / " + right->ToString(inString);
     }
 
     void Divide::GetVariables(std::vector<Association>& inVector){
@@ -184,8 +184,8 @@
         subexpression = input;
     }
 
-    std::string Parentheses::ToString(){
-        return "(" + subexpression->ToString() + ")";
+    std::string Parentheses::ToString(std::string inString){
+        return "(" + subexpression->ToString(inString) + ")";
     }
 
     void Parentheses::GetVariables(std::vector<Association>& inVector){
@@ -207,8 +207,8 @@
         right = input;
     }
 
-    std::string Negative::ToString(){
-        return "-" + right->ToString();
+    std::string Negative::ToString(std::string inString){
+        return "-" + right->ToString(inString);
     }
 
     void Negative::GetVariables(std::vector<Association>& inVector){
@@ -235,7 +235,7 @@
         name = inString;
     }
 
-    std::string Variable::ToString(){
+    std::string Variable::ToString(std::string inString){
         return name;
     }
 
@@ -280,8 +280,8 @@
         name = inString;
     }
 
-    std::string Initialize::ToString(){
-        return name;
+    std::string Initialize::ToString(std::string inString){
+        return adjective + " " + name;
     }
 
     void Initialize::FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables){
@@ -319,8 +319,8 @@
         body = inBody;
     }
 
-    std::string IfObject::ToString(){
-        return "if(" + condition->ToString() + "){\n" + body->ToString() + "\n}";
+    std::string IfObject::ToString(std::string inString){
+        return "if(" + condition->ToString(inString) + "){\n" + body->ToString("\t" + inString) + "\n}";
     }
 
     void IfObject::GetVariables(std::vector<Association>& inVector){
@@ -360,37 +360,40 @@
         body = inBody;
     }
 
-    std::string ForLoop::ToString(){
+    std::string ForLoop::ToString(std::string inString){
         std::string part1 = "";
         std::string part2 = "";
         std::string part3 = "";
 
         if(initialization != nullptr){
-            part1 = initialization->ToString();
+            part1 = initialization->ToString(inString);
         }
 
         if(condition != nullptr){
-            part2 = " " + body->ToString();
+            part2 = " " + condition->ToString(inString);
         }
 
         if(increment != nullptr){
-            part3 = " " + increment->ToString();
+            part3 = " " + increment->ToString(inString);
         }
 
-        return "for(" + part1 + ";" + part2 + ";" + part3 + ")\n{\n" + body->ToString() + "\n}";
+        return inString + "for(" + part1 + ";" + part2 + ";" + part3 + "){\n" + inString + body->ToString("\t" + inString) + "\n" + inString + "}";
     }
 
     void ForLoop::GetVariables(std::vector<Association>& inVector){
-        //Do nothing.
+        initialization->GetVariables(inVector);
+        body->GetVariables(inVector);
     }
 
     void ForLoop::FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables){
-        size_t start = inInstructions.size();
-        size_t middle = 0;
+        size_t start = 0;
         
         if(initialization != nullptr){
             initialization->FLVMCodeGen(inInstructions, inVariables);
         }
+
+        //This is the beginning of the for loop.
+        start = inInstructions.size();
 
         if(increment != nullptr){
             increment->FLVMCodeGen(inInstructions, inVariables);
@@ -400,14 +403,13 @@
         if(condition != nullptr){
             condition->FLVMCodeGen(inInstructions, inVariables);
             inInstructions.push_back(Instruction(Operation::cjump, 0));
-            middle = inInstructions.size();
         }
 
+        //Generate the code for the body of the for loop.
         body->FLVMCodeGen(inInstructions, inVariables);
 
+        //This is the end of the for loop.
         size_t end = inInstructions.size();
-
-        inInstructions[middle - 1].literal.fixed64 = end;
 
         inInstructions.push_back(Instruction(Operation::jump, start));
 
@@ -424,8 +426,8 @@
         name = inName;
     }
 
-    std::string Goto::ToString(){
-        return name + ": ";
+    std::string Goto::ToString(std::string inString){
+        return inString + name + ": ";
     }
 
     void Goto::GetVariables(std::vector<Association>& inVector){
@@ -458,7 +460,7 @@
         body = inBody;
     }
 
-    std::string Cgoto::ToString(){
+    std::string Cgoto::ToString(std::string inString){
         return "";
     }
 
@@ -483,8 +485,8 @@
         name = inName;
     }
 
-    std::string Landing::ToString(){
-        return name + ":";
+    std::string Landing::ToString(std::string inString){
+        return inString + name + ":";
     }
 
     void Landing::GetVariables(std::vector<Association>& inVector){

@@ -5,7 +5,7 @@
         value = std::stoll(input);
     }
 
-    std::string Fixed8::ToString(){
+    std::string Fixed8::ToString(std::string inString){
         return std::to_string(value);
     }
 
@@ -28,7 +28,7 @@
         value = inBool;
     }
 
-    std::string Boolean::ToString(){
+    std::string Boolean::ToString(std::string inString){
         return std::to_string(value);
     }
 

@@ -31,7 +31,7 @@ public:
     Node(const Node&&) = delete;
     Node& operator=(const Node&&) = delete;
 
-    virtual std::string ToString() = 0;
+    virtual std::string ToString(std::string inString) = 0;
     //This is exclusively used for Variable.
     virtual void GetVariables(std::vector<Association>& inAssociation) = 0;
     virtual void FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables) = 0;
@@ -50,7 +50,7 @@ public:
 
     Program(Node* inHead);
     void Append(Program* inProgram);
-    std::string ToString() override;
+    std::string ToString(std::string inString) override;
     void GetVariables(std::vector<Association>& inVector) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables) override;
     int64_t GetPosition(std::vector<Association>& inVariables) override;
@@ -62,7 +62,7 @@ public:
     Node* right;
 
     Add(Node* LHE, Node* RHE);
-    std::string ToString() override;
+    std::string ToString(std::string inString) override;
     void GetVariables(std::vector<Association>& inVector) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables) override;
     int64_t GetPosition(std::vector<Association>& inVariables) override;
@@ -74,7 +74,7 @@ public:
     Node* right;
 
     Subtract(Node* LHE, Node* RHE);
-    std::string ToString() override;
+    std::string ToString(std::string inString) override;
     void GetVariables(std::vector<Association>& inVector) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables) override;
     int64_t GetPosition(std::vector<Association>& inVariables) override;
@@ -88,7 +88,7 @@ public:
     Node* right;
 
     Multiply(Node* LHE, Node* RHE);
-    std::string ToString() override;
+    std::string ToString(std::string inString) override;
     void GetVariables(std::vector<Association>& inVector) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables) override;
     int64_t GetPosition(std::vector<Association>& inVariables) override;
@@ -100,7 +100,7 @@ public:
     Node* right;
 
     Divide(Node* LHE, Node* RHE);
-    std::string ToString() override;
+    std::string ToString(std::string inString) override;
     void GetVariables(std::vector<Association>& inVector) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables) override;
     int64_t GetPosition(std::vector<Association>& inVariables) override;
@@ -118,8 +118,8 @@ public:
         right = RHE;
     }
 
-    std::string ToString() override {
-        return left->ToString() + "^" + right->ToString();
+    std::string ToString(std::string inString) override {
+        return left->ToString(inString) + "^" + right->ToString(inString);
     }
 
     void GetVariables(std::vector<Association>& inVector) override {
@@ -140,8 +140,8 @@ public:
         left = input;
     }
 
-    std::string ToString() override {
-        return left->ToString() + "!";
+    std::string ToString(std::string inString) override {
+        return left->ToString(inString) + "!";
     }
 
 };
@@ -151,7 +151,7 @@ public:
     Node* subexpression;
 
     Parentheses(Node* input);
-    std::string ToString() override;
+    std::string ToString(std::string inString) override;
     void GetVariables(std::vector<Association>& inVector) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables) override;
     int64_t GetPosition(std::vector<Association>& inVariables) override;
@@ -162,7 +162,7 @@ public:
     Node* right;
 
     Negative(Node* input);
-    std::string ToString() override;
+    std::string ToString(std::string inString) override;
     void GetVariables(std::vector<Association>& inVector) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables) override;
     int64_t GetPosition(std::vector<Association>& inVariables) override;
@@ -176,7 +176,7 @@ public:
 
     Variable();
     Variable(std::string inString);
-    std::string ToString() override;
+    std::string ToString(std::string inString) override;
     void GetVariables(std::vector<Association>& inVector) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables) override;
     int64_t GetPosition(std::vector<Association>& inVariables) override;
@@ -194,7 +194,7 @@ public:
     Node* right;
 
     Assignment(Node* inLeft, Node* inRight);
-    std::string ToString() override;
+    std::string ToString(std::string inString) override;
     void GetVariables(std::vector<Association>& inVector) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables) override;
     int64_t GetPosition(std::vector<Association>& inVariables) override;
@@ -207,7 +207,7 @@ public:
 
     Initialize();
     Initialize(std::string inType, std::string inString);
-    std::string ToString() override;
+    std::string ToString(std::string inString) override;
     void GetVariables(std::vector<Association>& inVector) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables) override;
     int64_t GetPosition(std::vector<Association>& inVariables) override;
@@ -226,7 +226,7 @@ public:
     int64_t value;
 
     Fixed8(std::string input);
-    std::string ToString() override;
+    std::string ToString(std::string inString) override;
     void GetVariables(std::vector<Association>& inVector) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables) override;
     int64_t GetPosition(std::vector<Association>& inVariables) override;
@@ -241,7 +241,7 @@ public:
         value = std::stod(input);
     }
 
-    std::string ToString() override {
+    std::string ToString(std::string inString) override {
         return std::to_string(value);
     }
 
@@ -252,7 +252,7 @@ public:
     bool value;
 
     Boolean(bool inBool);
-    std::string ToString() override;
+    std::string ToString(std::string inString) override;
     void GetVariables(std::vector<Association>& inVector) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables) override;
     int64_t GetPosition(std::vector<Association>& inVariables) override;
@@ -266,7 +266,7 @@ public:
     Node* body;
 
     IfObject(Node* inCondition, Node* inBody);
-    std::string ToString() override;
+    std::string ToString(std::string inString) override;
     void GetVariables(std::vector<Association>& inVector) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables) override;
     int64_t GetPosition(std::vector<Association>& inVariables) override;
@@ -280,7 +280,7 @@ public:
     Node* body;
 
     ForLoop(Node* inInitialization, Node* inCondition, Node* inIncrement, Node* inBody);
-    std::string ToString() override;
+    std::string ToString(std::string inString) override;
     void GetVariables(std::vector<Association>& inVector) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables) override;
     int64_t GetPosition(std::vector<Association>& inVariables) override;
@@ -293,7 +293,7 @@ public:
     std::string name;
 
     Goto(std::string inName);
-    std::string ToString() override;
+    std::string ToString(std::string inString) override;
     void GetVariables(std::vector<Association>& inVector) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables) override;
     int64_t GetPosition(std::vector<Association>& inVariables) override;
@@ -304,7 +304,7 @@ class Cgoto : public Node{
     Node* body;
 
     Cgoto(Node* inCondition, Node* inBody);
-    std::string ToString() override;
+    std::string ToString(std::string inString) override;
     void GetVariables(std::vector<Association>& inVector) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables) override;
     int64_t GetPosition(std::vector<Association>& inVariables) override;
@@ -315,7 +315,7 @@ public:
     std::string name;
 
     Landing(std::string inName);
-    std::string ToString() override;
+    std::string ToString(std::string inString) override;
     void GetVariables(std::vector<Association>& inVector) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables) override;
     int64_t GetPosition(std::vector<Association>& inVariables) override;

@@ -64,10 +64,11 @@ int main(){
 	types left;
 	types right;
 
-	std::cout << result->ToString() << "\n";
+	std::cout << result->ToString("") << "\n";
 
 	//x++ returns x + 1;
 	//++x returns x;
+	//instNum stands for "Instruction Number".
 	for(size_t instNum = 0; instNum < instructionVector.size(); instNum++){
 		Operation currInst = instructionVector[instNum].oper;
 		switch (currInst){
@@ -75,11 +76,11 @@ int main(){
 				//If it's true, then don't skip
 				if(!computationVector[position - 1].boolean){
 					//This is to adjust the position of the instruction number.
-					instNum = instructionVector[instNum].literal.fixed64;
+					instNum = instructionVector[instNum].literal.fixed64 - 1;
 				}
 				continue;
 			case Operation::jump:
-				//Subtract one, because of the i++.
+				//Subtract one, because of the instNum++.
 				instNum = instructionVector[instNum].literal.fixed64 - 1;
 				continue;
 			case Operation::fetch:

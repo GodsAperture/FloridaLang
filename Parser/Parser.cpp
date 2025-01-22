@@ -32,6 +32,8 @@ Program* Parser::programList(){
     //Check for a jump statement.
     thisNode = jump();
     if(thisNode != nullptr){
+        //Increment for the ';'.
+        iter++;
         return stack->alloc<Program>(thisNode);
     }
 
@@ -50,13 +52,18 @@ Program* Parser::programList(){
     //Check for an assignment.
     thisNode = assignment();
     if(thisNode != nullptr){
+        //Increment for the ';'.
+        iter++;
         return stack->alloc<Program>(thisNode);
     }
 
     //Check for a landing point (for jump statements).
     thisNode = landing();
     if(thisNode != nullptr){
+        //Increment for the ';'.
+        iter++;
         return stack->alloc<Program>(thisNode);
+        
     }
 
     // //Check for an expression.
@@ -89,7 +96,7 @@ Node* Parser::program(){
     //Get all statements in the program.
     while(thisProgram != nullptr){  
         //If all tokens have been consumed, then terminate parsing.
-        if(given.size() == iter){
+        if(given.size() <= iter + 1){
             break;
         }
         thisProgram = nullptr;
@@ -139,7 +146,6 @@ Node* Parser::assignment(){
         //Increment the iterator, and then get p0().
         right = p0();
         if(right != nullptr){
-            iter++;
             return stack->alloc<Assignment>(left, right);
         } else {
             std::cout << "Error: [Line: " + std::to_string(given[iter - 1].row) + "]\n\tNo assignable expression was found.\n";
@@ -259,8 +265,12 @@ Node* Parser::For(){
 
     //Check for an initilization/assignment.
     init = assignment();
+    //Increment for the ';'.
+    iter++;
     //Check for a condition.
     condition = p0();
+    //Increment for the ';'.
+    iter++;
     //Create the incrementer.
     increment = assignment();
     //Increment for the ')' and '{'.
@@ -270,7 +280,8 @@ Node* Parser::For(){
     //Get the body of the for loop.
     body = programList();
 
-
+    //Increment for the '}'.
+    iter++;
 
     if(body == nullptr){
         printf("The body of the for loop is malformed.");
@@ -390,7 +401,7 @@ Node* Parser::p2(){
     }
     //Check for booleans.
     if(given[iter].type == FloridaType::Bool){
-        if(given[iter].name == "True"){
+        if(given[iter].name == "true"){
             iter++;
             return stack->alloc<Boolean>(true);
         } else {
