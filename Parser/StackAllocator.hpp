@@ -21,7 +21,7 @@ public:
     template<typename T, typename... Args>
     T* alloc(Args&&... args) {
         std::size_t bytes_needed = sizeof(T);
-        bytes_needed += 8 - (bytes_needed % 8);
+        bytes_needed += (8 - (bytes_needed % 8)) % 8;
         if ((std::size_t) current + bytes_needed >= (std::size_t) end) {
             throw std::bad_alloc(); // Not enough memory
         }
@@ -36,7 +36,7 @@ public:
     void dealloc(T* ptr) {
         if (ptr != head) {
             std::size_t bytes_needed = sizeof(T);
-            bytes_needed += 8 - (bytes_needed % 8);
+            bytes_needed += (8 - (bytes_needed % 8)) % 8;
             current = (void*) ((std::size_t) current - bytes_needed);
             ptr->~T(); // Call the destructor explicitly
         }

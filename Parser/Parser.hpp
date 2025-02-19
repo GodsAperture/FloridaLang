@@ -14,9 +14,20 @@ public:
     uint64_t iter = 0;
     bool error = false;
     std::vector<Token> given;
+    std::vector<Scope> scopes;
+    std::vector<Scope> scopeStack;
     StackAllocator* stack = nullptr;
 //Comments on the rightmost parts of the functions
 //are solely so I can build the parser properly.
+
+//Scope related methods.
+    Scope& global(){
+        return scopeStack[0];
+    }
+
+    Scope& top(){
+        return scopeStack[scopeStack.size() - 1];
+    }
 
 //Program
     Program* programList();
@@ -58,6 +69,7 @@ public:
 
     Parser(std::vector<Token> inTokens, long size){
         given = inTokens;
+        scopes = std::vector<Scope>();
         stack = new StackAllocator(size);
     }
 

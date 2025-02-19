@@ -25,21 +25,21 @@
         }
     }
 
-    void Program::GetVariables(std::vector<Association>& inVector){
-        head->GetVariables(inVector);
+    void Program::GetVariables(Scope& inScope){
+        head->GetVariables(inScope);
         if(next != nullptr){
-            next->GetVariables(inVector);
+            next->GetVariables(inScope);
         }
     }
 
-    void Program::FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables){
-        head->FLVMCodeGen(inInstructions, inVariables);
+    void Program::FLVMCodeGen(std::vector<Instruction>& inInstructions){
+        head->FLVMCodeGen(inInstructions);
         if(next != nullptr){
-            next->FLVMCodeGen(inInstructions, inVariables);
+            next->FLVMCodeGen(inInstructions);
         }
     }
 
-    int64_t Program::GetPosition(std::vector<Association>& inVariables){
+    int64_t Program::GetPosition(std::vector<Scope>& inScopes){
         return -1;
     }
 
@@ -55,17 +55,17 @@
         return inString + left->ToString(inString) + " = " + right->ToString(inString) + ";";
     }
 
-    void Assignment::GetVariables(std::vector<Association>& inVector){
-        left->GetVariables(inVector);
-        right->GetVariables(inVector);
+    void Assignment::GetVariables(Scope& inScope){
+        left->GetVariables(inScope);
+        right->GetVariables(inScope);
     }
 
-    void Assignment::FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables){
-        right->FLVMCodeGen(inInstructions, inVariables);
-        inInstructions.push_back(Instruction(Operation::assign, left->GetPosition(inVariables)));
+    void Assignment::FLVMCodeGen(std::vector<Instruction>& inInstructions){
+        right->FLVMCodeGen(inInstructions);
+        inInstructions.push_back(Instruction(Operation::assign, left->GetPosition()));
     }
 
-    int64_t Assignment::GetPosition(std::vector<Association>& inVariables){
+    int64_t Assignment::GetPosition(std::vector<Scope>& inScopes){
         return -1;
     }
 
@@ -81,18 +81,18 @@
         return left->ToString(inString) + " + " + right->ToString(inString);
     }
 
-    void Add::GetVariables(std::vector<Association>& inVector){
+    void Add::GetVariables(Scope& inScope){
         left->GetVariables(inVector);
         right->GetVariables(inVector);
     }
 
-    void Add::FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables){
+    void Add::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         left->FLVMCodeGen(inInstructions, inVariables);
         right->FLVMCodeGen(inInstructions, inVariables);
         inInstructions.push_back(Instruction(Operation::add, -1));
     }
 
-    int64_t Add::GetPosition(std::vector<Association>& inVariables){
+    int64_t Add::GetPosition(std::vector<Scope>& inScopes){
         return -1;
     }
 
@@ -108,18 +108,18 @@
         return left->ToString(inString) + " - " + right->ToString(inString);
     }
 
-    void Subtract::GetVariables(std::vector<Association>& inVector){    
+    void Subtract::GetVariables(Scope& inScope){    
         left->GetVariables(inVector);
         right->GetVariables(inVector);
     }
 
-    void Subtract::FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables){
+    void Subtract::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         left->FLVMCodeGen(inInstructions, inVariables);
         right->FLVMCodeGen(inInstructions, inVariables);
         inInstructions.push_back(Instruction(Operation::subtract, -1));
     }
 
-    int64_t Subtract::GetPosition(std::vector<Association>& inVariables){
+    int64_t Subtract::GetPosition(std::vector<Scope>& inScopes){
         return -1;
     }
 
@@ -135,18 +135,18 @@
         return left->ToString(inString) + " * " + right->ToString(inString);
     }
 
-    void Multiply::GetVariables(std::vector<Association>& inVector){
+    void Multiply::GetVariables(Scope& inScope){
         left->GetVariables(inVector);
         right->GetVariables(inVector);
     }
 
-    void Multiply::FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables){
+    void Multiply::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         left->FLVMCodeGen(inInstructions, inVariables);
         right->FLVMCodeGen(inInstructions, inVariables);
         inInstructions.push_back(Instruction(Operation::multiply, -1));
     }
 
-    int64_t Multiply::GetPosition(std::vector<Association>& inVariables){
+    int64_t Multiply::GetPosition(std::vector<Scope>& inScopes){
         return -1;
     }
 
@@ -162,18 +162,18 @@
         return left->ToString(inString) + " / " + right->ToString(inString);
     }
 
-    void Divide::GetVariables(std::vector<Association>& inVector){
+    void Divide::GetVariables(Scope& inScope){
         left->GetVariables(inVector);
         right->GetVariables(inVector);
     }
 
-    void Divide::FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables){
+    void Divide::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         left->FLVMCodeGen(inInstructions, inVariables);
         right->FLVMCodeGen(inInstructions, inVariables);
         inInstructions.push_back(Instruction(Operation::divide, -1));
     }
 
-    int64_t Divide::GetPosition(std::vector<Association>& inVariables){
+    int64_t Divide::GetPosition(std::vector<Scope>& inScopes){
         return -1;
     }
 
@@ -188,15 +188,15 @@
         return "(" + subexpression->ToString(inString) + ")";
     }
 
-    void Parentheses::GetVariables(std::vector<Association>& inVector){
+    void Parentheses::GetVariables(Scope& inScope){
         subexpression->GetVariables(inVector);
     }
 
-    void Parentheses::FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables){
+    void Parentheses::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         subexpression->FLVMCodeGen(inInstructions, inVariables);
     }
 
-    int64_t Parentheses::GetPosition(std::vector<Association>& inVariables){
+    int64_t Parentheses::GetPosition(std::vector<Scope>& inScopes){
         return -1;
     }
 
@@ -211,16 +211,16 @@
         return "-" + right->ToString(inString);
     }
 
-    void Negative::GetVariables(std::vector<Association>& inVector){
+    void Negative::GetVariables(Scope& inScope){
         right->GetVariables(inVector);
     }
 
-    void Negative::FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables){
+    void Negative::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         right->FLVMCodeGen(inInstructions, inVariables);
         inInstructions.push_back(Instruction(Operation::negate, -1));
     }
 
-    int64_t Negative::GetPosition(std::vector<Association>& inVariables){
+    int64_t Negative::GetPosition(std::vector<Scope>& inScopes){
         return -1;
     }
 
@@ -239,11 +239,11 @@
         return name;
     }
 
-    void Variable::GetVariables(std::vector<Association>& inVector){
+    void Variable::GetVariables(Scope& inScope){
         //Do nothing.
     }
 
-    void Variable::FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables){
+    void Variable::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         int position = -1;
         //Search for the variable in the symbols table.
         //Get its position and assign it to that variable.
@@ -257,11 +257,15 @@
         inInstructions.push_back(Instruction(Operation::fetch, position));
     }
 
-    int64_t Variable::GetPosition(std::vector<Association>& inVariables){
+    int64_t Variable::GetPosition(std::vector<Scope>& inScopes){
         //Search for the variable in the list.
-        for(size_t i = 0; i < inVariables.size(); i++){
-            if(inVariables[i].name == name){
-                return inVariables[i].position;
+        //Work from the current scope outward.
+        for(size_t i = inScopes.size() - 1; i >= 0; i--){
+            for(size_t j = 0; j < inScopes[i].size(); j++){
+                //Find the name of the particular variable in the scope
+                if(inScopes[i].objects[j].name == name){
+                    return inScopes[i].objects[j].position;
+                }
             }
         }
         return -1;
@@ -284,11 +288,11 @@
         return adjective + " " + name;
     }
 
-    void Initialize::FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables){
+    void Initialize::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         //Null
     }
 
-    void Initialize::GetVariables(std::vector<Association>& inVector){
+    void Initialize::GetVariables(Scope& inScope){
         for(size_t i = 0; i < inVector.size(); i++){
             if(inVector[i].name == name){
                 //If the same variable name appears, throw an error.
@@ -301,11 +305,15 @@
         inVector.push_back(Association(adjective, name, inVector.size()));
     }
 
-    int64_t Initialize::GetPosition(std::vector<Association>& inVariables){
+    int64_t Variable::GetPosition(std::vector<Scope>& inScopes){
         //Search for the variable in the list.
-        for(size_t i = 0; i < inVariables.size(); i++){
-            if(inVariables[i].name == name){
-                return inVariables[i].position;
+        //Work from the current scope outward.
+        for(size_t i = inScopes.size() - 1; i >= 0; i--){
+            for(size_t j = 0; j < inScopes[i].size(); j++){
+                //Find the name of the particular variable in the scope
+                if(inScopes[i].objects[j].name == name){
+                    return inScopes[i].objects[j].position;
+                }
             }
         }
         return -1;
@@ -323,11 +331,11 @@
         return "if(" + condition->ToString(inString) + "){\n" + body->ToString("\t" + inString) + "\n}";
     }
 
-    void IfObject::GetVariables(std::vector<Association>& inVector){
+    void IfObject::GetVariables(Scope& inScope){
         //Do nothing.
     }
 
-    void IfObject::FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables){
+    void IfObject::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         size_t start;
         size_t end;
         
@@ -346,7 +354,7 @@
         inInstructions[start - 1] = Instruction(cjump, end);
     }
 
-    int64_t IfObject::GetPosition(std::vector<Association>& inVariables){
+    int64_t IfObject::GetPosition(std::vector<Scope>& inScopes){
         return -1;
     }
 
@@ -380,29 +388,39 @@
         return inString + "for(" + part1 + ";" + part2 + ";" + part3 + "){\n" + inString + body->ToString("\t" + inString) + "\n" + inString + "}";
     }
 
-    void ForLoop::GetVariables(std::vector<Association>& inVector){
+    void ForLoop::GetVariables(Scope& inScope){
         initialization->GetVariables(inVector);
         body->GetVariables(inVector);
     }
 
-    void ForLoop::FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables){
+    void ForLoop::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         size_t start = 0;
+        size_t cjumpPoint = 0;
         
+        //Initialize the variable, if there is one.
         if(initialization != nullptr){
             initialization->FLVMCodeGen(inInstructions, inVariables);
         }
 
         //This is the beginning of the for loop.
-        start = inInstructions.size();
-
-        if(increment != nullptr){
-            increment->FLVMCodeGen(inInstructions, inVariables);
+        if(inInstructions.size() == 0){
+            start = inInstructions.size();
+        } else {
+            start = inInstructions.size() - 1;
         }
 
-        //If there's not a condition, then append true.
+        //Check for a condition.
         if(condition != nullptr){
             condition->FLVMCodeGen(inInstructions, inVariables);
+            //Push the instruction for cjump
             inInstructions.push_back(Instruction(Operation::cjump, 0));
+            //Get the position of the cjump.
+            cjumpPoint = inInstructions.size();
+        }
+
+        //The increment always occurs after the body executes.
+        if(increment != nullptr){
+            increment->FLVMCodeGen(inInstructions, inVariables);
         }
 
         //Generate the code for the body of the for loop.
@@ -411,14 +429,62 @@
         //This is the end of the for loop.
         size_t end = inInstructions.size();
 
+        //Adjust the location where the cjump goes to.
+        inInstructions[cjumpPoint - 1].literal.fixed64 = end;
         inInstructions.push_back(Instruction(Operation::jump, start));
 
     }
 
-    int64_t ForLoop::GetPosition(std::vector<Association>& inVariables){
+    int64_t ForLoop::GetPosition(std::vector<Scope>& inScopes){
         return -1;
     }
 
+
+
+//Function
+    Function::Function(std::string inType, std::string inName, std::string inArguments, Node* inBody){
+        type = inType;
+        name = inName;
+        arguments = inArguments;
+        body = inBody;
+    }
+
+    std::string Function::ToString(std::string inString){
+
+        std::string argumentList = "(";
+
+        //arguments.size() is cut in half because half of it
+        //is the variable name, the other half is variable types.
+        //The minus one is so I don't add an unnecessary comma.
+        for(size_t i = 0; i < arguments.size() / 2 - 1; i++){
+            argumentList += arguments[2 * i + 1] + ", ";
+        }
+
+        //If there is a nonzero amount of arguments then
+        //I will make sure to have one less comma than 
+        //the number of arguments.
+        if(arguments.size() != 0){
+            //Add the last variable in the list to the function
+            //without an extra commma.
+            argumentList += arguments[arguments.size() - 1];
+        }
+
+        argumentList += ")";
+
+        return inString + name + argumentList;
+    }
+
+    void Function::GetVariables(Scope& inScope){
+        body->GetVariables(inVector);
+    }
+
+    void Function::FLVMCodeGen(std::vector<Instruction>& inInstructions){
+        
+    }
+
+    int64_t Function::GetPosition(std::vector<Scope>& inScopes){
+        return -1;
+    }
 
 
 //Goto
@@ -430,11 +496,11 @@
         return inString + name + ": ";
     }
 
-    void Goto::GetVariables(std::vector<Association>& inVector){
+    void Goto::GetVariables(Scope& inScope){
         //Do nothing
     }
 
-    void Goto::FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables){
+    void Goto::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         int64_t position = -1;
         //Find the variable in the symbols table and adjust its position.
         for(size_t i = 0; i < inVariables.size(); i++){
@@ -448,7 +514,7 @@
         inInstructions.push_back(Instruction(Operation::jump, position));
     }
 
-    int64_t Goto::GetPosition(std::vector<Association>& inVariables){
+    int64_t Goto::GetPosition(std::vector<Scope>& inScopes){
         return -1;
     }
 
@@ -464,17 +530,17 @@
         return "";
     }
 
-    void Cgoto::GetVariables(std::vector<Association>& inVector){
+    void Cgoto::GetVariables(Scope& inScope){
         //Do nothing.
     }
 
-    void Cgoto::FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables){
+    void Cgoto::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         condition->FLVMCodeGen(inInstructions, inVariables);
         inInstructions.push_back(Instruction(Operation::cjump, -1));
         body->FLVMCodeGen(inInstructions, inVariables);
     }
 
-    int64_t Cgoto::GetPosition(std::vector<Association>& inVariables){
+    int64_t Cgoto::GetPosition(std::vector<Scope>& inScopes){
         return -1;
     }
 
@@ -489,11 +555,11 @@
         return inString + name + ":";
     }
 
-    void Landing::GetVariables(std::vector<Association>& inVector){
+    void Landing::GetVariables(Scope& inScope){
         inVector.push_back(Association("Null", name, -1));
     }
 
-    void Landing::FLVMCodeGen(std::vector<Instruction>& inInstructions, std::vector<Association>& inVariables){
+    void Landing::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         int64_t position = -1;
         //
         for(size_t i = 0; i < inVariables.size(); i++){
@@ -514,6 +580,6 @@
 
     }
 
-    int64_t Landing::GetPosition(std::vector<Association>& inVariables){
+    int64_t Landing::GetPosition(std::vector<Scope>& inScopes){
         return -1;
     }
