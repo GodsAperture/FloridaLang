@@ -33,15 +33,18 @@ class Scope{
 public:
     std::string name;
     std::vector<Association> objects;
+    int64_t position;
 
-    Scope(std::string inName, std::vector<Association> inObjects){
+    Scope(std::string inName, std::vector<Association> inObjects, int64_t inPosition){
         name = inName;
         objects = inObjects;
+        position = inPosition;
     }
 
     Scope operator=(Scope& right){
         name = right.name;
         objects = right.objects;
+        position = right.position;
 
         return *this;
     }
@@ -65,10 +68,7 @@ public:
 
     virtual std::string ToString(std::string inString) = 0;
     //This is exclusively used for Variable.
-    virtual void GetVariables(Scope& inScope) = 0;
     virtual void FLVMCodeGen(std::vector<Instruction>& inInstructions) = 0;
-    //This is exclusively for use on Variable in Assignment.
-    virtual int64_t GetPosition(std::vector<Scope>& inScopes) = 0;
 
     virtual ~Node(){};
 };
@@ -83,9 +83,7 @@ public:
     Program(Node* inHead);
     void Append(Program* inProgram);
     std::string ToString(std::string inString) override;
-    void GetVariables(Scope& inScope) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    int64_t GetPosition(std::vector<Scope>& inScopes) override;
 };
 
 class Add : public Node{
@@ -95,9 +93,7 @@ public:
 
     Add(Node* LHE, Node* RHE);
     std::string ToString(std::string inString) override;
-    void GetVariables(Scope& inScope) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    int64_t GetPosition(std::vector<Scope>& inScopes) override;
 };
 
 class Subtract : public Node{
@@ -107,9 +103,7 @@ public:
 
     Subtract(Node* LHE, Node* RHE);
     std::string ToString(std::string inString) override;
-    void GetVariables(Scope& inScope) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    int64_t GetPosition(std::vector<Scope>& inScopes) override;
 };
 
 
@@ -121,9 +115,7 @@ public:
 
     Multiply(Node* LHE, Node* RHE);
     std::string ToString(std::string inString) override;
-    void GetVariables(Scope& inScope) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    int64_t GetPosition(std::vector<Scope>& inScopes) override;
 };
 
 class Divide : public Node{
@@ -133,9 +125,7 @@ public:
 
     Divide(Node* LHE, Node* RHE);
     std::string ToString(std::string inString) override;
-    void GetVariables(Scope& inScope) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    int64_t GetPosition(std::vector<Scope>& inScopes) override;
 };
 
 
@@ -178,9 +168,7 @@ public:
 
     Parentheses(Node* input);
     std::string ToString(std::string inString) override;
-    void GetVariables(Scope& inScope) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    int64_t GetPosition(std::vector<Scope>& inScopes) override;
 };
 
 class Negative : public Node{
@@ -189,9 +177,7 @@ public:
 
     Negative(Node* input);
     std::string ToString(std::string inString) override;
-    void GetVariables(Scope& inScope) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    int64_t GetPosition(std::vector<Scope>& inScopes) override;
 };
 
 
@@ -203,9 +189,7 @@ public:
     Variable();
     Variable(std::string inString);
     std::string ToString(std::string inString) override;
-    void GetVariables(Scope& inScope) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    int64_t GetPosition(std::vector<Scope>& inScopes) override;
 
     Variable& operator=(Variable& right){
         name = right.name;
@@ -221,9 +205,7 @@ public:
 
     Assignment(Node* inLeft, Node* inRight);
     std::string ToString(std::string inString) override;
-    void GetVariables(Scope& inScope) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    int64_t GetPosition(std::vector<Scope>& inScopes) override;
 };
 
 class Initialize : public Node{
@@ -234,9 +216,7 @@ public:
     Initialize();
     Initialize(std::string inType, std::string inString);
     std::string ToString(std::string inString) override;
-    void GetVariables(Scope& inScope) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    int64_t GetPosition(std::vector<Scope>& inScopes) override;
 
     Initialize& operator=(Initialize& right){
         adjective = right.adjective;
@@ -253,10 +233,7 @@ public:
 
     Fixed8(std::string input);
     std::string ToString(std::string inString) override;
-    void GetVariables(Scope& inScope) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    int64_t GetPosition(std::vector<Scope>& inScopes) override;
-
 };
 
 class float64 : public Node{
@@ -279,9 +256,7 @@ public:
 
     Boolean(bool inBool);
     std::string ToString(std::string inString) override;
-    void GetVariables(Scope& inScope) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    int64_t GetPosition(std::vector<Scope>& inScopes) override;
 };
 
 
@@ -293,9 +268,7 @@ public:
 
     IfObject(Node* inCondition, Node* inBody);
     std::string ToString(std::string inString) override;
-    void GetVariables(Scope& inScope) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    int64_t GetPosition(std::vector<Scope>& inScopes) override;
 };
 
 class ForLoop : public Node{
@@ -307,11 +280,7 @@ public:
 
     ForLoop(Node* inInitialization, Node* inCondition, Node* inIncrement, Node* inBody);
     std::string ToString(std::string inString) override;
-    void GetVariables(Scope& inScope) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    int64_t GetPosition(std::vector<Scope>& inScopes) override;
-
-
 };
 
 class Function : public Node{
@@ -323,10 +292,7 @@ public:
 
     Function(std::string type, std::string inName, std::string inArguments, Node* inBody);
     std::string ToString(std::string inString) override;
-    void GetVariables(Scope& inScope) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    int64_t GetPosition(std::vector<Scope>& inScopes) override;
-
 };
 
 class Goto : public Node{
@@ -335,9 +301,7 @@ public:
 
     Goto(std::string inName);
     std::string ToString(std::string inString) override;
-    void GetVariables(Scope& inScope) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    int64_t GetPosition(std::vector<Scope>& inScopes) override;
 };
 
 class Cgoto : public Node{
@@ -346,9 +310,7 @@ class Cgoto : public Node{
 
     Cgoto(Node* inCondition, Node* inBody);
     std::string ToString(std::string inString) override;
-    void GetVariables(Scope& inScope) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    int64_t GetPosition(std::vector<Scope>& inScopes) override;
 };
 
 class Landing : public Node{
@@ -357,8 +319,6 @@ public:
 
     Landing(std::string inName);
     std::string ToString(std::string inString) override;
-    void GetVariables(Scope& inScope) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    int64_t GetPosition(std::vector<Scope>& inScopes) override;
 };
 #endif

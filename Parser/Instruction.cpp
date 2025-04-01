@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include "../Lexer/Types.hpp"
+#include "../Lexer/Token.hpp"
 
 enum Operation{
     fetch,
