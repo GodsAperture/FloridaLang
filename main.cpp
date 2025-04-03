@@ -11,14 +11,6 @@
 		return val;
 	}
 
-	std::string printValues(std::vector<types>& inInstructions, std::vector<Association>& inVariables){
-		std::string finalString = "";
-		for(size_t i = 0; i < inVariables.size(); i++){
-			finalString += inVariables[i].name + " = " + std::to_string(inInstructions[inVariables[i].position].fixed64) + ";\n";
-		}
-
-		return finalString;
-	}
 
 	//A simple conditionally recursive integration method.
 	double recint(double (fun)(double), double x0, double x2){
@@ -65,7 +57,7 @@
 	}
 
 int main(){
-	
+	long long position = -1;
 	//Load the sample file into a string.
 	std::string thing = readFile("sample.fl");
 	Lexer FloridaLexer = Lexer(thing);
@@ -83,11 +75,11 @@ int main(){
 
 	//Parse over the list and make sure that the expression is acceptable.
 	Parser FloridaParser = Parser(theList, 10000);
-	Node* result = FloridaParser.parse();
+	FloridaParser.parse();
 
 	//If the error flag has been raised, then
 	//terminate the program and print out the errors.
-	if(FloridaParser.error | result == nullptr){
+	if(FloridaParser.error){
 		//TODO: Set up error handler.
 		return -1;
 	}
@@ -96,15 +88,13 @@ int main(){
 	std::vector<Instruction> instructionVector;
 	std::vector<types> computationVector;
 	computationVector.resize(32);
-	//The stack will start at the offset to not disrupt the variables.
-	size_t position = FloridaParser.scopeStack[0].objects.size();
 
 	//Begin making the instruction vector;
-	result->FLVMCodeGen(instructionVector);
+	instructionVector = FloridaParser.FLVMCodeGen();
 	types left;
 	types right;
 
-	std::cout << result->ToString("") << "\n";
+	std::cout << FloridaParser.result->ToString("") << "\n";
 
 	//x++ returns x + 1;
 	//++x returns x;

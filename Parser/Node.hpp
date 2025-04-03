@@ -6,53 +6,7 @@
 #include <string>
 #include <vector>
 
-//These just exist.
-class Association{
-public:
-    std::string adjective;
-    std::string name;
-    int64_t position;
 
-    Association(std::string inAdjective, std::string inName, int64_t inPosition){
-        adjective = inAdjective;
-        name = inName;
-        position = inPosition;
-    }
-
-    Association operator=(Association right){
-        adjective = right.adjective;
-        name = right.name;
-        position = right.position;
-
-        return *this;
-    }
-};
-
-//A Scope will be the literal global scope and function scope.
-class Scope{
-public:
-    std::string name;
-    std::vector<Association> objects;
-    int64_t position;
-
-    Scope(std::string inName, std::vector<Association> inObjects, int64_t inPosition){
-        name = inName;
-        objects = inObjects;
-        position = inPosition;
-    }
-
-    Scope operator=(Scope& right){
-        name = right.name;
-        objects = right.objects;
-        position = right.position;
-
-        return *this;
-    }
-
-    int64_t size(){
-        return objects.size();
-    }
-};
 
 //If you need to be told what a node is, God help you.
 class Node{
@@ -74,17 +28,6 @@ public:
 };
 
 
-
-class Program : public Node{
-public:
-    Node* head;
-    Program* next;
-
-    Program(Node* inHead);
-    void Append(Program* inProgram);
-    std::string ToString(std::string inString) override;
-    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-};
 
 class Add : public Node{
 public:
@@ -130,38 +73,6 @@ public:
 
 
 
-class Exponent : public Node{
-public:
-    Node* left;
-    Node* right;
-
-    Exponent(Node* LHE, Node* RHE){
-        left = LHE;
-        right = RHE;
-    }
-
-    std::string ToString(std::string inString) override {
-        return left->ToString(inString) + "^" + right->ToString(inString);
-    }
-
-};
-
-
-
-class Factorial : public Node{
-public:
-    Node* left;
-
-    Factorial(Node* input){
-        left = input;
-    }
-
-    std::string ToString(std::string inString) override {
-        return left->ToString(inString) + "!";
-    }
-
-};
-
 class Parentheses : public Node{
 public:
     Node* subexpression;
@@ -182,50 +93,6 @@ public:
 
 
 
-class Variable : public Node{
-public:
-    std::string name;
-
-    Variable();
-    Variable(std::string inString);
-    std::string ToString(std::string inString) override;
-    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-
-    Variable& operator=(Variable& right){
-        name = right.name;
-
-        return *this;
-    }
-};
-
-class Assignment : public Node{
-public:
-    Node* left; 
-    Node* right;
-
-    Assignment(Node* inLeft, Node* inRight);
-    std::string ToString(std::string inString) override;
-    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-};
-
-class Initialize : public Node{
-public:
-    std::string adjective;
-    std::string name;
-
-    Initialize();
-    Initialize(std::string inType, std::string inString);
-    std::string ToString(std::string inString) override;
-    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-
-    Initialize& operator=(Initialize& right){
-        adjective = right.adjective;
-        name = right.name;
-
-        return *this;
-    }
-
-};
 
 class Fixed8 : public Node{
 public:
@@ -255,69 +122,6 @@ public:
     bool value;
 
     Boolean(bool inBool);
-    std::string ToString(std::string inString) override;
-    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-};
-
-
-
-class IfObject : public Node{
-public:
-    Node* condition;
-    Node* body;
-
-    IfObject(Node* inCondition, Node* inBody);
-    std::string ToString(std::string inString) override;
-    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-};
-
-class ForLoop : public Node{
-public:
-    Node* initialization;
-    Node* condition;
-    Node* increment;
-    Node* body;
-
-    ForLoop(Node* inInitialization, Node* inCondition, Node* inIncrement, Node* inBody);
-    std::string ToString(std::string inString) override;
-    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-};
-
-class Function : public Node{
-public:
-    std::string type;
-    std::string name;
-    std::string arguments;
-    Node* body;
-
-    Function(std::string type, std::string inName, std::string inArguments, Node* inBody);
-    std::string ToString(std::string inString) override;
-    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-};
-
-class Goto : public Node{
-public:
-    std::string name;
-
-    Goto(std::string inName);
-    std::string ToString(std::string inString) override;
-    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-};
-
-class Cgoto : public Node{
-    Node* condition;
-    Node* body;
-
-    Cgoto(Node* inCondition, Node* inBody);
-    std::string ToString(std::string inString) override;
-    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-};
-
-class Landing : public Node{
-public:
-    std::string name;
-
-    Landing(std::string inName);
     std::string ToString(std::string inString) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
 };
