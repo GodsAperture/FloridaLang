@@ -9,14 +9,35 @@ enum Operation{
     fetch,
     cjump,
     jump,
+
     initialize,
     assign,
     push,
+
+    //Math instructions
     multiply,
     divide,
     add,
     subtract,
-    negate
+    negate,
+
+    //Object comparisons
+    equals,
+    nequals,
+    greater,
+    greateror,
+    lesser,
+    lesseror,
+
+    //Boolean algebra
+    //i is short for instruction
+    ior,
+    inor,
+    ixor,
+    ixnor,
+    iand,
+    inand,
+    inot
 };
 
 union types{
@@ -45,6 +66,10 @@ public:
     FloridaType type;
     Operation oper;
     types literal;
+
+    Instruction(Operation inOper){
+        oper = inOper;
+    }
 
     Instruction(Operation inOper, int64_t inPosition){
         oper = inOper;

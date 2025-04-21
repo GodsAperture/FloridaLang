@@ -1,7 +1,1 @@
-fixed8 x = 10;
-
-for(fixed8 i = 0; true; i = i + 1){
-    i = i + 1;
-}
-
-fixed8 y = 2;
+1 + 2 * 3
