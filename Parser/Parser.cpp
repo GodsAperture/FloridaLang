@@ -5,7 +5,7 @@
 
 void Parser::parse(){
     //If it's not the nullptr, then it's successful.
-    result = p0();
+    result = AddSub();
 };
 
 std::vector<Instruction> Parser::FLVMCodeGen(){
@@ -14,29 +14,43 @@ std::vector<Instruction> Parser::FLVMCodeGen(){
     return instructions;
 }
 
-
-
 //Mathy stuff
-Node* Parser::p0(){
-    Node* left = p1();
-    std::string current = given[iter].getName();
+Node* Parser::AddSub(){
+    uint64_t startIter = iter;
+    void* startPointer = stack->current;
+    Node* left = nullptr;
+    Node* right = nullptr;
 
-    //Check for + or - operators between p1() expressions.
-    while(current == "+" || current == "-"){
+    //Check for a subexpression.
+    left = MulDiv();
+    if(left == nullptr){
+        return nullptr;
+    }
+
+    std::string current = given[iter].name;
+    while(current == "+" or current == "-"){
+        //Increment for either + or -
         iter++;
-        Node* right = p1();
-        //Check for any errors in the subexpression.
+
+        //Check for a product/division subexpression.
+        right = MulDiv();
         if(right == nullptr){
+            error = true;
+            errorStack.push_back("Expression expected after " + current);
+            iter = startIter;
+            stack->current = startPointer;
             return nullptr;
         }
+
+        //Check for any sort of sum or difference.
         if(current == "+"){
             left = stack->alloc<Add>(left, right);
-            current = given[iter].getName();
+            current = given[iter].name;
             continue;
         }
         if(current == "-"){
             left = stack->alloc<Subtract>(left, right);
-            current = given[iter].getName();
+            current = given[iter].name;
             continue;
         }
     }
@@ -45,93 +59,57 @@ Node* Parser::p0(){
 
 }
 
-Node* Parser::multiply(){
-    int64_t start = iter;
+Node* Parser::MulDiv(){
+    uint64_t startIter = iter;
+    void* startPointer = stack->current;
     Node* left = nullptr;
+    Node* right = nullptr;
 
-    left = p2();
+    left = primitive();
     if(left == nullptr){
-        return nullptr;
+        return left;
     }
 
-    std::string current = given[iter].getName();
-    iter++;
+    std::string current = given[iter].name;
+    while(current == "*" or current == "/"){
+        //Increment for either * or /
+        iter++;
 
-    if(current != "*"){
-        stack->dealloc(left);
-        iter = start;
-        return nullptr;
+        //Check for a primitive.
+        right = primitive();
+        if(right == nullptr){
+            error = true;
+            errorStack.push_back("Expression expected after " + current);
+            iter = startIter;
+            stack->current = startPointer;
+            return nullptr;
+        }
+
+        //Start checking for products or divisions.
+        if(current == "*"){
+            left = stack->alloc<Multiply>(left, right);
+            current = given[iter].name;
+            continue;
+        }
+        if(current == "/"){
+            left = stack->alloc<Divide>(left, right);
+            current = given[iter].name;
+            continue;
+        }
     }
 
-    Node* right = p1();
-    if(right == nullptr){
-        stack->dealloc(right);
-        iter = start;
-        return nullptr;
-    }
-
-    return stack->alloc<Multiply>(left, right);
+    return left;
 
 }
 
-Node* Parser::divide(){
-    int64_t start = iter;
-    Node* left = p2();
-
-    //Check to see if an instance of p2 exists.
-    if(left == nullptr){
-        return nullptr;
-    }
-
-    //Get the token to see if it's + or not.
-    std::string current = given[iter].getName();
-    iter++;
-
-    //If it's not + then backtrack.
-    if(current != "/"){
-        stack->dealloc(left);
-        iter = start;
-        return nullptr;
-    }
-
-    Node* right = p1();
-
-    if(right == nullptr){
-        stack->dealloc(right);
-        iter = start;
-        return nullptr;
-    }
-
-    return stack->alloc<Divide>(left, right);
-
-}
-
-Node* Parser::p1(){
-    Node* result = nullptr;
-
-    result = multiply();
-    if(result != nullptr){
-        return result;
-    }
-
-    result = divide();
-    if(result != nullptr){
-        return result;
-    }
-
-    //If nothing, then it's not one of these.
-    return nullptr;
-
-}
-
-Node* Parser::p2(){
+Node* Parser::primitive(){
     //Check for negations
     std::string current = given[iter].getName();
     if(current == "-"){
         Node* expression;
         //Increment for the minus sign;
         iter++;
-        expression = stack->alloc<Negative>(p1());
+        expression = stack->alloc<Negative>(MulDiv());
 
         return expression;
     }
@@ -140,7 +118,7 @@ Node* Parser::p2(){
         Node* expression;
         //Increment for the left parenthesis;
         iter++;
-        expression = stack->alloc<Parentheses>(p0());
+        expression = stack->alloc<Parentheses>(AddSub());
         //Increment for the right parenthesis;
         iter++;
 
@@ -177,7 +155,7 @@ Node* Parser::equal(){
     Node* left = nullptr;
     Node* right = nullptr;
 
-    left = p0();
+    left = AddSub();
     if(left == nullptr){
         return nullptr;
     }
@@ -188,7 +166,7 @@ Node* Parser::equal(){
         return nullptr;
     }
 
-    right = p0();
+    right = AddSub();
     if(right == nullptr){
         //This means that the expression is malformed.
         error = true;
@@ -203,7 +181,7 @@ Node* Parser::notEqual(){
     Node* left = nullptr;
     Node* right = nullptr;
 
-    left = p0();
+    left = AddSub();
     if(left == nullptr){
         return nullptr;
     }
@@ -214,7 +192,7 @@ Node* Parser::notEqual(){
         return nullptr;
     }
 
-    right = p0();
+    right = AddSub();
     if(right == nullptr){
         //This means that the expression is malformed.
         error = true;
@@ -229,7 +207,7 @@ Node* Parser::greaterThan(){
     Node* left = nullptr;
     Node* right = nullptr;
 
-    left = p0();
+    left = AddSub();
     if(left == nullptr){
         return nullptr;
     }
@@ -240,7 +218,7 @@ Node* Parser::greaterThan(){
         return nullptr;
     }
 
-    right = p0();
+    right = AddSub();
     if(right == nullptr){
         //This means that the expression is malformed.
         error = true;
@@ -255,7 +233,7 @@ Node* Parser::greaterThanOr(){
     Node* left = nullptr;
     Node* right = nullptr;
 
-    left = p0();
+    left = AddSub();
     if(left == nullptr){
         return nullptr;
     }
@@ -266,7 +244,7 @@ Node* Parser::greaterThanOr(){
         return nullptr;
     }
 
-    right = p0();
+    right = AddSub();
     if(right == nullptr){
         //This means that the expression is malformed.
         error = true;
@@ -281,7 +259,7 @@ Node* Parser::lessThan(){
     Node* left = nullptr;
     Node* right = nullptr;
 
-    left = p0();
+    left = AddSub();
     if(left == nullptr){
         return nullptr;
     }
@@ -292,7 +270,7 @@ Node* Parser::lessThan(){
         return nullptr;
     }
 
-    right = p0();
+    right = AddSub();
     if(right == nullptr){
         //This means that the expression is malformed.
         error = true;
@@ -307,7 +285,7 @@ Node* Parser::lessThanOr(){
     Node* left = nullptr;
     Node* right = nullptr;
 
-    left = p0();
+    left = AddSub();
     if(left == nullptr){
         return nullptr;
     }
@@ -318,7 +296,7 @@ Node* Parser::lessThanOr(){
         return nullptr;
     }
 
-    right = p0();
+    right = AddSub();
     if(right == nullptr){
         //This means that the expression is malformed.
         error = true;
@@ -566,4 +544,11 @@ Scope* Parser::scope(){
     }
 
     return newScope;
+}
+
+Body* Parser::body(){
+    Body* result = nullptr;
+
+    //TODO
+    return result;
 }

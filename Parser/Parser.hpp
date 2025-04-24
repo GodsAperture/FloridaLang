@@ -7,6 +7,7 @@
 #include "../Lexer/Token.hpp"
 #include <cinttypes>
 #include <iostream>
+#include <math.h>
 
 class Parser{
 public:
@@ -16,6 +17,8 @@ public:
     uint64_t iter = 0;
     //Error flag for errors.
     bool error = false;
+    //All the errors logged.
+    std::vector<std::string> errorStack;
     //The given vector of tokens to be parsed into a program.
     std::vector<Token> given;
     //The StackAllocator keeps my program slightly tidier.
@@ -42,17 +45,15 @@ public:
 
 //Mathematical expressions
     //0 priority
-    Node* p0();
-    Node* add();            //left: p1(), right: p0();
-    Node* subtract();       //left: p1(), right: p0();
+    //Addition and subtraction.
+    Node* AddSub();
 
     //1 priority
-    Node* p1();
-    Node* multiply();       //left: p2(), right: p1();
-    Node* divide();         //left: p2(), right: p1();
+    //Multiplication and division.
+    Node* MulDiv();
 
     //2 priority
-    Node* p2();             //numbers, booleans.
+    Node* primitive();             //numbers, booleans.
     Node* parentheses();    //subexpression: p0();Node
 
     //Comparisons
@@ -67,7 +68,7 @@ public:
     Node* compare();
 
     //0 priority
-    Node* Bool0();
+    Node* BooleanAlgebra();
     //I'm actually unsure if these are of the same priority...
     Node* OR();             //left: Bool1(), right: Bool1()
     Node* NOR();            //left: Bool1(), right: Bool1()
@@ -79,11 +80,37 @@ public:
     Node* AND();            //left: compare(), right: compare()
     Node* NAND();           //left: compare(), right: compare()
 
+    //This is so I can "pretty print" the number of errors found.
+    //Example, if I have 99 errors I can print out:
+    //[ 9] ...
+    //[10] ...
+    std::string sizer(size_t input){
+        std::string result = "[";
+        //Get how many decimal places the number is.
+        size_t size = ceil(log10((double) errorStack.size()));
+        std::string currentNumber = std::to_string(input);
+        
+        for(size_t i = 1; i < size; i++){
+            result += " ";
+        }
+
+        return result + currentNumber + "]: ";
+
+    }
+
+    //Error handler
+    void errorPrint(){
+        for(size_t i = 0; i < errorStack.size(); i++){
+            std::cout << sizer(i) << errorStack[i] << "\n";
+        }
+    }
+
     Parser(std::vector<Token> inTokens, long size){
         //This is the Global scope.
         currScope = new Scope();
         given = inTokens;
         stack = new StackAllocator(size);
+        errorStack = std::vector<std::string>();
     }
 
     ~Parser(){
