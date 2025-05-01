@@ -8,10 +8,8 @@ void Parser::parse(){
     result = AddSub();
 };
 
-std::vector<Instruction> Parser::FLVMCodeGen(){
-    std::vector<Instruction> instructions = std::vector<Instruction>();
-    result->FLVMCodeGen(instructions);
-    return instructions;
+void Parser::FLVMCodeGen(){
+    result->FLVMCodeGen(programInstructions);
 }
 
 //Mathy stuff
@@ -551,4 +549,116 @@ Body* Parser::body(){
 
     //TODO
     return result;
+}
+
+
+//x++ returns x + 1;
+//++x returns x;
+
+bool Parser::next(){
+    //Check to see if all of instructions have been executed.
+    if(instructionNumber == programInstructions.size()){
+        return false;
+    }
+
+    switch (programInstructions[instructionNumber].oper){
+        case Operation::cjump:
+            //If it's true, then don't skip
+            if(!computationVector[computationPointer - 1].boolean){
+                //This is to adjust the position of the instruction number.
+                instructionNumber = programInstructions[instructionNumber].literal.fixed64;
+                //Move the position of the stack pointer back to "delete" the-
+                //boolean being used in the prior slot.
+                computationPointer--;
+            }
+            return true;
+        case Operation::jump:
+            instructionNumber = programInstructions[instructionNumber].literal.fixed64;
+            return true;
+        case Operation::fetch:
+            //Push the value into the stack.
+            computationVector[computationPointer++] = computationVector[programInstructions[instructionNumber].literal.fixed64];
+            instructionNumber++;
+            return true;
+        case Operation::assign:
+            if(programInstructions[instructionNumber].literal.fixed64 == -1){
+                printf("Error: bad assignment position\n");
+                return;
+                //If there isn't another assignment instruction next, then-
+                //the current value is no longer needed.
+                if(programInstructions[instructionNumber + 1].oper != Operation::assign){
+                    computationPointer--;
+                }
+            }
+            computationVector[programInstructions[instructionNumber].literal.fixed64] = computationVector[computationPointer - 1];
+            instructionNumber++;
+            return true;
+        case Operation::push:
+            computationVector[computationPointer++] = programInstructions[instructionNumber].literal;
+            instructionNumber++;
+            return true;
+        case Operation::add:
+            //Get the right operand;
+            right = computationVector[--computationPointer];
+            //Get the left operand;
+            left = computationVector[--computationPointer];
+            //Operate and push;
+            computationVector[computationPointer++].fixed64 = left.fixed64 + right.fixed64;
+            instructionNumber++;
+            return true;
+        case Operation::subtract:
+            //Get the right operand;
+            right = computationVector[--computationPointer];
+            //Get the left operand;
+            left = computationVector[--computationPointer];
+            //Operate and push;
+            computationVector[computationPointer++].fixed64 = left.fixed64 - right.fixed64;
+            instructionNumber++;
+            return true;
+        case Operation::negate:
+            //Negate the value;
+            computationVector[computationPointer].fixed64 = -computationVector[computationPointer].fixed64;
+            instructionNumber++;
+            return true;
+        case Operation::multiply:
+            //Get the right operand;
+            right = computationVector[--computationPointer];
+            //Get the left operand;
+            left = computationVector[--computationPointer];
+            //Operate and push;
+            computationVector[computationPointer++].fixed64 = left.fixed64 * right.fixed64;
+            instructionNumber++;
+            return true;
+        case Operation::divide:
+            //Get the right operand;
+            right = computationVector[--computationPointer];
+            //Get the left operand;
+            left = computationVector[--computationPointer];
+            //Operate and push;	
+            computationVector[computationPointer++].fixed64 = left.fixed64 / right.fixed64;
+            instructionNumber++;
+            return true;
+        case equals:
+            //Get the right operand;
+            right = computationVector[--computationPointer];
+            //Get the left operand;
+            left = computationVector[--computationPointer];
+            //Operate and push;
+            computationVector[computationPointer++].boolean = left.fixed64 == right.fixed64;
+            instructionNumber++;
+            return true;
+        case nequals:
+            //Get the right operand;
+            right = computationVector[--computationPointer];
+            //Get the left operand;
+            left = computationVector[--computationPointer];
+            //Operate and push;
+            computationVector[computationPointer++].boolean = left.fixed64 != right.fixed64;
+            instructionNumber++;
+            return true;
+        default:
+            std::cout << "Error: Unknown instruction given.\nThe instruction number is " + programInstructions[instructionNumber].oper;
+            return true;
+    }
+
 }

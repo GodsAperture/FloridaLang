@@ -23,6 +23,9 @@ public:
     std::vector<Token> given;
     //The StackAllocator keeps my program slightly tidier.
     StackAllocator* stack = nullptr;
+
+
+
     //This will be the resulting AST.
     Node* result = nullptr;
     //The currently active scope.
@@ -30,6 +33,29 @@ public:
     //Keeps track of how many variables are in a scope.
     //This value will be reset after a scope has been exited.
     int64_t variableCount = 0;
+
+
+
+    //These methods and members are for the virtual machine.
+
+    //left and right hand members for operations
+    types left;
+    types right;
+    //The value that keeps track of where we are in the instructions.
+    size_t instructionNumber = 0;
+    //The instruction set for the program.
+    std::vector<Instruction> programInstructions = std::vector<Instruction>();
+    //The variable responsible for emulating the pointer in the "stack."
+    size_t computationPointer = 0;
+    //The "stack"
+    std::vector<types> computationVector = std::vector<types>();
+    //Exceutes the current instruction in the virtual machine.
+    //Returns true if an instruction was successfully executed.
+    bool next();
+    //Prints the current object in the stack.
+    void print();
+    //Prints the stack from the bottom to the "currentInst"
+    void printStack();
 //Comments on the rightmost parts of the functions
 //are solely so I can build the parser properly.
 
@@ -37,7 +63,7 @@ public:
     //Parse the tokens to generate a program.
     void parse();
     //Generate the code.
-    std::vector<Instruction> FLVMCodeGen();
+    void FLVMCodeGen();
     //This will handles scopes and scoping.
     Scope* scope();
     //Generate full bodies of some scope.
@@ -53,7 +79,7 @@ public:
     Node* MulDiv();
 
     //2 priority
-    Node* primitive();             //numbers, booleans.
+    Node* primitive();      //numbers, booleans.
     Node* parentheses();    //subexpression: p0();Node
 
     //Comparisons
@@ -113,6 +139,9 @@ public:
         errorStack = std::vector<std::string>();
     }
 
+    //For the love of God, don't forget this.
+    //Delete and free shit you don't need.
+    //Stay in good habit of this.
     ~Parser(){
         delete stack;
         delete result;

@@ -84,99 +84,20 @@ int main(){
 		return -1;
 	}
 
-	//Generate the instructions vector.
-	std::vector<Instruction> instructionVector;
-	std::vector<types> computationVector;
-	computationVector.resize(32);
-
 	//Begin making the instruction vector;
-	instructionVector = FloridaParser.FLVMCodeGen();
+	FloridaParser.FLVMCodeGen();
 	types left;
 	types right;
 
 	std::cout << FloridaParser.result->ToString("") << "\n";
+	bool successful = true;
 
-	//x++ returns x + 1;
-	//++x returns x;
-	//instNum stands for "Instruction Number".
-	for(size_t instNum = 0; instNum < instructionVector.size(); instNum++){
-		Operation currInst = instructionVector[instNum].oper;
-		switch (currInst){
-			case Operation::cjump:
-				//If it's true, then don't skip
-				if(!computationVector[position - 1].boolean){
-					//This is to adjust the position of the instruction number.
-					instNum = instructionVector[instNum].literal.fixed64 - 1;
-					//Move the position of the stack pointer back to "delete" the-
-					//boolean being used in the prior slot.
-					position--;
-				}
-				continue;
-			case Operation::jump:
-				//Subtract one, because of the instNum++.
-				instNum = instructionVector[instNum].literal.fixed64 - 1;
-				continue;
-			case Operation::fetch:
-				//Push the value into the stack.
-				computationVector[position++] = computationVector[instructionVector[instNum].literal.fixed64];
-				continue;
-			case Operation::assign:
-				if(instructionVector[instNum].literal.fixed64 == -1){
-					printf("Error: bad assignment position\n");
-					return -1;
-					//If there isn't another assignment instruction next, then-
-					//the current value is no longer needed.
-					if(instructionVector[instNum + 1].oper != Operation::assign){
-						position--;
-					}
-				}
-				computationVector[instructionVector[instNum].literal.fixed64] = computationVector[position - 1];
-				continue;
-			case Operation::push:
-				computationVector[position++] = instructionVector[instNum].literal;
-				continue;
-			case Operation::add:
-				//Get the right operand;
-				right = computationVector[--position];
-				//Get the left operand;
-				left = computationVector[--position];
-				//Operate and push;
-				computationVector[position++].fixed64 = left.fixed64 + right.fixed64;
-				continue;
-			case Operation::subtract:
-				//Get the right operand;
-				right = computationVector[--position];
-				//Get the left operand;
-				left = computationVector[--position];
-				//Operate and push;
-				computationVector[position++].fixed64 = left.fixed64 - right.fixed64;
-				continue;
-			case Operation::negate:
-				//Negate the value;
-				computationVector[position].fixed64 = -computationVector[position].fixed64;
-			case Operation::multiply:
-				//Get the right operand;
-				right = computationVector[--position];
-				//Get the left operand;
-				left = computationVector[--position];
-				//Operate and push;
-				computationVector[position++].fixed64 = left.fixed64 * right.fixed64;
-				continue;
-			case Operation::divide:
-				//Get the right operand;
-				right = computationVector[--position];
-				//Get the left operand;
-				left = computationVector[--position];
-				//Operate and push;	
-				computationVector[position++].fixed64 = left.fixed64 / right.fixed64;
-				continue;
-			default:
-				std::cout << "Error: Unknown instruction given.\nThe instruction number is " + currInst;
-				return -1;
-		}
+	//Execute the instructions
+	while(successful){
+		successful = FloridaParser.next();
 	}
 
-	std::cout << computationVector[0].fixed64 << "\n";
+	FloridaParser.print();
 
 	return 0;
 

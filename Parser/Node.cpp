@@ -38,6 +38,8 @@
         body->FLVMCodeGen(inInstructions);
     }
 
+
+
 //Body
     Body::Body(Node* inCurrent, Body* inNext){
         current = inCurrent;
@@ -297,6 +299,8 @@
         inInstructions.push_back(Instruction(ior));
     }
 
+
+
 //Nor NOR
     Nor::Nor(Node* inLeft, Node* inRight){
         left = inLeft;
@@ -313,6 +317,8 @@
         //Push back the instruction for OR
         inInstructions.push_back(Instruction(inor));
     }
+
+
 
 //Xor XOR
     Xor::Xor(Node* inLeft, Node* inRight){
@@ -331,6 +337,8 @@
         inInstructions.push_back(Instruction(ixor));
     }
 
+
+
 //Xnor XNOR
     Xnor::Xnor(Node* inLeft, Node* inRight){
         left = inLeft;
@@ -347,6 +355,8 @@
         //Push back the instruction for OR
         inInstructions.push_back(Instruction(ixnor));
     }
+
+
 
 //And AND
     And::And(Node* inLeft, Node* inRight){
@@ -365,6 +375,8 @@
         inInstructions.push_back(Instruction(iand));
     }
 
+
+    
 //Nand NAND
     Nand::Nand(Node* inLeft, Node* inRight){
         left = inLeft;
