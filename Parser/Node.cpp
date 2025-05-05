@@ -46,6 +46,11 @@
         next = inNext;
     }
 
+    Body::Body(Node* inCurrent){
+        current = inCurrent;
+        next = nullptr;
+    }
+
     std::string Body::ToString(std::string inString){
         if(next != nullptr){
             return inString + current->ToString(inString) + next->ToString(inString);
@@ -61,6 +66,22 @@
         if(next != nullptr){
             next->FLVMCodeGen(inInstructions);
         }
+    }
+
+
+
+//Variable
+    Variable::Variable(std::string inAdjective, std::string inName){
+        adjective = inAdjective;
+        name = inName;
+    }
+
+    std::string Variable::ToString(std::string inString){
+        return inString + adjective + " " + name; 
+    }
+
+    void FLVMCodeGen(std::vector<Instruction>& inInstructions){
+        //Do nothing
     }
 
 
@@ -301,63 +322,6 @@
 
 
 
-//Nor NOR
-    Nor::Nor(Node* inLeft, Node* inRight){
-        left = inLeft;
-        right = inRight;
-    }
-
-    std::string Nor::ToString(std::string inString){
-        return left->ToString(inString) + " NOR " + right->ToString(inString);
-    }
-
-    void Nor::FLVMCodeGen(std::vector<Instruction>& inInstructions){
-        left->FLVMCodeGen(inInstructions);
-        right->FLVMCodeGen(inInstructions);
-        //Push back the instruction for OR
-        inInstructions.push_back(Instruction(inor));
-    }
-
-
-
-//Xor XOR
-    Xor::Xor(Node* inLeft, Node* inRight){
-        left = inLeft;
-        right = inRight;
-    }
-
-    std::string Xor::ToString(std::string inString){
-        return left->ToString(inString) + " XOR " + right->ToString(inString);
-    }
-
-    void Xor::FLVMCodeGen(std::vector<Instruction>& inInstructions){
-        left->FLVMCodeGen(inInstructions);
-        right->FLVMCodeGen(inInstructions);
-        //Push back the instruction for XOR
-        inInstructions.push_back(Instruction(ixor));
-    }
-
-
-
-//Xnor XNOR
-    Xnor::Xnor(Node* inLeft, Node* inRight){
-        left = inLeft;
-        right = inRight;
-    }
-
-    std::string Xnor::ToString(std::string inString){
-        return left->ToString(inString) + " OR " + right->ToString(inString);
-    }
-
-    void Xnor::FLVMCodeGen(std::vector<Instruction>& inInstructions){
-        left->FLVMCodeGen(inInstructions);
-        right->FLVMCodeGen(inInstructions);
-        //Push back the instruction for OR
-        inInstructions.push_back(Instruction(ixnor));
-    }
-
-
-
 //And AND
     And::And(Node* inLeft, Node* inRight){
         left = inLeft;
@@ -376,20 +340,17 @@
     }
 
 
-    
-//Nand NAND
-    Nand::Nand(Node* inLeft, Node* inRight){
-        left = inLeft;
-        right = inRight;
+
+//Not !
+    Not::Not(Node* inRight){
+        right = inRight; 
     }
 
-    std::string Nand::ToString(std::string inString){
-        return left->ToString(inString) + " OR " + right->ToString(inString);
+    std::string Not::ToString(std::string input){
+        return "!" + right->ToString(input);
     }
 
-    void Nand::FLVMCodeGen(std::vector<Instruction>& inInstructions){
-        left->FLVMCodeGen(inInstructions);
+    void Not::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         right->FLVMCodeGen(inInstructions);
-        //Push back the instruction for OR
-        inInstructions.push_back(Instruction(inand));
+        inInstructions.push_back(Instruction(inot));
     }

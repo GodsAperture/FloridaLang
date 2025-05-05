@@ -34,7 +34,7 @@ public:
     // Deallocates one object that is assumed to be at the top of the stack
     template<typename T>
     void dealloc(T* ptr) {
-        if (ptr != head) {
+        if (ptr != head){
             std::size_t bytes_needed = sizeof(T);
             bytes_needed += (8 - (bytes_needed % 8)) % 8;
             current = (void*) ((std::size_t) current - bytes_needed);

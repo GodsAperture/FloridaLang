@@ -38,15 +38,10 @@ public:
 
     //These methods and members are for the virtual machine.
 
-    //left and right hand members for operations
-    types left;
-    types right;
     //The value that keeps track of where we are in the instructions.
     size_t instructionNumber = 0;
     //The instruction set for the program.
     std::vector<Instruction> programInstructions = std::vector<Instruction>();
-    //The variable responsible for emulating the pointer in the "stack."
-    size_t computationPointer = 0;
     //The "stack"
     std::vector<types> computationVector = std::vector<types>();
     //Exceutes the current instruction in the virtual machine.
@@ -54,12 +49,23 @@ public:
     bool next();
     //Prints the current object in the stack.
     void print();
-    //Prints the stack from the bottom to the "currentInst"
+    //Prints the stack from the bottom to the end of the vector.
     void printStack();
 //Comments on the rightmost parts of the functions
 //are solely so I can build the parser properly.
 
+//ComputationVector related methods
+
+    //Push the given value to the computation vector.
+    void push(types input);
+    //Pop the current value from the computation vector.
+    types pop();
+    //Get the current value from the computation vector.
+    types top();
+    bool check(std::string inString);
+
 //Program related functions.
+
     //Parse the tokens to generate a program.
     void parse();
     //Generate the code.
@@ -68,6 +74,9 @@ public:
     Scope* scope();
     //Generate full bodies of some scope.
     Body* body();
+    //Helper function for common expresssions.
+    //Assignments, functions, objects with methods, etc.
+    Node* commonExpressions();
 
 //Mathematical expressions
     //0 priority
@@ -94,17 +103,10 @@ public:
     Node* compare();
 
     //0 priority
-    Node* BooleanAlgebra();
-    //I'm actually unsure if these are of the same priority...
     Node* OR();             //left: Bool1(), right: Bool1()
-    Node* NOR();            //left: Bool1(), right: Bool1()
-    Node* XOR();            //left: Bool1(), right: Bool1()
-    Node* XNOR();           //left: Bool1(), right: Bool1()
 
     //1 priority
-    Node* Bool1();          
     Node* AND();            //left: compare(), right: compare()
-    Node* NAND();           //left: compare(), right: compare()
 
     //This is so I can "pretty print" the number of errors found.
     //Example, if I have 99 errors I can print out:

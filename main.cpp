@@ -57,7 +57,6 @@
 	// }
 
 int main(){
-	long long position = 0;
 	//Load the sample file into a string.
 	std::string thing = readFile("sample.fl");
 	Lexer FloridaLexer = Lexer(thing);
@@ -84,20 +83,18 @@ int main(){
 		return -1;
 	}
 
+	std::cout << FloridaParser.result->ToString("") << "\n";
+
 	//Begin making the instruction vector;
 	FloridaParser.FLVMCodeGen();
-	types left;
-	types right;
-
-	std::cout << FloridaParser.result->ToString("") << "\n";
-	bool successful = true;
 
 	//Execute the instructions
+	bool successful = true;
 	while(successful){
 		successful = FloridaParser.next();
 	}
 
-	FloridaParser.print();
+	//FloridaParser.print();
 
 	return 0;
 

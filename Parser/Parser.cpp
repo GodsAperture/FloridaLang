@@ -5,8 +5,17 @@
 
 void Parser::parse(){
     //If it's not the nullptr, then it's successful.
-    result = AddSub();
+
+    result = body();
 };
+
+bool Parser::check(std::string inString){
+    if(given[iter].name == inString){
+        iter++;
+        return true;
+    }
+    return false;
+}
 
 void Parser::FLVMCodeGen(){
     result->FLVMCodeGen(programInstructions);
@@ -15,7 +24,7 @@ void Parser::FLVMCodeGen(){
 //Mathy stuff
 Node* Parser::AddSub(){
     uint64_t startIter = iter;
-    void* startPointer = stack->current;
+    Node* startPointer = stack->peek<Node>();
     Node* left = nullptr;
     Node* right = nullptr;
 
@@ -26,17 +35,14 @@ Node* Parser::AddSub(){
     }
 
     std::string current = given[iter].name;
-    while(current == "+" or current == "-"){
-        //Increment for either + or -
-        iter++;
-
+    while(check("+") or check("-")){
         //Check for a product/division subexpression.
         right = MulDiv();
         if(right == nullptr){
             error = true;
             errorStack.push_back("Expression expected after " + current);
             iter = startIter;
-            stack->current = startPointer;
+            stack->dealloc(startPointer);
             return nullptr;
         }
 
@@ -59,7 +65,7 @@ Node* Parser::AddSub(){
 
 Node* Parser::MulDiv(){
     uint64_t startIter = iter;
-    void* startPointer = stack->current;
+    Node* startPointer = stack->peek<Node>();
     Node* left = nullptr;
     Node* right = nullptr;
 
@@ -69,10 +75,7 @@ Node* Parser::MulDiv(){
     }
 
     std::string current = given[iter].name;
-    while(current == "*" or current == "/"){
-        //Increment for either * or /
-        iter++;
-
+    while(check("*") or check("/")){
         //Check for a primitive.
         right = primitive();
         if(right == nullptr){
@@ -103,22 +106,22 @@ Node* Parser::MulDiv(){
 Node* Parser::primitive(){
     //Check for negations
     std::string current = given[iter].getName();
-    if(current == "-"){
+    if(check("-")){
         Node* expression;
         //Increment for the minus sign;
-        iter++;
         expression = stack->alloc<Negative>(MulDiv());
 
         return expression;
     }
     //Check for expression within parentheses.
-    if(current == "("){
+    if(check("(")){
         Node* expression;
         //Increment for the left parenthesis;
-        iter++;
         expression = stack->alloc<Parentheses>(AddSub());
         //Increment for the right parenthesis;
-        iter++;
+        if(!check(")")){
+            errorStack.push_back("Missing ')' on line " + given[iter].row);
+        }
 
         return expression;
     }
@@ -150,17 +153,21 @@ Node* Parser::primitive(){
 
 //Comparisons
 Node* Parser::equal(){
+    uint64_t startIter = iter;
+    Node* startPointer = stack->peek<Node>();
     Node* left = nullptr;
     Node* right = nullptr;
 
     left = AddSub();
     if(left == nullptr){
+        stack->dealloc(startPointer);
+        iter = startIter;
         return nullptr;
     }
 
-    if(given[iter].name == "=="){
-        iter++;
-    } else {
+    if(!check("==")){
+        stack->dealloc(startPointer);
+        iter = startIter;
         return nullptr;
     }
 
@@ -176,17 +183,23 @@ Node* Parser::equal(){
 }
 
 Node* Parser::notEqual(){
+    uint64_t startIter = iter;
+    Node* startPointer = stack->peek<Node>();
     Node* left = nullptr;
     Node* right = nullptr;
 
     left = AddSub();
     if(left == nullptr){
+        stack->dealloc(startPointer);
+        iter = startIter;
         return nullptr;
     }
 
     if(given[iter].name == "!="){
         iter++;
     } else {
+        stack->dealloc(startPointer);
+        iter = startIter;
         return nullptr;
     }
 
@@ -202,17 +215,21 @@ Node* Parser::notEqual(){
 }
 
 Node* Parser::greaterThan(){
+    uint64_t startIter = iter;
+    Node* startPointer = stack->peek<Node>();
     Node* left = nullptr;
     Node* right = nullptr;
 
     left = AddSub();
     if(left == nullptr){
+        stack->dealloc(startPointer);
+        iter = startIter;
         return nullptr;
     }
 
-    if(given[iter].name == ">"){
-        iter++;
-    } else {
+    if(!check(">")){
+        stack->dealloc(startPointer);
+        iter = startIter;
         return nullptr;
     }
 
@@ -228,17 +245,21 @@ Node* Parser::greaterThan(){
 }
 
 Node* Parser::greaterThanOr(){
+    uint64_t startIter = iter;
+    Node* startPointer = stack->peek<Node>();
     Node* left = nullptr;
     Node* right = nullptr;
 
     left = AddSub();
     if(left == nullptr){
+        stack->dealloc(startPointer);
+        iter = startIter;
         return nullptr;
     }
 
-    if(given[iter].name == ">="){
-        iter++;
-    } else {
+    if(check(">=")){
+        stack->dealloc(startPointer);
+        iter = startIter;
         return nullptr;
     }
 
@@ -254,17 +275,21 @@ Node* Parser::greaterThanOr(){
 }
 
 Node* Parser::lessThan(){
+    uint64_t startIter = iter;
+    Node* startPointer = stack->peek<Node>();
     Node* left = nullptr;
     Node* right = nullptr;
 
     left = AddSub();
     if(left == nullptr){
+        stack->dealloc(startPointer);
+        iter = startIter;
         return nullptr;
     }
 
-    if(given[iter].name == "<"){
-        iter++;
-    } else {
+    if(!check("<")){
+        iter = startIter;
+        stack->dealloc(startPointer);
         return nullptr;
     }
 
@@ -280,17 +305,21 @@ Node* Parser::lessThan(){
 }
 
 Node* Parser::lessThanOr(){
+    uint64_t startIter = iter;
+    Node* startPointer = stack->peek<Node>();
     Node* left = nullptr;
     Node* right = nullptr;
 
     left = AddSub();
     if(left == nullptr){
+        stack->dealloc(startPointer);
+        iter = startIter;
         return nullptr;
     }
 
-    if(given[iter].name == "<="){
-        iter++;
-    } else {
+    if(check("<=")){
+        stack->dealloc(startPointer);
+        iter = startIter;
         return nullptr;
     }
 
@@ -345,111 +374,39 @@ Node* Parser::compare(){
 
 
 Node* Parser::OR(){
+    uint64_t startIter = iter;
+    Node* startPointer = stack->peek<Node>();
     Node* left = nullptr;
     Node* right = nullptr;
 
-    left = compare();
+    left = AND();
     if(left == nullptr){
         return nullptr;
     }
 
-    if(given[iter].name == "OR"){
-        iter++;
-    } else {
-        return nullptr;
+    std::string current = given[iter].name;
+    while(check("OR")){
+        right = AND();
+        if(right == nullptr){
+            error = true;
+            errorStack.push_back("Expression expected after " + current);
+            iter = startIter;
+            stack->dealloc(startPointer);
+            return nullptr;
+        }
+
+        left = stack->alloc<Or>(left, right);
+        current = given[iter].name;
+
     }
 
-    right = compare();
-    if(right == nullptr){
-        //If right returns a nullptr.
-        //This means the statement is malformed.
-        error = true;
-        return nullptr;
-    }
+    return left;
 
-    return stack->alloc<Or>(left, right);
 }
 
-Node* Parser::NOR(){
-    Node* left = nullptr;
-    Node* right = nullptr;
-
-    left = compare();
-    if(left == nullptr){
-        return nullptr;
-    }
-
-    if(given[iter].name == "NOR"){
-        iter++;
-    } else {
-        return nullptr;
-    }
-
-    right = compare();
-    if(right == nullptr){
-        //If right returns a nullptr.
-        //This means the statement is malformed.
-        error = true;
-        return nullptr;
-    }
-
-    return stack->alloc<Nor>(left, right);
-}
-
-Node* Parser::XOR(){
-    Node* left = nullptr;
-    Node* right = nullptr;
-
-    left = compare();
-    if(left == nullptr){
-        return nullptr;
-    }
-
-    if(given[iter].name == "XOR"){
-        iter++;
-    } else {
-        return nullptr;
-    }
-
-    right = compare();
-    if(right == nullptr){
-        //If right returns a nullptr.
-        //This means the statement is malformed.
-        error = true;
-        return nullptr;
-    }
-
-    return stack->alloc<Xor>(left, right);
-}
-
-Node* Parser::XNOR(){
-    Node* left = nullptr;
-    Node* right = nullptr;
-
-    left = compare();
-    if(left == nullptr){
-        return nullptr;
-    }
-
-    if(given[iter].name == "XNOR"){
-        iter++;
-    } else {
-        return nullptr;
-    }
-
-    right = compare();
-    if(right == nullptr){
-        //If right returns a nullptr.
-        //This means the statement is malformed.
-        error = true;
-        return nullptr;
-    }
-
-    return stack->alloc<Xnor>(left, right);
-}
-
-//Priority 1 booleans
 Node* Parser::AND(){
+    uint64_t startIter = iter;  
+    Node* startPointer = stack->peek<Node>();
     Node* left = nullptr;
     Node* right = nullptr;
 
@@ -458,47 +415,23 @@ Node* Parser::AND(){
         return nullptr;
     }
 
-    if(given[iter].name == "AND"){
-        iter++;
-    } else {
-        return nullptr;
+    std::string current = given[iter].name;
+    while(check("AND")){
+        right = compare();
+        if(right == nullptr){
+            error = true;
+            errorStack.push_back("Expression expected after " + current);
+            iter = startIter;
+            stack->dealloc(startPointer);
+            return nullptr;
+        }
+
+        left = stack->alloc<And>(left, right);
+        current = given[iter].name;
+
     }
 
-    right = compare();
-    if(right == nullptr){
-        //If right returns a nullptr.
-        //This means the statement is malformed.
-        error = true;
-        return nullptr;
-    }
-
-    return stack->alloc<And>(left, right);
-}
-
-Node* Parser::NAND(){
-    Node* left = nullptr;
-    Node* right = nullptr;
-
-    left = compare();
-    if(left == nullptr){
-        return nullptr;
-    }
-
-    if(given[iter].name == "NAND"){
-        iter++;
-    } else {
-        return nullptr;
-    }
-
-    right = compare();
-    if(right == nullptr){
-        //If right returns a nullptr.
-        //This means the statement is malformed.
-        error = true;
-        return nullptr;
-    }
-
-    return stack->alloc<Nand>(left, right);
+    return left;
 }
 
 //Scopes
@@ -508,8 +441,7 @@ Scope* Parser::scope(){
     Body* newBody = nullptr;
 
     //Check for some body of code enclosed by {}.
-    if(given[iter].name == "{"){
-        iter++;
+    if(check("{")){
         newBody = body();
         
         //Check to see if there was some sort of body of code.
@@ -533,9 +465,7 @@ Scope* Parser::scope(){
     //Return to the outerscope.
     currScope = currScope->parent;
     //Increment for the "}", otherwise error.
-    if(given[iter].name == "}"){
-        iter++;
-    } else {
+    if(!check("}")){
         std::cout << "Expected '}' at line " << given[iter].row << ".\n";
         error = true;
         return nullptr;
@@ -545,17 +475,68 @@ Scope* Parser::scope(){
 }
 
 Body* Parser::body(){
-    Body* result = nullptr;
+    Node* current = nullptr;
+    Body* currentBody = nullptr;
+    Body* bodyStart = nullptr;
 
-    //TODO
-    return result;
+    current = commonExpressions();
+    bodyStart = stack->alloc<Body>(current);
+    currentBody = bodyStart;
+
+    while(currentBody != nullptr){
+        current = commonExpressions();
+        currentBody->next = stack->alloc<Body>(current);
+        currentBody = currentBody->next;
+        if(!check(";")){
+            error = true;
+            std::cout << "Missing ';' expected at [" + std::to_string(given[iter].row) + ", " + std::to_string(given[iter].column) +"]";
+        }
+    }
+
+    return bodyStart;
+}
+
+Node* Parser::commonExpressions(){
+    Node* result;
+
+    result = AddSub();
+    if(result != nullptr){
+        return result;
+    }
+
+    result = OR();
+    if(result != nullptr){
+        return result;
+    }
+
+    return nullptr;
 }
 
 
 //x++ returns x + 1;
 //++x returns x;
 
+void Parser::push(types input){
+    computationVector.push_back(input);
+}
+
+types Parser::pop(){
+    types result = computationVector.back();
+    computationVector.pop_back();
+
+    return result;
+}
+
+types Parser::top(){
+    return computationVector.back();
+}
+
 bool Parser::next(){
+    //left and right hand members for operations
+    types left;
+    types right;
+    types result;
+
     //Check to see if all of instructions have been executed.
     if(instructionNumber == programInstructions.size()){
         return false;
@@ -564,12 +545,11 @@ bool Parser::next(){
     switch (programInstructions[instructionNumber].oper){
         case Operation::cjump:
             //If it's true, then don't skip
-            if(!computationVector[computationPointer - 1].boolean){
+            if(!top().boolean){
                 //This is to adjust the position of the instruction number.
                 instructionNumber = programInstructions[instructionNumber].literal.fixed64;
                 //Move the position of the stack pointer back to "delete" the-
                 //boolean being used in the prior slot.
-                computationPointer--;
             }
             return true;
         case Operation::jump:
@@ -577,88 +557,155 @@ bool Parser::next(){
             return true;
         case Operation::fetch:
             //Push the value into the stack.
-            computationVector[computationPointer++] = computationVector[programInstructions[instructionNumber].literal.fixed64];
+            computationVector.push_back(computationVector[programInstructions[instructionNumber].literal.fixed64]);
             instructionNumber++;
             return true;
         case Operation::assign:
-            if(programInstructions[instructionNumber].literal.fixed64 == -1){
-                printf("Error: bad assignment position\n");
-                return;
-                //If there isn't another assignment instruction next, then-
-                //the current value is no longer needed.
-                if(programInstructions[instructionNumber + 1].oper != Operation::assign){
-                    computationPointer--;
-                }
-            }
-            computationVector[programInstructions[instructionNumber].literal.fixed64] = computationVector[computationPointer - 1];
+            computationVector[programInstructions[instructionNumber].literal.fixed64] = top();
             instructionNumber++;
             return true;
         case Operation::push:
-            computationVector[computationPointer++] = programInstructions[instructionNumber].literal;
+            push(programInstructions[instructionNumber].literal);
             instructionNumber++;
             return true;
         case Operation::add:
             //Get the right operand;
-            right = computationVector[--computationPointer];
+            right = pop();
             //Get the left operand;
-            left = computationVector[--computationPointer];
+            left = pop();
             //Operate and push;
-            computationVector[computationPointer++].fixed64 = left.fixed64 + right.fixed64;
+            result.fixed64 = left.fixed64 + right.fixed64;
+            push(result);
             instructionNumber++;
             return true;
         case Operation::subtract:
             //Get the right operand;
-            right = computationVector[--computationPointer];
+            right = pop();
             //Get the left operand;
-            left = computationVector[--computationPointer];
+            left = pop();
             //Operate and push;
-            computationVector[computationPointer++].fixed64 = left.fixed64 - right.fixed64;
+            result.fixed64 = left.fixed64 - right.fixed64;
+            push(result);
             instructionNumber++;
             return true;
         case Operation::negate:
             //Negate the value;
-            computationVector[computationPointer].fixed64 = -computationVector[computationPointer].fixed64;
+            result.fixed64 = -pop().fixed64;
+            push(result);
             instructionNumber++;
             return true;
         case Operation::multiply:
             //Get the right operand;
-            right = computationVector[--computationPointer];
+            right = pop();
             //Get the left operand;
-            left = computationVector[--computationPointer];
+            left = pop();
             //Operate and push;
-            computationVector[computationPointer++].fixed64 = left.fixed64 * right.fixed64;
+            result.fixed64 = left.fixed64 * right.fixed64;
+            push(result);
             instructionNumber++;
             return true;
         case Operation::divide:
             //Get the right operand;
-            right = computationVector[--computationPointer];
+            right = pop();
             //Get the left operand;
-            left = computationVector[--computationPointer];
-            //Operate and push;	
-            computationVector[computationPointer++].fixed64 = left.fixed64 / right.fixed64;
+            left = pop();
+            //Operate and push;
+            result.fixed64 = left.fixed64 / right.fixed64;
+            push(result);
             instructionNumber++;
             return true;
         case equals:
             //Get the right operand;
-            right = computationVector[--computationPointer];
+            right = pop();
             //Get the left operand;
-            left = computationVector[--computationPointer];
+            left = pop();
             //Operate and push;
-            computationVector[computationPointer++].boolean = left.fixed64 == right.fixed64;
+            result.boolean = left.fixed64 == right.fixed64;
+            push(result);
             instructionNumber++;
             return true;
         case nequals:
             //Get the right operand;
-            right = computationVector[--computationPointer];
+            right = pop();
             //Get the left operand;
-            left = computationVector[--computationPointer];
+            left = pop();
             //Operate and push;
-            computationVector[computationPointer++].boolean = left.fixed64 != right.fixed64;
+            result.boolean = left.fixed64 != right.fixed64;
+            push(result);
+            instructionNumber++;
+            return true;
+        case greater:
+            //Get the right operand;
+            right = pop();
+            //Get the left operand;
+            left = pop();
+            //Operate and push;
+            result.boolean = left.fixed64 > right.fixed64;
+            push(result);
+            instructionNumber++;
+            return true;
+            return true;
+        case greateror:
+            //Get the right operand;
+            right = pop();
+            //Get the left operand;
+            left = pop();
+            //Operate and push;
+            result.boolean = left.fixed64 >= right.fixed64;
+            push(result);
+            instructionNumber++;
+            return true;
+        case lesser:
+            //Get the right operand;
+            right = pop();
+            //Get the left operand;
+            left = pop();
+            //Operate and push;
+            result.boolean = left.fixed64 < right.fixed64;
+            push(result);
+            instructionNumber++;
+            return true;
+        case lesseror:
+            //Get the right operand;
+            right = pop();
+            //Get the left operand;
+            left = pop();
+            //Operate and push;
+            result.boolean = left.fixed64 <= right.fixed64;
+            push(result);
+            instructionNumber++;
+            return true;
+        case ior:
+            //Get the right operand;
+            right = pop();
+            //Get the left operand;
+            left = pop();
+            //Operate and push;
+            result.boolean = left.boolean or right.boolean;
+            push(result);
+            instructionNumber++;
+            return true;
+        case iand:
+            //Get the right operand;
+            right = pop();
+            //Get the left operand;
+            left = pop();
+            //Operate and push;
+            result.boolean = left.boolean and right.boolean;
+            push(result);
+            instructionNumber++;
+            return true;
+        case inot:
+            //Get the right operand;
+            right = pop();
+            //Operate and push;
+            result.boolean = !right.boolean;
+            push(result);
             instructionNumber++;
             return true;
         default:
             std::cout << "Error: Unknown instruction given.\nThe instruction number is " + programInstructions[instructionNumber].oper;
-            return true;
+            return false;
     }
 
 }

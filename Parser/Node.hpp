@@ -42,15 +42,15 @@ public:
     Body* next;
 
     Body(Node* inCurrent, Body* inNext);
+    Body(Node* inCurrent);
     std::string ToString(std::string inString) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
 };
 
 class Scope : public Node{
     public:
-        //This is where the scope is in the stack.
-        //This is only relevant during run time.
-        int64_t position = 0;
+        //Determines distnace from the beginning of the scope to this variable.
+        int64_t distance;
         //This points to the outerscope.
         Scope* parent = nullptr;
         //This is the body of code within the scope.
@@ -68,6 +68,18 @@ class Scope : public Node{
         void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     
     };
+
+
+
+class Variable : public Node{
+public:
+    std::string adjective;
+    std::string name;
+
+    Variable(std::string inAdjective, std::string inName);
+    std::string ToString(std::string inString) override;
+    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
+};
 
 
 
@@ -143,20 +155,6 @@ public:
     Fixed8(std::string input);
     std::string ToString(std::string inString) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-};
-
-class float64 : public Node{
-public:
-    double value;
-
-    float64(std::string input){
-        value = std::stod(input);
-    }
-
-    std::string ToString(std::string inString) override {
-        return std::to_string(value);
-    }
-
 };
 
 class Boolean : public Node{
@@ -244,52 +242,12 @@ public:
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
 };
 
-class Nor : public Node{
-public:
-    Node* left;
-    Node* right;
-
-    Nor(Node* inLeft, Node* inRight);
-    std::string ToString(std::string inString) override;
-    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-};
-
-class Xor : public Node{
-public:
-    Node* left;
-    Node* right;
-
-    Xor(Node* inLeft, Node* inRight);
-    std::string ToString(std::string inString) override;
-    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-};
-
-class Xnor : public Node{
-public:
-    Node* left;
-    Node* right;
-
-    Xnor(Node* inLeft, Node* inRight);
-    std::string ToString(std::string inString) override;
-    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-};
-
 class And : public Node{
 public:
     Node* left;
     Node* right;
 
     And(Node* inLeft, Node* inRight);
-    std::string ToString(std::string inString) override;
-    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-};
-
-class Nand : public Node{
-public:
-    Node* left;
-    Node* right;
-
-    Nand(Node* inLeft, Node* inRight);
     std::string ToString(std::string inString) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
 };

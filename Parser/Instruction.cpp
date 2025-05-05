@@ -32,11 +32,7 @@ enum Operation{
     //Boolean algebra
     //i is short for instruction
     ior,
-    inor,
-    ixor,
-    ixnor,
     iand,
-    inand,
     inot
 };
 
@@ -66,6 +62,10 @@ public:
     FloridaType type;
     Operation oper;
     types literal;
+
+    Instruction(){
+        //Do nothing, just make the compiler stop complaining.
+    }
 
     Instruction(Operation inOper){
         oper = inOper;
