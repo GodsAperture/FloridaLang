@@ -62,6 +62,8 @@ public:
     types pop();
     //Get the current value from the computation vector.
     types top();
+    //Check to see if the given string is the next token.
+    //If it is, then increment the iterator.
     bool check(std::string inString);
 
 //Program related functions.
@@ -70,15 +72,21 @@ public:
     void parse();
     //Generate the code.
     void FLVMCodeGen();
-    //This will handles scopes and scoping.
+    //Assign vales to a variable
+    Node* Assignment();
+
+//Tree related functions.
+
     Scope* scope();
     //Generate full bodies of some scope.
     Body* body();
     //Helper function for common expresssions.
     //Assignments, functions, objects with methods, etc.
     Node* commonExpressions();
+    bool hasTokens();
 
 //Mathematical expressions
+
     //0 priority
     //Addition and subtraction.
     Node* AddSub();
@@ -90,6 +98,8 @@ public:
     //2 priority
     Node* primitive();      //numbers, booleans.
     Node* parentheses();    //subexpression: p0();Node
+
+//Booleans
 
     //Comparisons
     Node* equal();

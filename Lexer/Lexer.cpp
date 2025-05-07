@@ -157,14 +157,15 @@
 		}
 
 		// Grab the first character, and then decide what to do with it.
-		Token inToken;
 		char currChar;
+		FloridaType currType;
+		std::string theToken = "";
 		this->get(currChar);
 		
 		//Catch EOF token, first and foremost.
 		//Just check to see if we've reached the end
 		//of the file.
-		if(count == file.size()){
+		if(currChar == EOF){
 			return Token(FloridaType::eof, EOF, row, column);
 		}
 		// Catch and delete page related characters.
@@ -193,7 +194,6 @@
 			// then it will continually consume characters until reaching *).
 			// Otherwise it ungets the end character and then sets the currChar to
 			// (.
-			inToken = Token(Comment, '*', row, column);
 			// While in a comment, check for *, if star is found, check to see
 			// if the next character is ). If it is, then return. If not,
 			// continue.
@@ -212,14 +212,15 @@
 		// Deal with numbers
 		if (NumberQ(currChar)) {
 			//Assuming a simple string of numbers, fix64 will be the default type.
-			inToken = Token(FloridaType::fixed8, currChar, row, column);
+			theToken += currChar;
+			currType = FloridaType::fixed8;
 			this->get(currChar);
 
 			while (!this->isEOF()) {
 
 				//If the character is a number, append it.
 				if (NumberQ(currChar)) {
-					inToken.append(currChar);
+					theToken += currChar;
 
 					this->get(currChar);
 
@@ -228,8 +229,8 @@
 
 				// Numbers with decimals will default to type fix8.
 				if (currChar == '.') {
-					inToken.append(currChar);
-					inToken.changeType(FloridaType::float8);
+					theToken += currChar;
+					currType = FloridaType::float8;
 
 					this->get(currChar);
 
@@ -247,123 +248,122 @@
 					//Check to see if it's 1.
 					if(this->peek() == '1'){
 						this->get();
-						inToken.changeType(FloridaType::ufixed8);
+						currType =  FloridaType::ufixed8;
 
-						return inToken;
+						return Token(currType, theToken, row, column);
 					}
 					//Check to see if it's 2.
 					if(this->peek() == '2'){
 						this->get();
-						inToken.changeType(FloridaType::ufixed2);
+						currType = FloridaType::ufixed2;
 						
-						return inToken;
+						return Token(currType, theToken, row, column);
 					}
 					//Check to see if it's 4.
 					if(this->peek() == '4'){
 						this->get();
-						inToken.changeType(FloridaType::ufixed4);
+						currType = FloridaType::ufixed4;
 
-						return inToken;
+						return Token(currType, theToken, row, column);
 					}
 					//Check to see if it's 8.
 					if(this->peek() == '8'){
 						this->get();
-						inToken.changeType(FloridaType::ufixed8);
+						currType = FloridaType::ufixed8;
 
-						return inToken;
+						return Token(currType, theToken, row, column);
 					} else {
-						throw new BadNumberFormatException(inToken.getName() + "u8", column, row);
+						throw new BadNumberFormatException(theToken + "u8", column, row);
 					}
 				//This case handles floating point values.
 				case 'f':
 					//Check to see if it's 32;
 					if(this->peek() == '4'){
 						this->get();
-						inToken.changeType(FloridaType::float4);
+						currType = FloridaType::float4;
 
-						return inToken;
+						return Token(currType, theToken, row, column);
 					}
 					//Check to see if it's 64;
 					if(this->peek() == '8'){
 						this->get();
-						inToken.changeType(FloridaType::float8);
+						currType = FloridaType::float8;
 
-						return inToken;
+						return Token(currType, theToken, row, column);
 					} else {
-						throw new BadNumberFormatException(inToken.getName() + "f8", column, row);
+						throw new BadNumberFormatException(theToken + "f8", column, row);
 					}
 				//This case handles fixed point values.
 				case 'i':
 					//Check to see if it's 1;
 					if(this->peek() == '1'){
 						this->get();
-						inToken.changeType(FloridaType::fixed8);
+						currType = FloridaType::fixed8;
 
-						return inToken;
+						return Token(currType, theToken, row, column);
 					}
 					//Check to see if it's 16;
 					if(this->peek() == '2'){
 						this->get();
-						inToken.changeType(FloridaType::fixed2);
+						currType = FloridaType::fixed2;
 
-						return inToken;
+						return Token(currType, theToken, row, column);
 					}
 					//Check to see if it's 4;
 					if(this->peek() == '4'){
 						this->get();
+						currType = FloridaType::fixed4;
 
-						inToken.changeType(FloridaType::fixed4);
-
-						return inToken;
+						return Token(currType, theToken, row, column);
 					}
 					//Check to see if it's 8;
 					if(this->peek() == '8'){
 						this->get();
-						inToken.changeType(FloridaType::fixed8);
+						currType = FloridaType::fixed8;
 
-						return inToken;
+						return Token(currType, theToken, row, column);
 					} else {
-						throw new BadNumberFormatException(inToken.getName() + "i4", column, row);
+						throw new BadNumberFormatException(theToken + "i4", column, row);
 					}
 				case 'e':
 					if(AlphaQ(this->peek()) || this->peek() == '-'){
-						inToken.append(currChar);
-						inToken.changeType(FloridaType::scifix8);
+						theToken += currChar;
+						currType = FloridaType::scifix8;
 						//Consume the e character and move to the next character.
 						//Scifix numbers take the form 1.23e123 to represent 1.23 * 10^123
 						this->get(currChar);
 
 						//While the next characters are numeric, append them.
 						while(NumberQ(currChar) && currChar != EOF){
-							inToken.append(currChar);
+							theToken += currChar;
 							this->get(currChar);
 						}
 						//When a non-numerical character is encountered, break the loop and unget.
 						this->unget();
 
-						return inToken;
+						return Token(currType, theToken, row, column);
 					} else {
-						throw new BadNumberFormatException(inToken.getName() + "e4", column, row);
+						throw new BadNumberFormatException(theToken + "e4", column, row);
 					}
 				case 'E':
 					if(AlphaQ(this->peek()) || this->peek() == '-'){
-						inToken.append(currChar);
-						inToken.changeType(FloridaType::scifixn);
+						theToken += currChar;
+						currType = FloridaType::scifixn;
 						//Consume the E character and move to the next character.
 						//Scifixn numbers take the form 1.23E123 to represent 1.23 * 10^123
 						this->get(currChar);
 
 						//While the next characters are numeric, append them.
 						while(NumberQ(currChar) && !this->isEOF()){
-							inToken.append(currChar);
+							theToken += currChar;
 							this->get(currChar);
 						}
 						//When a non-numerical character is encountered, break the loop and unget.
 						this->unget();
 
-						return inToken;
+						return Token(currType, theToken, row, column);
 					} else {
-						throw new BadNumberFormatException(inToken.getName() + "E4", column, row);
+						throw new BadNumberFormatException(theToken + "E4", column, row);
 					}
 				default:
 					break;
@@ -378,7 +378,7 @@
 			this->unget();
 
 			// In case a number is not specified, it returns as is and ungets.
-			return inToken;
+			return Token(currType, theToken, row, column);
 
 		} // End if statement
 
@@ -387,7 +387,8 @@
 		// Identifers: Functions, variables, methods, patterns, and character based
 		// operators.
 		if (AlphaQ(currChar)) {
-			inToken = Token(FloridaType::Identifier, currChar, row, column);
+			theToken += currChar;
+			currType = FloridaType::Identifier;
 			this->get(currChar);
 
 			while (!this->isEOF()) {
@@ -395,8 +396,8 @@
 				// If the end character is an underscore, it will be appended and
 				// the type will be changed to Pattern and return.
 				if (currChar == '_') {
-					inToken.append(currChar);
-					inToken.changeType(Pattern);
+					theToken += currChar;
+					currType = Pattern;
 
 					break;
 				}
@@ -404,7 +405,7 @@
 				// If the current character is a letter or a number it is appended, else
 				// it will unget the character and return.
 				if (AlphaQ(currChar) || NumberQ(currChar)) {
-					inToken.append(currChar);
+					theToken += currChar;
 
 					this->get(currChar);
 					continue;
@@ -414,11 +415,7 @@
 				}
 			}
 
-			if(inToken.getName() == "True" or inToken.getName() == "False"){
-				inToken.changeType(Bool);
-			}
-
-			return inToken;
+			return Token(currType, theToken, row, column);
 
 		}
 
@@ -426,27 +423,34 @@
 
 		// Strings of operators
 		if (OperatorQ(currChar)) {
-			inToken = Token(FloridaType::Operator, currChar, row, column);
+			theToken += currChar;
+			currType = FloridaType::Operator;
 			this->get(currChar);
 
 			//While every consecutive character is an operator character add them to the token.
 			while(OperatorQ(currChar) && !this->isEOF() && currChar != '(' && currChar != ')'){
-				inToken.append(currChar);
+				theToken += currChar;
 
 				this->get(currChar);
 			}
 
 			this->unget();
-			return inToken;
+			return Token(currType, theToken, row, column);
 		}
 
 
 
 		// Catch strings
 		if (currChar == '"') {
-			inToken = Token(Strings, '"', row, column);
+			get(currChar);
+			if(currChar == '"'){
+				return Token(FloridaType::Strings, "", row, column);
+			}
 
-			this->get(currChar);
+			theToken += currChar;
+			currType = Strings;
+
+			get(currChar);
 
 			while (currChar != '"' && !this->isEOF()) {
 				switch (currChar) {
@@ -458,61 +462,59 @@
 						this->get();
 						this->get();
 
-						inToken.append('\n');
+						theToken += '\n';
 						continue;
 					}
 					if (this->peek() == '\\') {
 						this->get();
 						this->get();
 
-						inToken.append('\\');
+						theToken += '\\';
 						continue;
 					}
 					if(this->peek() == 't'){
 						this->get();
 						this->get();
 
-						inToken.append('t');
+						theToken += '\t';
 						continue;
 					} else {
 						continue;//This gets rid of the [-Wimplict-fallthrough=] error.
 					}
 				default:
-					inToken.append(currChar);
+					theToken += currChar;
 					this->get(currChar);
 					continue;
 				}
 			}
 
-			inToken.append('"');
-			this->get();
-
-			return inToken;
+			return Token(currType, theToken, row, column);
 		}
 
 
 
 		// Catch compiler related commands
 		if (currChar == '#') {
-			inToken = Token(Hash, '#', row, column);
+			theToken += '#';
+			currType = Hash;
 
 			this->get(currChar);
 
 			// Compiler commands are whole tokens. An example is '#include'.
 			while ((currChar != ' ') & (currChar != '\n') & !this->isEOF()) {
-				inToken.append(currChar);
+				theToken += currChar;
 
 				this->get(currChar);
 			}
 
 			// No more characters to add to the compiler command
 			this->unget();
-			return inToken;
+			return Token(currType, theToken, row, column);
 		}
 
 
 		//Catch all paired operators
-		if(POperatorLQ(currChar) || POperatorRQ(currChar)){
+		if(POperatorLQ(currChar) or POperatorRQ(currChar)){
 			//Check if it's a left operator, otherwise it's a right operator.
 			if(POperatorLQ(currChar)){
 				return Token(POperatorL, currChar, row, column);
@@ -525,11 +527,9 @@
 		// Catch those other tokens
 		switch (currChar) {
 		case ',':
-			inToken = Token(Comma, ',', row, column);
-			return inToken;
+			return Token(Comma, ',', row, column);
 		case ';':
-			inToken = Token(Semicolon, ';', row, column);
-			return inToken;
+			return Token(Semicolon, ';', row, column);
 		}
 
 		return Token(FloridaType::BadToken, '.', row, column);

@@ -11,11 +11,11 @@ public:
 	unsigned long row;
 	unsigned long column;
 
-	std::string name;
+	std::string_view name;
 
 	Token();
 	Token(FloridaType inType, char inChar, unsigned long inRow, unsigned long inColumn);
-	Token(FloridaType inType, std::string inName, unsigned long inRow, unsigned long inColumn);
+	Token(FloridaType inType, std::string inString, unsigned long inRow, unsigned long inColumn);
 	
 	FloridaType getType();
 	std::string getName();

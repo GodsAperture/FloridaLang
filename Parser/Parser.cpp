@@ -5,12 +5,17 @@
 
 void Parser::parse(){
     //If it's not the nullptr, then it's successful.
-
     result = body();
 };
 
+
+
+bool Parser::hasTokens(){
+    return iter < given.size();
+}
+
 bool Parser::check(std::string inString){
-    if(given[iter].name == inString){
+    if(given[iter].getName() == inString){
         iter++;
         return true;
     }
@@ -34,7 +39,7 @@ Node* Parser::AddSub(){
         return nullptr;
     }
 
-    std::string current = given[iter].name;
+    std::string current = given[iter].getName();
     while(check("+") or check("-")){
         //Check for a product/division subexpression.
         right = MulDiv();
@@ -74,7 +79,7 @@ Node* Parser::MulDiv(){
         return left;
     }
 
-    std::string current = given[iter].name;
+    std::string current = given[iter].getName();
     while(check("*") or check("/")){
         //Check for a primitive.
         right = primitive();
@@ -134,7 +139,7 @@ Node* Parser::primitive(){
     }
     //Check for booleans.
     if(given[iter].type == FloridaType::Bool){
-        if(given[iter].name == "true"){
+        if(given[iter].getName() == "true"){
             iter++;
             return stack->alloc<Boolean>(true);
         } else {
@@ -143,7 +148,7 @@ Node* Parser::primitive(){
         }
     }
     //Undetectable object found.
-    std::cout << given[iter].name + " is not an identifiable object.\n\t-Type number: " + std::to_string(given[iter].type) + "\n";
+    std::cout << "[" + std::to_string(given[iter].row) + ", " + std::to_string(given[iter].column) + "] " + given[iter].getName() + " is not an identifiable object\n";
     error = true;
 
     return nullptr;
@@ -195,7 +200,7 @@ Node* Parser::notEqual(){
         return nullptr;
     }
 
-    if(given[iter].name == "!="){
+    if(given[iter].getName() == "!="){
         iter++;
     } else {
         stack->dealloc(startPointer);
@@ -257,7 +262,7 @@ Node* Parser::greaterThanOr(){
         return nullptr;
     }
 
-    if(check(">=")){
+    if(!check(">=")){
         stack->dealloc(startPointer);
         iter = startIter;
         return nullptr;
@@ -317,7 +322,7 @@ Node* Parser::lessThanOr(){
         return nullptr;
     }
 
-    if(check("<=")){
+    if(!check("<=")){
         stack->dealloc(startPointer);
         iter = startIter;
         return nullptr;
@@ -384,19 +389,17 @@ Node* Parser::OR(){
         return nullptr;
     }
 
-    std::string current = given[iter].name;
     while(check("OR")){
         right = AND();
         if(right == nullptr){
             error = true;
-            errorStack.push_back("Expression expected after " + current);
+            errorStack.push_back("Expression expected after the OR operator.");
             iter = startIter;
             stack->dealloc(startPointer);
             return nullptr;
         }
 
         left = stack->alloc<Or>(left, right);
-        current = given[iter].name;
 
     }
 
@@ -415,19 +418,17 @@ Node* Parser::AND(){
         return nullptr;
     }
 
-    std::string current = given[iter].name;
     while(check("AND")){
         right = compare();
         if(right == nullptr){
             error = true;
-            errorStack.push_back("Expression expected after " + current);
+            errorStack.push_back("Expression expected after the AND operator.");
             iter = startIter;
             stack->dealloc(startPointer);
             return nullptr;
         }
 
         left = stack->alloc<And>(left, right);
-        current = given[iter].name;
 
     }
 
@@ -482,14 +483,18 @@ Body* Parser::body(){
     current = commonExpressions();
     bodyStart = stack->alloc<Body>(current);
     currentBody = bodyStart;
+    if(!check(";")){
+        error = true;
+        std::cout << "Missing ';' expected at [" + std::to_string(given[iter].row) + ", " + std::to_string(given[iter].column) +"]\n";
+    }
 
-    while(currentBody != nullptr){
+    while(hasTokens() & (currentBody != nullptr)){
         current = commonExpressions();
         currentBody->next = stack->alloc<Body>(current);
         currentBody = currentBody->next;
         if(!check(";")){
             error = true;
-            std::cout << "Missing ';' expected at [" + std::to_string(given[iter].row) + ", " + std::to_string(given[iter].column) +"]";
+            std::cout << "Missing ';' expected at [" + std::to_string(given[iter].row) + ", " + std::to_string(given[iter].column) +"]\n";
         }
     }
 
@@ -499,12 +504,12 @@ Body* Parser::body(){
 Node* Parser::commonExpressions(){
     Node* result;
 
-    result = AddSub();
+    result = OR();
     if(result != nullptr){
         return result;
     }
 
-    result = OR();
+    result = AddSub();
     if(result != nullptr){
         return result;
     }

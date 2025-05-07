@@ -40,6 +40,22 @@
 
 
 
+//Global scope
+    Global::Global(Node* inCode){
+        code = inCode;
+        globalScope = nullptr;
+    }
+
+    std::string Global::ToString(std::string inString){
+        return code->ToString(inString);
+    }
+
+    void Global::FLVMCodeGen(std::vector<Instruction>& inInstructions){
+        code->FLVMCodeGen(inInstructions);
+    }
+
+
+
 //Body
     Body::Body(Node* inCurrent, Body* inNext){
         current = inCurrent;
@@ -53,10 +69,10 @@
 
     std::string Body::ToString(std::string inString){
         if(next != nullptr){
-            return inString + current->ToString(inString) + next->ToString(inString);
+            return inString + current->ToString(inString) + ";\n" + next->ToString(inString);
         }
 
-        return inString + current->ToString(inString);
+        return inString + current->ToString(inString) + ";\n";
     }
 
     void Body::FLVMCodeGen(std::vector<Instruction>& inInstructions){
@@ -71,16 +87,16 @@
 
 
 //Variable
-    Variable::Variable(std::string inAdjective, std::string inName){
-        adjective = inAdjective;
-        name = inName;
+    Variable::Variable(Token inToken, int64_t inDistance){
+        thisToken = inToken;
+        distance = inDistance;
     }
 
     std::string Variable::ToString(std::string inString){
-        return inString + adjective + " " + name; 
+        return thisToken.getName();
     }
 
-    void FLVMCodeGen(std::vector<Instruction>& inInstructions){
+    void Variable::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         //Do nothing
     }
 

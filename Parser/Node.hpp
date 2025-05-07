@@ -69,14 +69,32 @@ class Scope : public Node{
     
     };
 
+class Global : public Node{
+public:
+    Scope* globalScope;
+    Node* code;
 
+    Global(Node* inCode);
+    std::string ToString(std::string inString) override;
+    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
+};
 
 class Variable : public Node{
+public:
+    Token thisToken;
+    int64_t distance;
+
+    Variable(Token thisToken, int64_t inDistance);
+    std::string ToString(std::string inString) override;
+    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
+};
+
+class Initialize : public Node{
 public:
     std::string adjective;
     std::string name;
 
-    Variable(std::string inAdjective, std::string inName);
+    Initialize(std::string inAdjective, std::string inName);
     std::string ToString(std::string inString) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
 };
