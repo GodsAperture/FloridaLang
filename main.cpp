@@ -14,7 +14,7 @@
 
 	// //A simple conditionally recursive integration method.
 	// double recint(double (fun)(double), double x0, double x2){
-	// 	return simp(fun, x0, x2, fun(x0), fun(x2));
+	// 	return simp(fun, x0, x2, fun	(x0), fun(x2));
 	// }
 
 	// double simp(double (fun)(double), double x0, double x2, double y0, double y2){
@@ -58,7 +58,7 @@
 
 int main(){
 	//Load the sample file into a string.
-	std::string thing = readFile("sample.fl");
+	const std::string thing = readFile("sample.fl");
 	Lexer FloridaLexer = Lexer(thing);
 
 	//Load the first token and begin the while loop.

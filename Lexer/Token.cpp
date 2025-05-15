@@ -9,7 +9,7 @@ Token::Token(){
     column = 0;
 }
 
-Token::Token(FloridaType inType, std::string inString, unsigned long inRow, unsigned long inColumn){
+Token::Token(FloridaType inType, std::string_view inString, unsigned long inRow, unsigned long inColumn){
     type = inType;
     name = inString;
     row = inRow;

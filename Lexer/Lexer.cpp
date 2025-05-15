@@ -19,7 +19,6 @@
 	char Lexer::get(){
 
 		if(count >= file.length()){
-			column++;
 			return EOF;
 		}
 
@@ -115,51 +114,51 @@
 	}
 
 	Token Lexer::next() {
+		uint64_t start = count;
 		//Check for particular keywords.
 		if(compare("for")){
-			return Token(FloridaType::For, "for", row, column - 3);
+			return Token(FloridaType::For, std::string_view(file.data() + start, count - start), row, column - 3);
 		}
 
 		if(compare("if")){
-			return Token(FloridaType::If, "if", row, column - 2);
+			return Token(FloridaType::If, std::string_view(file.data() + start, count - start), row, column - 2);
 		}
 
 		if(compare("while")){
-			return Token(FloridaType::While, "while", row, column - 5);
+			return Token(FloridaType::While, std::string_view(file.data() + start, count - start), row, column - 5);
 		}
 
 		if(compare("fixed1")){
-			return Token(FloridaType::fixed1, "fixed1", row, column - 6);
+			return Token(FloridaType::fixed1, std::string_view(file.data() + start, count - start), row, column - 6);
 		}
 
 		if(compare("fixed2")){
-			return Token(FloridaType::fixed2, "fixed2", row, column - 6);
+			return Token(FloridaType::fixed2, std::string_view(file.data() + start, count - start), row, column - 6);
 		}
 
 		if(compare("fixed4")){
-			return Token(FloridaType::fixed4, "fixed4", row, column - 6);
+			return Token(FloridaType::fixed4, std::string_view(file.data() + start, count - start), row, column - 6);
 		}
 
 		if(compare("fixed8")){
-			return Token(FloridaType::fixed8, "fixed8", row, column - 6);
+			return Token(FloridaType::fixed8, std::string_view(file.data() + start, count - start), row, column - 6);
 		}
 
 		if(compare("boolean")){
-			return Token(FloridaType::Bool, "boolean", row, column - 7);
+			return Token(FloridaType::Bool, std::string_view(file.data() + start, count - start), row, column - 7);
 		}
 
 		if(compare("true")){
-			return Token(FloridaType::Bool, "true", row, column - 4);
+			return Token(FloridaType::Bool, std::string_view(file.data() + start, count - start), row, column - 4);
 		}
 
-		if(compare("false")){
-			return Token(FloridaType::Bool, "false", row, column - 5);
+		if(compare("false")){	
+			return Token(FloridaType::Bool, std::string_view(file.data() + start, count - start), row, column - 5);
 		}
 
 		// Grab the first character, and then decide what to do with it.
 		char currChar;
 		FloridaType currType;
-		std::string theToken = "";
 		this->get(currChar);
 		
 		//Catch EOF token, first and foremost.
@@ -175,12 +174,15 @@
 				switch (currChar) {
 				case '\n':
 					this->get(currChar);
+					start++;
 					continue;
 				case '\t':
 					this->get(currChar);
+					start++;
 					continue;
 				case ' ':
 					this->get(currChar);
+					start++;
 					continue;
 				}
 			}
@@ -212,7 +214,6 @@
 		// Deal with numbers
 		if (NumberQ(currChar)) {
 			//Assuming a simple string of numbers, fix64 will be the default type.
-			theToken += currChar;
 			currType = FloridaType::fixed8;
 			this->get(currChar);
 
@@ -220,8 +221,6 @@
 
 				//If the character is a number, append it.
 				if (NumberQ(currChar)) {
-					theToken += currChar;
-
 					this->get(currChar);
 
 					continue;
@@ -229,7 +228,6 @@
 
 				// Numbers with decimals will default to type fix8.
 				if (currChar == '.') {
-					theToken += currChar;
 					currType = FloridaType::float8;
 
 					this->get(currChar);
@@ -250,30 +248,30 @@
 						this->get();
 						currType =  FloridaType::ufixed8;
 
-						return Token(currType, theToken, row, column);
+						return Token(currType, std::string_view(file.data() + start, count - start), row, column);
 					}
 					//Check to see if it's 2.
 					if(this->peek() == '2'){
 						this->get();
 						currType = FloridaType::ufixed2;
 						
-						return Token(currType, theToken, row, column);
+						return Token(currType, std::string_view(file.data() + start, count - start), row, column);
 					}
 					//Check to see if it's 4.
 					if(this->peek() == '4'){
 						this->get();
 						currType = FloridaType::ufixed4;
 
-						return Token(currType, theToken, row, column);
+						return Token(currType, std::string_view(file.data() + start, count - start), row, column);
 					}
 					//Check to see if it's 8.
 					if(this->peek() == '8'){
 						this->get();
 						currType = FloridaType::ufixed8;
 
-						return Token(currType, theToken, row, column);
+						return Token(currType, std::string_view(file.data() + start, count - start), row, column);
 					} else {
-						throw new BadNumberFormatException(theToken + "u8", column, row);
+						throw new BadNumberFormatException(std::string(file.data() + start, count - start) + "u8", column, row);
 					}
 				//This case handles floating point values.
 				case 'f':
@@ -282,16 +280,16 @@
 						this->get();
 						currType = FloridaType::float4;
 
-						return Token(currType, theToken, row, column);
+						return Token(currType, std::string_view(file.data() + start, count - start), row, column);
 					}
 					//Check to see if it's 64;
 					if(this->peek() == '8'){
 						this->get();
 						currType = FloridaType::float8;
 
-						return Token(currType, theToken, row, column);
+						return Token(currType, std::string_view(file.data() + start, count - start), row, column);
 					} else {
-						throw new BadNumberFormatException(theToken + "f8", column, row);
+						throw new BadNumberFormatException(std::string(file.data() + start, count - start) + "f8", column, row);
 					}
 				//This case handles fixed point values.
 				case 'i':
@@ -300,34 +298,33 @@
 						this->get();
 						currType = FloridaType::fixed8;
 
-						return Token(currType, theToken, row, column);
+						return Token(currType, std::string_view(file.data() + start, count - start), row, column);
 					}
 					//Check to see if it's 16;
 					if(this->peek() == '2'){
 						this->get();
 						currType = FloridaType::fixed2;
 
-						return Token(currType, theToken, row, column);
+						return Token(currType, std::string_view(file.data() + start, count - start), row, column);
 					}
 					//Check to see if it's 4;
 					if(this->peek() == '4'){
 						this->get();
 						currType = FloridaType::fixed4;
 
-						return Token(currType, theToken, row, column);
+						return Token(currType, std::string_view(file.data() + start, count - start), row, column);
 					}
 					//Check to see if it's 8;
 					if(this->peek() == '8'){
 						this->get();
 						currType = FloridaType::fixed8;
 
-						return Token(currType, theToken, row, column);
+						return Token(currType, std::string_view(file.data() + start, count - start), row, column);
 					} else {
-						throw new BadNumberFormatException(theToken + "i4", column, row);
+						throw new BadNumberFormatException(std::string(file.data() + start, count - start) + "i4", column, row);
 					}
 				case 'e':
 					if(AlphaQ(this->peek()) || this->peek() == '-'){
-						theToken += currChar;
 						currType = FloridaType::scifix8;
 						//Consume the e character and move to the next character.
 						//Scifix numbers take the form 1.23e123 to represent 1.23 * 10^123
@@ -335,19 +332,17 @@
 
 						//While the next characters are numeric, append them.
 						while(NumberQ(currChar) && currChar != EOF){
-							theToken += currChar;
 							this->get(currChar);
 						}
 						//When a non-numerical character is encountered, break the loop and unget.
 						this->unget();
 
-						return Token(currType, theToken, row, column);
+						return Token(currType, std::string_view(file.data() + start, count - start), row, column);
 					} else {
-						throw new BadNumberFormatException(theToken + "e4", column, row);
+						throw new BadNumberFormatException(std::string(file.data() + start, count - start) + "e4", column, row);
 					}
 				case 'E':
 					if(AlphaQ(this->peek()) || this->peek() == '-'){
-						theToken += currChar;
 						currType = FloridaType::scifixn;
 						//Consume the E character and move to the next character.
 						//Scifixn numbers take the form 1.23E123 to represent 1.23 * 10^123
@@ -355,15 +350,14 @@
 
 						//While the next characters are numeric, append them.
 						while(NumberQ(currChar) && !this->isEOF()){
-							theToken += currChar;
 							this->get(currChar);
 						}
 						//When a non-numerical character is encountered, break the loop and unget.
 						this->unget();
 
-						return Token(currType, theToken, row, column);
+						return Token(currType, std::string_view(file.data() + start, count - start), row, column);
 					} else {
-						throw new BadNumberFormatException(theToken + "E4", column, row);
+						throw new BadNumberFormatException(std::string(file.data() + start, count - start) + "E4", column, row);
 					}
 				default:
 					break;
@@ -378,7 +372,7 @@
 			this->unget();
 
 			// In case a number is not specified, it returns as is and ungets.
-			return Token(currType, theToken, row, column);
+			return Token(currType, std::string_view(file.data() + start, count - start), row, column);
 
 		} // End if statement
 
@@ -387,7 +381,6 @@
 		// Identifers: Functions, variables, methods, patterns, and character based
 		// operators.
 		if (AlphaQ(currChar)) {
-			theToken += currChar;
 			currType = FloridaType::Identifier;
 			this->get(currChar);
 
@@ -396,7 +389,6 @@
 				// If the end character is an underscore, it will be appended and
 				// the type will be changed to Pattern and return.
 				if (currChar == '_') {
-					theToken += currChar;
 					currType = Pattern;
 
 					break;
@@ -405,7 +397,6 @@
 				// If the current character is a letter or a number it is appended, else
 				// it will unget the character and return.
 				if (AlphaQ(currChar) || NumberQ(currChar)) {
-					theToken += currChar;
 
 					this->get(currChar);
 					continue;
@@ -415,7 +406,7 @@
 				}
 			}
 
-			return Token(currType, theToken, row, column);
+			return Token(currType, std::string_view(file.data() + start, count - start), row, column);
 
 		}
 
@@ -423,19 +414,17 @@
 
 		// Strings of operators
 		if (OperatorQ(currChar)) {
-			theToken += currChar;
 			currType = FloridaType::Operator;
 			this->get(currChar);
 
 			//While every consecutive character is an operator character add them to the token.
 			while(OperatorQ(currChar) && !this->isEOF() && currChar != '(' && currChar != ')'){
-				theToken += currChar;
 
 				this->get(currChar);
 			}
 
 			this->unget();
-			return Token(currType, theToken, row, column);
+			return Token(currType, std::string_view(file.data() + start, count - start), row, column);
 		}
 
 
@@ -444,10 +433,9 @@
 		if (currChar == '"') {
 			get(currChar);
 			if(currChar == '"'){
-				return Token(FloridaType::Strings, "", row, column);
+				return Token(FloridaType::Strings, std::string_view(file.data() + start, count - start), row, column);
 			}
 
-			theToken += currChar;
 			currType = Strings;
 
 			get(currChar);
@@ -462,54 +450,50 @@
 						this->get();
 						this->get();
 
-						theToken += '\n';
 						continue;
 					}
 					if (this->peek() == '\\') {
 						this->get();
 						this->get();
 
-						theToken += '\\';
 						continue;
 					}
 					if(this->peek() == 't'){
 						this->get();
 						this->get();
 
-						theToken += '\t';
 						continue;
 					} else {
 						continue;//This gets rid of the [-Wimplict-fallthrough=] error.
 					}
 				default:
-					theToken += currChar;
 					this->get(currChar);
 					continue;
 				}
 			}
 
-			return Token(currType, theToken, row, column);
+			unget();
+
+			return Token(currType, std::string_view(file.data() + start, count - start), row, column);
 		}
 
 
 
 		// Catch compiler related commands
 		if (currChar == '#') {
-			theToken += '#';
 			currType = Hash;
 
 			this->get(currChar);
 
 			// Compiler commands are whole tokens. An example is '#include'.
 			while ((currChar != ' ') & (currChar != '\n') & !this->isEOF()) {
-				theToken += currChar;
 
 				this->get(currChar);
 			}
 
 			// No more characters to add to the compiler command
 			this->unget();
-			return Token(currType, theToken, row, column);
+			return Token(currType, std::string_view(file.data() + start, count - start), row, column);
 		}
 
 
@@ -527,9 +511,9 @@
 		// Catch those other tokens
 		switch (currChar) {
 		case ',':
-			return Token(Comma, ',', row, column);
+			return Token(Comma, std::string_view(file.data() + start, count - start), row, column);
 		case ';':
-			return Token(Semicolon, ';', row, column);
+			return Token(Semicolon, std::string_view(file.data() + start, count - start), row, column);
 		}
 
 		return Token(FloridaType::BadToken, '.', row, column);

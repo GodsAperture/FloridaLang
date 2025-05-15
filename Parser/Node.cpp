@@ -12,7 +12,7 @@
     int64_t Scope::where(std::string input){
         //If it exists, then we'll find the position.
         for(size_t i = 0; i < variables.size(); i++){
-            if(input == variables[i].token.name){
+            if(input == variables[i]){
                 return i;
             }
         }
@@ -26,8 +26,8 @@
         parent = inScope;
     }
 
-    void Scope::push(Association input){
-        variables.push_back(input);
+    void Scope::push(Variable* input){
+        variables.push_back(input->thisToken.getName());
     }
 
     std::string Scope::ToString(std::string inString){
@@ -98,6 +98,25 @@
 
     void Variable::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         //Do nothing
+    }
+
+
+
+//Assignment
+    Assignment::Assignment(Variable* inVariable, Node* inCode){
+        thisVariable = inVariable;
+        code = inCode;
+    }
+
+    std::string Assignment::ToString(std::string inString){
+        return thisVariable->thisToken.getName() + " = " + code->ToString(inString);
+    }
+
+    void Assignment::FLVMCodeGen(std::vector<Instruction>& inInstructions){
+        //Generate code for the assignment.
+        code->FLVMCodeGen(inInstructions);
+        //Push back the instruction for assignment.
+        inInstructions.push_back(Instruction(assign, thisVariable->distance));
     }
 
 

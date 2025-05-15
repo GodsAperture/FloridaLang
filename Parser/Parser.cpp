@@ -3,10 +3,38 @@
 #include "StackAllocator.hpp"
 #include <iostream>
 
+bool typeCheck(FloridaType inType){
+    switch(inType){
+        case FloridaType::fixed1:
+        case FloridaType::fixed2:
+        case FloridaType::fixed4:
+        case FloridaType::fixed8:
+        case FloridaType::Bool:
+            return true;
+        default:
+            return false;
+
+    }
+}
+
 void Parser::parse(){
     //If it's not the nullptr, then it's successful.
+    variableCount.push_back(0);
     result = body();
+    variableCount.pop_back();
 };
+
+void Parser::countInc(){
+    variableCount[variableCount.size() - 1] = variableCount[variableCount.size() - 1] + 1;
+}
+
+void Parser::countDec(){
+    variableCount[variableCount.size() - 1] = variableCount[variableCount.size() - 1] - 1;
+}
+
+int64_t Parser::count(){
+    return variableCount[variableCount.size() - 1];
+}
 
 
 
@@ -53,11 +81,13 @@ Node* Parser::AddSub(){
 
         //Check for any sort of sum or difference.
         if(current == "+"){
+            countDec();
             left = stack->alloc<Add>(left, right);
             current = given[iter].name;
             continue;
         }
         if(current == "-"){
+            countDec();
             left = stack->alloc<Subtract>(left, right);
             current = given[iter].name;
             continue;
@@ -93,11 +123,13 @@ Node* Parser::MulDiv(){
 
         //Start checking for products or divisions.
         if(current == "*"){
+            countDec();
             left = stack->alloc<Multiply>(left, right);
             current = given[iter].name;
             continue;
         }
         if(current == "/"){
+            countDec();
             left = stack->alloc<Divide>(left, right);
             current = given[iter].name;
             continue;
@@ -116,6 +148,7 @@ Node* Parser::primitive(){
         //Increment for the minus sign;
         expression = stack->alloc<Negative>(MulDiv());
 
+        countInc();
         return expression;
     }
     //Check for expression within parentheses.
@@ -128,6 +161,7 @@ Node* Parser::primitive(){
             errorStack.push_back("Missing ')' on line " + given[iter].row);
         }
 
+        countInc();
         return expression;
     }
     //Check for numbers.
@@ -135,15 +169,18 @@ Node* Parser::primitive(){
         Fixed8* number = stack->alloc<Fixed8>(given[iter].getName());
         iter++; 
 
+        countInc();
         return number;
     }
     //Check for booleans.
     if(given[iter].type == FloridaType::Bool){
         if(given[iter].getName() == "true"){
             iter++;
+            countInc();
             return stack->alloc<Boolean>(true);
         } else {
             iter++;
+            countInc();
             return stack->alloc<Boolean>(false);
         }
     }
@@ -183,6 +220,7 @@ Node* Parser::equal(){
         return nullptr;
     }
 
+    countDec();
     return stack->alloc<Equal>(left, right);
 
 }
@@ -215,6 +253,7 @@ Node* Parser::notEqual(){
         return nullptr;
     }
 
+    countDec();
     return stack->alloc<NotEqual>(left, right);
 
 }
@@ -245,6 +284,7 @@ Node* Parser::greaterThan(){
         return nullptr;
     }
 
+    countDec();
     return stack->alloc<GreaterThan>(left, right);
 
 }
@@ -275,6 +315,7 @@ Node* Parser::greaterThanOr(){
         return nullptr;
     }
 
+    countDec();
     return stack->alloc<GreaterThanOr>(left, right);
 
 }
@@ -305,6 +346,7 @@ Node* Parser::lessThan(){
         return nullptr;
     }
 
+    countDec();
     return stack->alloc<LessThan>(left, right);
 
 }
@@ -335,6 +377,7 @@ Node* Parser::lessThanOr(){
         return nullptr;
     }
 
+    countDec();
     return stack->alloc<LessThanOr>(left, right);
 
 }
@@ -399,6 +442,7 @@ Node* Parser::OR(){
             return nullptr;
         }
 
+        countDec();
         left = stack->alloc<Or>(left, right);
 
     }
@@ -428,6 +472,7 @@ Node* Parser::AND(){
             return nullptr;
         }
 
+        countDec();
         left = stack->alloc<And>(left, right);
 
     }
@@ -454,25 +499,27 @@ Scope* Parser::scope(){
             iter--;
             return nullptr;
         }
-    } else {
-        //This isn't an error, just that a scope wasn't found.
-        //Scopes will always be enclosed by {}.
-        //Except for the global scope.
-        return nullptr;
+
+        //Reset the counter and empty the current scope before leaving scope.
+        variableCount.pop_back();
+        //Return to the outerscope.
+        currScope = currScope->parent;
+        //Increment for the "}", otherwise error.
+        if(!check("}")){
+            std::cout << "Expected '}' at line " << given[iter].row << ".\n";
+            error = true;
+            return nullptr;
+        }
+
+        return newScope;
+
     }
 
-    //Reset the counter before leaving scope.
-    variableCount = 0;
-    //Return to the outerscope.
-    currScope = currScope->parent;
-    //Increment for the "}", otherwise error.
-    if(!check("}")){
-        std::cout << "Expected '}' at line " << given[iter].row << ".\n";
-        error = true;
-        return nullptr;
-    }
+    //This isn't an error, just that a scope wasn't found.
+    //Scopes will always be enclosed by {}.
+    //Except for the global scope.
+    return nullptr;
 
-    return newScope;
 }
 
 Body* Parser::body(){
@@ -517,6 +564,73 @@ Node* Parser::commonExpressions(){
     return nullptr;
 }
 
+//Variable stuff
+Variable* Parser::variable(){
+    //Check to see if the variable is a valid token.
+    if(given[iter].getType() == FloridaType::Identifier){
+        //Create a new variable object.
+        Variable* newVariable = stack->alloc<Variable>(given[iter], count());
+        iter++;
+        countInc();
+        return newVariable;
+    }
+
+    //This isn't an error, just that a variable wasn't found.
+    return nullptr;
+}
+
+Initialize* Parser::initialize(){
+    //Check to see if the variable is a valid token.
+    if(typeCheck(given[iter].getType()) & given[iter + 1].getType() == FloridaType::Identifier){
+        //Create a new variable object.
+        Initialize* newVariable = stack->alloc<Initialize>(given[iter + 1], count());
+        //Add the variable to the current scope.
+        currScope->variables.push_back(given[iter + 1].getName());
+        iter++;
+        iter++;
+
+        return newVariable;
+    }
+
+    //This isn't an error, just that a variable wasn't found.
+    return nullptr;
+}
+
+Assignment* Parser::assignment(){
+    Variable* thisVariable = variable();
+    if(thisVariable != nullptr){
+        if(!check("=")){
+            error = true;
+            errorStack.push_back("Missing '=' on line " + given[iter].row);
+            return nullptr;
+        }
+
+        Node* thisStatement = commonExpressions();
+        if(thisStatement != nullptr){
+            return stack->alloc<Assignment>(thisVariable, thisStatement);
+        }
+
+        return nullptr;
+        
+    }
+
+    Initialize* thisInitialization = initialize();
+    if(thisInitialization != nullptr){
+        if(!check("=")){
+            return stack->alloc<Assignment>(thisInitialization, nullptr);
+        }
+
+        Node* thisStatement = commonExpressions();
+        if(thisStatement != nullptr){
+            return stack->alloc<Assignment>(thisInitialization, thisStatement);
+        }
+
+        return nullptr;
+    }
+
+    //This isn't an error, just that an assignment wasn't found.
+    return nullptr;
+}
 
 //x++ returns x + 1;
 //++x returns x;

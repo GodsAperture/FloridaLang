@@ -32,8 +32,14 @@ public:
     Scope* currScope = nullptr;
     //Keeps track of how many variables are in a scope.
     //This value will be reset after a scope has been exited.
-    int64_t variableCount = 0;
+    std::vector<int64_t> variableCount = std::vector<int64_t>(0);
 
+    //Increments the stack counter.
+    void countInc();
+    //Decrements the stack counter.
+    void countDec();
+    //Returns the current stack size.
+    int64_t count();
 
 
     //These methods and members are for the virtual machine.
@@ -44,6 +50,8 @@ public:
     std::vector<Instruction> programInstructions = std::vector<Instruction>();
     //The "stack"
     std::vector<types> computationVector = std::vector<types>();
+    //Expected stack size.
+    int64_t expSize = 0;
     //Exceutes the current instruction in the virtual machine.
     //Returns true if an instruction was successfully executed.
     bool next();
@@ -72,8 +80,12 @@ public:
     void parse();
     //Generate the code.
     void FLVMCodeGen();
-    //Assign vales to a variable
-    Node* Assignment();
+    //Check for a variable.
+    Variable* variable();
+    //Check for an initialization.
+    Initialize* initialize();
+    //Check for an assignment.
+    Assignment* assignment();
 
 //Tree related functions.
 

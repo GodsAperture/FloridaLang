@@ -56,12 +56,12 @@ class Scope : public Node{
         //This is the body of code within the scope.
         Body* body = nullptr;
         //This will be the variables of the current scope.
-        std::vector<Association> variables = std::vector<Association>(4);
+        std::vector<std::string> variables = std::vector<std::string>(8);
 
         //Find where in some given Scope a particular variable lies.
         int64_t where(std::string input);
         //Push a new variable into the scope's variable stack.
-        void push(Association input);
+        void push(Variable* input);
         Scope();
         Scope(Body* inBody, Scope* inScope);
         std::string ToString(std::string inString) override;
@@ -83,18 +83,30 @@ class Variable : public Node{
 public:
     Token thisToken;
     int64_t distance;
+    Variable* next = nullptr;
 
     Variable(Token thisToken, int64_t inDistance);
     std::string ToString(std::string inString) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
+
 };
 
 class Initialize : public Node{
 public:
-    std::string adjective;
-    std::string name;
+    Token thisToken;
+    int64_t distance;
 
-    Initialize(std::string inAdjective, std::string inName);
+    Initialize(Token inAdjective, int64_t inName);
+    std::string ToString(std::string inString) override;
+    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
+};
+
+class Assignment : public Node{
+public:
+    Variable* thisVariable;
+    Node* code;
+
+    Assignment(Variable* inVariable, Node* inCode);
     std::string ToString(std::string inString) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
 };
