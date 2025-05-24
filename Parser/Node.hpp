@@ -47,16 +47,27 @@ public:
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
 };
 
+class Variable : public Node{
+public:
+    Token thisToken;
+    bool isLocal = false;
+    int64_t distance;
+    Variable* next = nullptr;
+
+    Variable(Token thisToken, int64_t inDistance, bool inIsLocal);
+    std::string ToString(std::string inString) override;
+    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
+
+};
+
 class Scope : public Node{
     public:
-        //Determines distnace from the beginning of the scope to this variable.
-        int64_t distance;
         //This points to the outerscope.
         Scope* parent = nullptr;
         //This is the body of code within the scope.
         Body* body = nullptr;
         //This will be the variables of the current scope.
-        std::vector<std::string> variables = std::vector<std::string>(8);
+        std::vector<std::string> variables = std::vector<std::string>();
 
         //Find where in some given Scope a particular variable lies.
         int64_t where(std::string input);
@@ -79,24 +90,11 @@ public:
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
 };
 
-class Variable : public Node{
-public:
-    Token thisToken;
-    int64_t distance;
-    Variable* next = nullptr;
-
-    Variable(Token thisToken, int64_t inDistance);
-    std::string ToString(std::string inString) override;
-    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-
-};
-
 class Initialize : public Node{
 public:
-    Token thisToken;
-    int64_t distance;
+    Variable* thisVariable;
 
-    Initialize(Token inAdjective, int64_t inName);
+    Initialize(Variable* inVariable);
     std::string ToString(std::string inString) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
 };

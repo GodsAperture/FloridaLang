@@ -87,9 +87,10 @@
 
 
 //Variable
-    Variable::Variable(Token inToken, int64_t inDistance){
+    Variable::Variable(Token inToken, int64_t inDistance, bool inIsLocal){
         thisToken = inToken;
         distance = inDistance;
+        isLocal = inIsLocal;
     }
 
     std::string Variable::ToString(std::string inString){
@@ -97,6 +98,26 @@
     }
 
     void Variable::FLVMCodeGen(std::vector<Instruction>& inInstructions){
+        if(isLocal){
+            //Push back the instruction for local variable.
+            inInstructions.push_back(Instruction(lfetch, distance));
+            return;
+        }
+            inInstructions.push_back(Instruction(gfetch, distance));
+    }
+
+
+
+//Initialize
+    Initialize::Initialize(Variable* inVariable){
+        thisVariable = inVariable;
+    }
+
+    std::string Initialize::ToString(std::string inString){
+        return thisVariable->thisToken.getName();
+    }
+
+    void Initialize::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         //Do nothing
     }
 

@@ -6,7 +6,8 @@
 #include "../Lexer/Token.hpp"
 
 enum Operation{
-    fetch,
+    gfetch,
+    lfetch,
     cjump,
     jump,
 
@@ -74,12 +75,6 @@ public:
     Instruction(Operation inOper, int64_t inPosition){
         oper = inOper;
         literal.fixed64 = inPosition;
-    }
-
-    Instruction(FloridaType inType, types inLiteral){
-        type = inType;
-        oper = Operation::fetch;
-        literal = inLiteral;
     }
 
     Instruction(FloridaType inType, Operation inOperation, types inLiteral){

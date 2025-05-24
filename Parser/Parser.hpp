@@ -38,6 +38,8 @@ public:
     void countInc();
     //Decrements the stack counter.
     void countDec();
+    //Sets the counter
+    void countSet(int64_t input);
     //Returns the current stack size.
     int64_t count();
 
@@ -50,8 +52,6 @@ public:
     std::vector<Instruction> programInstructions = std::vector<Instruction>();
     //The "stack"
     std::vector<types> computationVector = std::vector<types>();
-    //Expected stack size.
-    int64_t expSize = 0;
     //Exceutes the current instruction in the virtual machine.
     //Returns true if an instruction was successfully executed.
     bool next();
@@ -83,9 +83,9 @@ public:
     //Check for a variable.
     Variable* variable();
     //Check for an initialization.
-    Initialize* initialize();
+    Variable* initialize();
     //Check for an assignment.
-    Assignment* assignment();
+    Node* assignment();
 
 //Tree related functions.
 

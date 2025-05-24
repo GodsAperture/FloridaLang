@@ -186,6 +186,10 @@
 					continue;
 				}
 			}
+
+			//Move back so the lexer doesn't get fucked up.
+			this->unget();
+			return next();
 		}
 
 
