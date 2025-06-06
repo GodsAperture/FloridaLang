@@ -19,31 +19,35 @@ bool typeCheck(FloridaType inType){
 
 void Parser::parse(){
     //If it's not the nullptr, then it's successful.
-    variableCount.push_back(0);
+    stackCount.push_back(0);
     result = body();
-    variableCount.pop_back();
+    stackCount.pop_back();
 };
 
 void Parser::countInc(){
-    variableCount[variableCount.size() - 1] = variableCount[variableCount.size() - 1] + 1;
+    stackCount[stackCount.size() - 1] = stackCount[stackCount.size() - 1] + 1;
 }
 
 void Parser::countDec(){
-    variableCount[variableCount.size() - 1] = variableCount[variableCount.size() - 1] - 1;
+    stackCount[stackCount.size() - 1] = stackCount[stackCount.size() - 1] - 1;
 }
 
 void Parser::countSet(int64_t input){
-    variableCount[variableCount.size() - 1] = input;
+    stackCount[stackCount.size() - 1] = input;
 }
 
 int64_t Parser::count(){
-    return variableCount[variableCount.size() - 1];
+    return stackCount[stackCount.size() - 1];
 }
 
 
 
 bool Parser::hasTokens(){
     return iter < given.size();
+}
+
+bool Parser::hasTokens(int64_t input){
+    return iter + input < given.size();
 }
 
 bool Parser::check(std::string inString){
@@ -58,11 +62,15 @@ void Parser::FLVMCodeGen(){
     result->FLVMCodeGen(programInstructions);
 }
 
+
+
 //Mathy stuff
 Node* Parser::AddSub(){
-    uint64_t startIter = iter;
-    int64_t startCount = count();
-    Node* startPointer = stack->peek<Node>();
+    if(!hasTokens(1)){
+        return nullptr;
+    }
+    
+    Start start = currInfo();
     Node* left = nullptr;
     Node* right = nullptr;
 
@@ -79,9 +87,7 @@ Node* Parser::AddSub(){
         if(right == nullptr){
             error = true;
             errorStack.push_back("Expression expected after " + current);
-            iter = startIter;
-            countSet(startCount);
-            stack->dealloc(startPointer);
+            reset(start);
             return nullptr;
         }
 
@@ -105,9 +111,11 @@ Node* Parser::AddSub(){
 }
 
 Node* Parser::MulDiv(){
-    uint64_t startIter = iter;
-    int64_t startCount = count();
-    Node* startPointer = stack->peek<Node>();
+    if(!hasTokens(1)){
+        return nullptr;
+    }
+
+    Start start = currInfo();
     Node* left = nullptr;
     Node* right = nullptr;
 
@@ -123,9 +131,7 @@ Node* Parser::MulDiv(){
         if(right == nullptr){
             error = true;
             errorStack.push_back("Expression expected after " + current);
-            countSet(startCount);
-            iter = startIter;
-            stack->current = startPointer;
+            reset(start);
             return nullptr;
         }
 
@@ -149,6 +155,10 @@ Node* Parser::MulDiv(){
 }
 
 Node* Parser::primitive(){
+    if(!hasTokens(1)){
+        return nullptr;
+    }
+
     //Check for negations
     std::string current = given[iter].getName();
     if(check("-")){
@@ -166,7 +176,7 @@ Node* Parser::primitive(){
         expression = stack->alloc<Parentheses>(AddSub());
         //Increment for the right parenthesis;
         if(!check(")")){
-            errorStack.push_back("Missing ')' on line " + given[iter].row);
+            errorStack.push_back("Missing ')' on line " + std::to_string(given[iter].row));
         }
 
         countInc();
@@ -207,24 +217,22 @@ Node* Parser::primitive(){
 
 //Comparisons
 Node* Parser::equal(){
-    uint64_t startIter = iter;
-    int64_t startCount = count();
-    Node* startPointer = stack->peek<Node>();
+    if(!hasTokens(1)){
+        return nullptr;
+    }
+
+    Start start = currInfo();
     Node* left = nullptr;
     Node* right = nullptr;
 
     left = AddSub();
     if(left == nullptr){
-        stack->dealloc(startPointer);
-        countSet(startCount);
-        iter = startIter;
+        reset(currInfo());
         return nullptr;
     }
 
     if(!check("==")){
-        stack->dealloc(startPointer);
-        countSet(startCount);
-        iter = startIter;
+        reset(start);
         return nullptr;
     }
 
@@ -241,26 +249,24 @@ Node* Parser::equal(){
 }
 
 Node* Parser::notEqual(){
-    uint64_t startIter = iter;
-    int64_t startCount = count();
-    Node* startPointer = stack->peek<Node>();
+    if(!hasTokens(3)){
+        return nullptr;
+    }
+
+    Start start = currInfo();
     Node* left = nullptr;
     Node* right = nullptr;
 
     left = AddSub();
     if(left == nullptr){
-        stack->dealloc(startPointer);
-        countSet(startCount);
-        iter = startIter;
+        reset(start);
         return nullptr;
     }
 
     if(given[iter].getName() == "!="){
         iter++;
     } else {
-        stack->dealloc(startPointer);
-        countSet(startCount);
-        iter = startIter;
+        reset(start);
         return nullptr;
     }
 
@@ -277,24 +283,22 @@ Node* Parser::notEqual(){
 }
 
 Node* Parser::greaterThan(){
-    uint64_t startIter = iter;
-    int64_t startCount = count();
-    Node* startPointer = stack->peek<Node>();
+    if(!hasTokens(3)){
+        return nullptr;
+    }
+
+    Start start = currInfo();
     Node* left = nullptr;
     Node* right = nullptr;
 
     left = AddSub();
     if(left == nullptr){
-        stack->dealloc(startPointer);
-        countSet(startCount);
-        iter = startIter;
+        reset(start);
         return nullptr;
     }
 
     if(!check(">")){
-        stack->dealloc(startPointer);
-        countSet(startCount);
-        iter = startIter;
+        reset(start);
         return nullptr;
     }
 
@@ -311,24 +315,22 @@ Node* Parser::greaterThan(){
 }
 
 Node* Parser::greaterThanOr(){
-    uint64_t startIter = iter;
-    int64_t startCount = count();
-    Node* startPointer = stack->peek<Node>();
+    if(!hasTokens(3)){
+        return nullptr;
+    }
+
+    Start start = currInfo();
     Node* left = nullptr;
     Node* right = nullptr;
 
     left = AddSub();
     if(left == nullptr){
-        stack->dealloc(startPointer);
-        countSet(startCount);
-        iter = startIter;
+        reset(start);
         return nullptr;
     }
 
     if(!check(">=")){
-        stack->dealloc(startPointer);
-        countSet(startCount);
-        iter = startIter;
+        reset(start);
         return nullptr;
     }
 
@@ -345,24 +347,22 @@ Node* Parser::greaterThanOr(){
 }
 
 Node* Parser::lessThan(){
-    uint64_t startIter = iter;
-    int64_t startCount = count();
-    Node* startPointer = stack->peek<Node>();
+    if(!hasTokens(3)){
+        return nullptr;
+    }
+
+    Start start = currInfo();
     Node* left = nullptr;
     Node* right = nullptr;
 
     left = AddSub();
     if(left == nullptr){
-        stack->dealloc(startPointer);
-        countSet(startCount);
-        iter = startIter;
+        reset(start);
         return nullptr;
     }
 
     if(!check("<")){
-        iter = startIter;
-        stack->dealloc(startPointer);
-        countSet(startCount);
+        reset(start);
         return nullptr;
     }
 
@@ -379,24 +379,22 @@ Node* Parser::lessThan(){
 }
 
 Node* Parser::lessThanOr(){
-    uint64_t startIter = iter;
-    int64_t startCount = count();
-    Node* startPointer = stack->peek<Node>();
+    if(!hasTokens(3)){
+        return nullptr;
+    }
+
+    Start start = currInfo();
     Node* left = nullptr;
     Node* right = nullptr;
 
     left = AddSub();
     if(left == nullptr){
-        stack->dealloc(startPointer);
-        countSet(startCount);
-        iter = startIter;
+        reset(start);
         return nullptr;
     }
 
     if(!check("<=")){
-        stack->dealloc(startPointer);
-        countSet(startCount);
-        iter = startIter;
+        reset(start);
         return nullptr;
     }
 
@@ -446,7 +444,7 @@ Node* Parser::compare(){
         return thing;
     }
 
-    thing = primitive();
+    thing = AddSub();
     if(thing != nullptr){
         return thing;
     }
@@ -457,9 +455,11 @@ Node* Parser::compare(){
 
 
 Node* Parser::OR(){
-    uint64_t startIter = iter;
-    int64_t startCount = count();
-    Node* startPointer = stack->peek<Node>();
+    if(!hasTokens(3)){
+        return nullptr;
+    }
+
+    Start start = currInfo();
     Node* left = nullptr;
     Node* right = nullptr;
 
@@ -473,9 +473,7 @@ Node* Parser::OR(){
         if(right == nullptr){
             error = true;
             errorStack.push_back("Expression expected after the OR operator.");
-            iter = startIter;
-            stack->dealloc(startPointer);
-            countSet(startCount);
+            reset(start);
             return nullptr;
         }
 
@@ -489,9 +487,11 @@ Node* Parser::OR(){
 }
 
 Node* Parser::AND(){
-    uint64_t startIter = iter;
-    int64_t startCount = count();
-    Node* startPointer = stack->peek<Node>();
+    if(!hasTokens(3)){
+        return nullptr;
+    }
+
+    Start start = currInfo();
     Node* left = nullptr;
     Node* right = nullptr;
 
@@ -505,9 +505,7 @@ Node* Parser::AND(){
         if(right == nullptr){
             error = true;
             errorStack.push_back("Expression expected after the AND operator.");
-            iter = startIter;
-            stack->dealloc(startPointer);
-            countSet(startCount);
+            reset(start);
             return nullptr;
         }
 
@@ -519,40 +517,98 @@ Node* Parser::AND(){
     return left;
 }
 
+
+
 //Scopes
 Scope* Parser::scope(){
+    if(!hasTokens(2)){
+        return nullptr;
+    }
+
     //Create a new scope for the object.
-    Scope* newScope = nullptr;
-    Body* newBody = nullptr;
+    //This will be terminated before returning.
+    Scope* newScope = new Scope();
+    Scope* finalScope = nullptr;
+
+    //Make the current scope the newly generated scope.
+    //currScope is guaranteed to not be a nullptr,
+    //because the Parser object starts with one.
+    newScope->parent = currScope;
+    currScope = newScope;
 
     //Check for some body of code enclosed by {}.
     if(check("{")){
-        newBody = body();
+        stackCount.push_back(0);
+        Body* newBody = body();
+
+        //The "linked list" of all the scope's variables.
+        Variable* theVariables = currScope->variables;
+        //Current variable in the stack.
+        Variable* currVar = nullptr;
+        //Head of the variables in the stack.
+        Variable* headVariable = nullptr;
+        //Previous variable in the heap.
+        Variable* lastVariable = nullptr;
+
+        //If there are any local variables, be sure to append them.
+        //Also, delete the Variables from the heap as I go along.
+        if(currScope != nullptr){
+            //Allocate the heap variable to the stack.
+            currVar = stack->alloc<Variable>(theVariables);
+            //This is the previous variable.
+            lastVariable = theVariables;
+            //Move to the next variable in the heap.
+            theVariables = theVariables->next;
+            //Delete the previous variable in the heap.
+            delete lastVariable;
+
+            //Repeat the process while there are still variables in the heap.
+            while(theVariables != nullptr){
+                //Allocate the heap variable to the stack.
+                currVar = stack->alloc<Variable>(theVariables);
+                //This is the previous variable.
+                lastVariable = theVariables;
+                //Move to the next variable in the heap.
+                theVariables = theVariables->next;
+                //Delete the previous variable in the heap.
+                delete lastVariable;
+            }
+
+        }
         
         //Check to see if there was some sort of body of code.
         if(newBody != nullptr){
-            newScope = stack->alloc<Scope>(newBody, currScope);
-            currScope = newScope;
-        } else {
-            //Something other than a scope was found.
-            iter--;
-            return nullptr;
+            finalScope = stack->alloc<Scope>(newBody, headVariable);
+            currScope = finalScope;
         }
 
-        //Reset the counter and empty the current scope before leaving scope.
-        variableCount.pop_back();
+        //If there was no code, just return it with nullptrs.
+        if((newBody == nullptr) & check("}")){
+            //Terminate newScope, as promised.
+            delete newScope;
+            return stack->alloc<Scope>(nullptr, nullptr);
+        }
+
+        //Pop this scope from the stack counter.
+        stackCount.pop_back();
         //Return to the outerscope.
         currScope = currScope->parent;
         //Increment for the "}", otherwise error.
         if(!check("}")){
             std::cout << "Expected '}' at line " << given[iter].row << ".\n";
             error = true;
+            //Terminate newScope, as promised.
+            delete newScope;
             return nullptr;
         }
 
-        return newScope;
+        //Terminate newScope, as promised.
+        delete newScope;
+        return finalScope;
 
     }
+
+    currScope = currScope->parent;
 
     //This isn't an error, just that a scope wasn't found.
     //Scopes will always be enclosed by {}.
@@ -566,22 +622,31 @@ Body* Parser::body(){
     Body* currentBody = nullptr;
     Body* bodyStart = nullptr;
 
-    current = assignment();
-    bodyStart = stack->alloc<Body>(current);
-    currentBody = bodyStart;
-    if(!check(";")){
-        error = true;
-        std::cout << "Missing ';' expected at [" + std::to_string(given[iter].row) + ", " + std::to_string(given[iter].column) +"]\n";
+    //Look out for anything familiar such as assignments or if statements.
+    current = commonExpressions();
+    if(current == nullptr){
+        return nullptr;
     }
+    //For debugging purposes.
+    std::cout << current->ToString("", "") << "\n";
+    bodyStart = stack->alloc<Body>(current);
 
+    //Treat the Body* as a "linked list."
+    currentBody = bodyStart;
+
+    //So long as the program has tokens as the most recent check for
+    //a expression hasn't turned up nothing, keep checking.
     while(hasTokens() & (currentBody != nullptr)){
-        current = assignment();
-        currentBody->next = stack->alloc<Body>(current);
-        currentBody = currentBody->next;
-        if(!check(";")){
-            error = true;
-            std::cout << "Missing ';' expected at [" + std::to_string(given[iter].row) + ", " + std::to_string(given[iter].column) +"]\n";
+        current = commonExpressions();
+        if(current == nullptr){
+            return bodyStart;
         }
+        //For debugging purposes.
+        std::cout << current->ToString("", "") << "\n";
+        //Append code to the "linked list" of expressions.
+        currentBody->next = stack->alloc<Body>(current);
+        //Move down the "linked list."
+        currentBody = currentBody->next;
     }
 
     return bodyStart;
@@ -590,12 +655,25 @@ Body* Parser::body(){
 Node* Parser::commonExpressions(){
     Node* result;
 
-    result = initialize();
+    result = assignment();
     if(result != nullptr){
+        if(!check(";")){
+            error = true;
+            std::cout << "Missing ';' expected at [" + std::to_string(given[iter].row) + ", " + std::to_string(given[iter].column) +"]\n";
+        }
         return result;
     }
 
-    result = assignment();
+    result = initialize();
+    if(result != nullptr){
+        if(!check(";")){
+            error = true;
+            std::cout << "Missing ';' expected at [" + std::to_string(given[iter].row) + ", " + std::to_string(given[iter].column) +"]\n";
+        }
+        return result;
+    }
+
+    result = IF();
     if(result != nullptr){
         return result;
     }
@@ -613,30 +691,67 @@ Node* Parser::commonExpressions(){
     return nullptr;
 }
 
+
+
+//If statement
+Node* Parser::IF(){
+    if(!hasTokens(5)){
+        return nullptr;
+    }
+
+    Node* condition = nullptr;
+
+    //Check to see if the syntax matches properly.
+    if(check("if") & check("(")){
+        Scope* thisScope = nullptr;
+
+        condition = OR();
+        //Check for the end of the condition and the start of the body.
+        if((condition != nullptr) & check(")")){
+            thisScope = scope();
+        } else {
+            error = true;
+            ///Error here
+        }
+
+        return stack->alloc<IfClass>(condition, thisScope);
+
+    }
+
+    return nullptr;
+
+}
+
+
+
 //Variable stuff
 Variable* Parser::variable(){
+    if(!hasTokens(1)){
+        return nullptr;
+    }
+
     //Check to see if the variable is a valid token.
     if(given[iter].getType() == FloridaType::Identifier){
-        //Create a new variable object.
         bool isLocal = false;
         Scope* thisScope = currScope;
         //Find the variable in any of the prior connected scopes.
-        while(thisScope != nullptr){
-            if((thisScope->where(given[iter].getName()) != -1) and (thisScope->parent != nullptr)){
+        while(thisScope->parent != nullptr){
+            if(thisScope->where(given[iter].getName()) != -1){
                 isLocal = true;
                 break;
+            } else {
+                thisScope = thisScope->parent;
             }
-            thisScope = thisScope->parent;
         }
 
-        if(!isLocal){
-            Variable* newVariable = stack->alloc<Variable>(given[iter], currScope->where(given[iter].getName()), isLocal);
-            iter++;
-            countInc();
-            return newVariable;
+        //The given variable does not exist.
+        if(thisScope->where(given[iter].getName()) == -1){
+            std::cout << "Unknown variable: " << given[iter].getName() << "\n";
+            return nullptr;
         }
 
-        Variable* newVariable = stack->alloc<Variable>(given[iter], thisScope->where(given[iter].getName()) - count(), isLocal);
+        //Assign the location of the variable in the scope.
+        Variable* newVariable = stack->alloc<Variable>(given[iter], thisScope->where(given[iter].getName()), isLocal);
         iter++;
         countInc();
         return newVariable;
@@ -647,14 +762,18 @@ Variable* Parser::variable(){
 }
 
 Variable* Parser::initialize(){
+    if(!hasTokens(2)){
+        return nullptr;
+    }
     //Check to see if the variable is a valid token.
     bool bool1 = typeCheck(given[iter].getType());
     bool bool2 = given[iter + 1].getType() == FloridaType::Identifier;
     if(bool1 & bool2){
-        //Create a new variable object.
-        Variable* newVariable = stack->alloc<Variable>(given[iter + 1], count(), currScope->parent == nullptr);
+        //Create a new variable object in the heap.
+        //This will be stack allocated in scope().
+        Variable* newVariable = new Variable(given[iter + 1], count(), currScope->parent != nullptr);
         //Add the variable to the current scope.
-        currScope->variables.push_back(given[iter + 1].getName());
+        currScope->push(newVariable);
         iter++;
         iter++;
 
@@ -666,8 +785,10 @@ Variable* Parser::initialize(){
 }
 
 Node* Parser::assignment(){
-    int64_t startIter = iter;
-    int64_t startCount = count();
+    if(!hasTokens(3)){
+        return nullptr;
+    }
+    Start start = currInfo();
 
     Variable* thisInitialization = initialize();
     if(thisInitialization != nullptr){
@@ -695,9 +816,7 @@ Node* Parser::assignment(){
     }
 
     if(thisVariable != nullptr){
-        iter = startIter;
-        stack->dealloc<Variable>(thisVariable);
-        countSet(startCount);
+        reset(start);
     }
     //This isn't an error, just that an assignment wasn't found.
     return nullptr;
@@ -899,7 +1018,7 @@ bool Parser::next(){
             instructionNumber++;
             return true;
         default:
-            std::cout << "Error: Unknown instruction given.\nThe instruction number is " + programInstructions[instructionNumber].oper;
+            std::cout << "Error: Unknown instruction given.\nThe instruction number is " + std::to_string(programInstructions[instructionNumber].oper);
             return false;
     }
 

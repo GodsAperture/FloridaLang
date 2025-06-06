@@ -73,7 +73,7 @@ int main(){
 	}
 
 	//Parse over the list and make sure that the expression is acceptable.
-	Parser FloridaParser = Parser(theList, 10000);
+	Parser FloridaParser = Parser(theList, 100000);
 	FloridaParser.parse();
 
 	//If the error flag has been raised, then
@@ -82,8 +82,6 @@ int main(){
 		FloridaParser.errorPrint();
 		return -1;
 	}
-
-	std::cout << FloridaParser.result->ToString("") << "\n";
 
 	//Begin making the instruction vector;
 	FloridaParser.FLVMCodeGen();

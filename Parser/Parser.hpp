@@ -13,6 +13,34 @@ class Parser{
 public:
 //Iterator points to current token
 
+    class Start{
+    public:
+        void* startNode;
+        int64_t startIter;
+        int64_t startCount;
+
+        Start(){
+            startNode = nullptr;
+            startIter = 0;
+            startCount = 0;
+        }
+
+        Start(void* inStart, int64_t inIter, int64_t inCount){
+            startNode = inStart;
+            startIter = inIter;
+            startCount = inCount;
+        }
+
+        Start& operator=(Start input){
+            startNode = input.startNode;
+            startIter = input.startIter;
+            startCount = input.startCount;
+
+            return *this;
+        }
+
+    };
+
     //The iterator points to the current token.
     uint64_t iter = 0;
     //Error flag for errors.
@@ -30,9 +58,9 @@ public:
     Node* result = nullptr;
     //The currently active scope.
     Scope* currScope = nullptr;
-    //Keeps track of how many variables are in a scope.
+    //Keeps track of the expected stack size.
     //This value will be reset after a scope has been exited.
-    std::vector<int64_t> variableCount = std::vector<int64_t>(0);
+    std::vector<int64_t> stackCount = std::vector<int64_t>(0);
 
     //Increments the stack counter.
     void countInc();
@@ -96,6 +124,7 @@ public:
     //Assignments, functions, objects with methods, etc.
     Node* commonExpressions();
     bool hasTokens();
+    bool hasTokens(int64_t input);
 
 //Mathematical expressions
 
@@ -129,6 +158,9 @@ public:
 
     //1 priority
     Node* AND();            //left: compare(), right: compare()
+
+    //If statement
+    Node* IF();
 
     //This is so I can "pretty print" the number of errors found.
     //Example, if I have 99 errors I can print out:
@@ -172,5 +204,15 @@ public:
         delete currScope;
     }
 
+    Start currInfo(){
+        return Start(stack->current, iter, count());
+    }
+
+    void reset(Start input){
+        stack->current = input.startNode;
+        iter = input.startIter;
+        stackCount[stackCount.size() - 1] = input.startCount;
+    }
+    
 };
 #endif

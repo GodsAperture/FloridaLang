@@ -10,10 +10,15 @@
     //Determine where a particular variable exists in a given scope.
     //If it is not found, then return -1.
     int64_t Scope::where(std::string input){
+        Variable* currVar = variables;
+        int64_t count = 0;
         //If it exists, then we'll find the position.
-        for(size_t i = 0; i < variables.size(); i++){
-            if(input == variables[i]){
-                return i;
+        while(currVar != nullptr){
+            if(currVar->thisToken.getName() == input){
+                return count;
+            } else {
+                count++;
+                currVar = currVar->next;
             }
         }
         //If there is no such member, return -1.
@@ -21,17 +26,25 @@
 
     }
 
-    Scope::Scope(Body* inBody, Scope* inScope){
+    Scope::Scope(Body* inBody, Variable* inVariables){
         body = inBody;
-        parent = inScope;
+        variables = inVariables;
     }
 
     void Scope::push(Variable* input){
-        variables.push_back(input->thisToken.getName());
+        Variable* currVar = variables;
+        //Reach the tail end of the "linked list" of Variables.
+        while(currVar->next != nullptr){
+            currVar = currVar->next;
+        }
+
+        //Append the Variable to the tail end of the "linked list."
+        currVar->next = input;
+
     }
 
-    std::string Scope::ToString(std::string inString){
-        return inString + "{" + body->ToString(inString) + "}";
+    std::string Scope::ToString(std::string inLeft, std::string inRight){
+            return body->ToString(inLeft, inRight) + "\n";
     }
 
     void Scope::FLVMCodeGen(std::vector<Instruction>& inInstructions){
@@ -46,8 +59,8 @@
         globalScope = nullptr;
     }
 
-    std::string Global::ToString(std::string inString){
-        return code->ToString(inString);
+    std::string Global::ToString(std::string inLeft, std::string inRight){
+        return code->ToString(inLeft, inRight);
     }
 
     void Global::FLVMCodeGen(std::vector<Instruction>& inInstructions){
@@ -67,12 +80,12 @@
         next = nullptr;
     }
 
-    std::string Body::ToString(std::string inString){
+    std::string Body::ToString(std::string inLeft, std::string inRight){
         if(next != nullptr){
-            return inString + current->ToString(inString) + ";\n" + next->ToString(inString);
+                return inLeft + current->ToString(inLeft, inRight) + "\n" + next->ToString(inLeft, inRight);
         }
 
-        return inString + current->ToString(inString) + ";\n";
+        return inLeft + current->ToString(inLeft, inRight) + "\n";
     }
 
     void Body::FLVMCodeGen(std::vector<Instruction>& inInstructions){
@@ -93,7 +106,13 @@
         isLocal = inIsLocal;
     }
 
-    std::string Variable::ToString(std::string inString){
+    Variable::Variable(Variable* inVariable){
+        thisToken = inVariable->thisToken;
+        distance = inVariable->distance;
+        isLocal = inVariable->isLocal;
+    }
+
+    std::string Variable::ToString(std::string inLeft, std::string inRight){
         return thisToken.getName();
     }
 
@@ -101,9 +120,10 @@
         if(isLocal){
             //Push back the instruction for local variable.
             inInstructions.push_back(Instruction(lfetch, distance));
-            return;
-        }
+        } else {
+            //Push back the instruction for the global variable.
             inInstructions.push_back(Instruction(gfetch, distance));
+        }
     }
 
 
@@ -113,7 +133,7 @@
         thisVariable = inVariable;
     }
 
-    std::string Initialize::ToString(std::string inString){
+    std::string Initialize::ToString(std::string inLeft, std::string inRight){
         return thisVariable->thisToken.getName();
     }
 
@@ -129,8 +149,8 @@
         code = inCode;
     }
 
-    std::string Assignment::ToString(std::string inString){
-        return thisVariable->thisToken.getName() + " = " + code->ToString(inString);
+    std::string Assignment::ToString(std::string inLeft, std::string inRight){
+        return inLeft + thisVariable->thisToken.getName() + " = " + code->ToString(inLeft, inRight);
     }
 
     void Assignment::FLVMCodeGen(std::vector<Instruction>& inInstructions){
@@ -148,8 +168,8 @@
         right = RHE;
     }
 
-    std::string Add::ToString(std::string inString){
-        return left->ToString(inString) + " + " + right->ToString(inString);
+    std::string Add::ToString(std::string inLeft, std::string inRight){
+        return left->ToString(inLeft, inRight) + " + " + right->ToString(inLeft, inRight);
     }
 
     void Add::FLVMCodeGen(std::vector<Instruction>& inInstructions){
@@ -166,8 +186,8 @@
         right = RHE;
     }
 
-    std::string Subtract::ToString(std::string inString){
-        return left->ToString(inString) + " - " + right->ToString(inString);
+    std::string Subtract::ToString(std::string inLeft, std::string inRight){
+        return left->ToString(inLeft, inRight) + " - " + right->ToString(inLeft, inRight);
     }
 
     void Subtract::FLVMCodeGen(std::vector<Instruction>& inInstructions){
@@ -184,8 +204,8 @@
         right = RHE;
     }
 
-    std::string Multiply::ToString(std::string inString){
-        return left->ToString(inString) + " * " + right->ToString(inString);
+    std::string Multiply::ToString(std::string inLeft, std::string inRight){
+        return left->ToString(inLeft, inRight) + " * " + right->ToString(inLeft, inRight);
     }
 
     void Multiply::FLVMCodeGen(std::vector<Instruction>& inInstructions){
@@ -202,8 +222,8 @@
         right = RHE;
     }
 
-    std::string Divide::ToString(std::string inString){
-        return left->ToString(inString) + " / " + right->ToString(inString);
+    std::string Divide::ToString(std::string inLeft, std::string inRight){
+        return left->ToString(inLeft, inRight) + " / " + right->ToString(inLeft, inRight);
     }
 
     void Divide::FLVMCodeGen(std::vector<Instruction>& inInstructions){
@@ -219,8 +239,8 @@
         subexpression = input;
     }
 
-    std::string Parentheses::ToString(std::string inString){
-        return "(" + subexpression->ToString(inString) + ")";
+    std::string Parentheses::ToString(std::string inLeft, std::string inRight){
+        return "(" + subexpression->ToString(inLeft, inRight) + ")";
     }
 
     void Parentheses::FLVMCodeGen(std::vector<Instruction>& inInstructions){
@@ -234,8 +254,8 @@
         right = input;
     }
 
-    std::string Negative::ToString(std::string inString){
-        return "-" + right->ToString(inString);
+    std::string Negative::ToString(std::string inLeft, std::string inRight){
+        return "-" + right->ToString(inLeft, inRight);
     }
 
     void Negative::FLVMCodeGen(std::vector<Instruction>& inInstructions){
@@ -251,8 +271,8 @@
         right = inRight;
     }
 
-    std::string Equal::ToString(std::string inString){
-        return left->ToString(inString) + " == " + right->ToString(inString);
+    std::string Equal::ToString(std::string inLeft, std::string inRight){
+        return left->ToString(inLeft, inRight) + " == " + right->ToString(inLeft, inRight);
     }
 
     void Equal::FLVMCodeGen(std::vector<Instruction>& inInstructions){
@@ -270,8 +290,8 @@
         right = inRight;
     }
 
-    std::string NotEqual::ToString(std::string inString){
-        return left->ToString(inString) + " != " + right->ToString(inString);
+    std::string NotEqual::ToString(std::string inLeft, std::string inRight){
+        return left->ToString(inLeft, inRight) + " != " + right->ToString(inLeft, inRight);
     }
 
     void NotEqual::FLVMCodeGen(std::vector<Instruction>& inInstructions){
@@ -289,8 +309,8 @@
         right = inRight;
     }
 
-    std::string GreaterThan::ToString(std::string inString){
-        return left->ToString(inString) + " > " + right->ToString(inString);
+    std::string GreaterThan::ToString(std::string inLeft, std::string inRight){
+        return left->ToString(inLeft, inRight) + " > " + right->ToString(inLeft, inRight);
     }
 
     void GreaterThan::FLVMCodeGen(std::vector<Instruction>& inInstructions){
@@ -308,8 +328,8 @@
         right = inRight;
     }
 
-    std::string GreaterThanOr::ToString(std::string inString){
-        return left->ToString(inString) + " >= " + right->ToString(inString);
+    std::string GreaterThanOr::ToString(std::string inLeft, std::string inRight){
+        return left->ToString(inLeft, inRight) + " >= " + right->ToString(inLeft, inRight);
     }
 
     void GreaterThanOr::FLVMCodeGen(std::vector<Instruction>& inInstructions){
@@ -327,8 +347,8 @@
         right = inRight;
     }
 
-    std::string LessThan::ToString(std::string inString){
-        return left->ToString(inString) + " < " + right->ToString(inString);
+    std::string LessThan::ToString(std::string inLeft, std::string inRight){
+        return left->ToString(inLeft, inRight) + " < " + right->ToString(inLeft, inRight);
     }
 
     void LessThan::FLVMCodeGen(std::vector<Instruction>& inInstructions){
@@ -346,8 +366,8 @@
         right = inRight;
     }
 
-    std::string LessThanOr::ToString(std::string inString){
-        return left->ToString(inString) + " <= " + right->ToString(inString);
+    std::string LessThanOr::ToString(std::string inLeft, std::string inRight){
+        return left->ToString(inLeft, inRight) + " <= " + right->ToString(inLeft, inRight);
     }
 
     void LessThanOr::FLVMCodeGen(std::vector<Instruction>& inInstructions){
@@ -365,8 +385,8 @@
         right = inRight;
     }
 
-    std::string Or::ToString(std::string inString){
-        return left->ToString(inString) + " OR " + right->ToString(inString);
+    std::string Or::ToString(std::string inLeft, std::string inRight){
+        return left->ToString(inLeft, inRight) + " OR " + right->ToString(inLeft, inRight);
     }
 
     void Or::FLVMCodeGen(std::vector<Instruction>& inInstructions){
@@ -384,8 +404,8 @@
         right = inRight;
     }
 
-    std::string And::ToString(std::string inString){
-        return left->ToString(inString) + " AND " + right->ToString(inString);
+    std::string And::ToString(std::string inLeft, std::string inRight){
+        return left->ToString(inLeft, inRight) + " AND " + right->ToString(inLeft, inRight);
     }
 
     void And::FLVMCodeGen(std::vector<Instruction>& inInstructions){
@@ -402,11 +422,31 @@
         right = inRight; 
     }
 
-    std::string Not::ToString(std::string input){
-        return "!" + right->ToString(input);
+    std::string Not::ToString(std::string inLeft, std::string inRight){
+        return "!" + right->ToString(inLeft, inRight);
     }
 
     void Not::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         right->FLVMCodeGen(inInstructions);
         inInstructions.push_back(Instruction(inot));
+    }
+
+
+
+//if
+    IfClass::IfClass(Node* inCondition, Scope* inScope){
+        condition = inCondition;
+        scope = inScope;
+    }
+
+    std::string IfClass::ToString(std::string inLeft, std::string inRight){
+        return inLeft + "if(" + condition->ToString(inLeft, inRight) + ")\n{" + 
+        scope->ToString("\t" + inLeft, inRight) +
+        inLeft + "}";
+    }
+
+    void IfClass::FLVMCodeGen(std::vector<Instruction>& inInstructions){
+        condition->FLVMCodeGen(inInstructions);
+        inInstructions.push_back(Instruction(cjump));
+        scope->FLVMCodeGen(inInstructions);
     }

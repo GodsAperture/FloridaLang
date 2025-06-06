@@ -8,15 +8,6 @@
 
 
 
-class Association{
-public:
-    Token token;
-    FloridaType type;
-    int64_t position;
-};
-
-
-
 //If you need to be told what a node is, God help you.
 class Node{
 public:
@@ -29,7 +20,7 @@ public:
     Node(const Node&&) = delete;
     Node& operator=(const Node&&) = delete;
 
-    virtual std::string ToString(std::string inString) = 0;
+    virtual std::string ToString(std::string inLeft, std::string inRight) = 0;
     //This is exclusively used for Variable.
     virtual void FLVMCodeGen(std::vector<Instruction>& inInstructions) = 0;
 
@@ -43,7 +34,7 @@ public:
 
     Body(Node* inCurrent, Body* inNext);
     Body(Node* inCurrent);
-    std::string ToString(std::string inString) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
 };
 
@@ -55,7 +46,8 @@ public:
     Variable* next = nullptr;
 
     Variable(Token thisToken, int64_t inDistance, bool inIsLocal);
-    std::string ToString(std::string inString) override;
+    Variable(Variable* inVariable);
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
 
 };
@@ -67,15 +59,16 @@ class Scope : public Node{
         //This is the body of code within the scope.
         Body* body = nullptr;
         //This will be the variables of the current scope.
-        std::vector<std::string> variables = std::vector<std::string>();
+        Variable* variables = nullptr;
 
         //Find where in some given Scope a particular variable lies.
+        //If it does not exist in the scope, it returns -1.
         int64_t where(std::string input);
         //Push a new variable into the scope's variable stack.
         void push(Variable* input);
         Scope();
-        Scope(Body* inBody, Scope* inScope);
-        std::string ToString(std::string inString) override;
+        Scope(Body* inBody, Variable* inScope);
+        std::string ToString(std::string inLeft, std::string inRight) override;
         void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     
     };
@@ -86,7 +79,7 @@ public:
     Node* code;
 
     Global(Node* inCode);
-    std::string ToString(std::string inString) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
 };
 
@@ -95,7 +88,7 @@ public:
     Variable* thisVariable;
 
     Initialize(Variable* inVariable);
-    std::string ToString(std::string inString) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
 };
 
@@ -105,7 +98,7 @@ public:
     Node* code;
 
     Assignment(Variable* inVariable, Node* inCode);
-    std::string ToString(std::string inString) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
 };
 
@@ -117,7 +110,7 @@ public:
     Node* right;
 
     Add(Node* LHE, Node* RHE);
-    std::string ToString(std::string inString) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
 };
 
@@ -127,7 +120,7 @@ public:
     Node* right;
 
     Subtract(Node* LHE, Node* RHE);
-    std::string ToString(std::string inString) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
 };
 
@@ -139,7 +132,7 @@ public:
     Node* right;
 
     Multiply(Node* LHE, Node* RHE);
-    std::string ToString(std::string inString) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
 };
 
@@ -149,7 +142,7 @@ public:
     Node* right;
 
     Divide(Node* LHE, Node* RHE);
-    std::string ToString(std::string inString) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
 };
 
@@ -160,7 +153,7 @@ public:
     Node* subexpression;
 
     Parentheses(Node* input);
-    std::string ToString(std::string inString) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
 };
 
@@ -169,7 +162,7 @@ public:
     Node* right;
 
     Negative(Node* input);
-    std::string ToString(std::string inString) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
 };
 
@@ -181,7 +174,7 @@ public:
     int64_t value;
 
     Fixed8(std::string input);
-    std::string ToString(std::string inString) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
 };
 
@@ -190,7 +183,7 @@ public:
     bool value;
 
     Boolean(bool inBool);
-    std::string ToString(std::string inString) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
 };
 
@@ -203,7 +196,7 @@ public:
     Node* right;
 
     Equal(Node* inLeft, Node* inRight);
-    std::string ToString(std::string inString) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
 };
 
@@ -213,7 +206,7 @@ public:
     Node* right;
 
     NotEqual(Node* inLeft, Node* inRight);
-    std::string ToString(std::string inString) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
 };
 
@@ -223,7 +216,7 @@ public:
     Node* right;
 
     GreaterThan(Node* inLeft, Node* inRight);
-    std::string ToString(std::string inString) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
 };
 
@@ -233,7 +226,7 @@ public:
     Node* right;
 
     GreaterThanOr(Node* inLeft, Node* inRight);
-    std::string ToString(std::string inString) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
 };
 
@@ -243,7 +236,7 @@ public:
     Node* right;
 
     LessThan(Node* inLeft, Node* inRight);
-    std::string ToString(std::string inString) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
 };
 
@@ -253,7 +246,7 @@ public:
     Node* right;
 
     LessThanOr(Node* inLeft, Node* inRight);
-    std::string ToString(std::string inString) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
 };
 
@@ -266,7 +259,7 @@ public:
     Node* right;
 
     Or(Node* inLeft, Node* inRight);
-    std::string ToString(std::string inString) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
 };
 
@@ -276,7 +269,7 @@ public:
     Node* right;
 
     And(Node* inLeft, Node* inRight);
-    std::string ToString(std::string inString) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
 };
 
@@ -285,7 +278,20 @@ public:
     Node* right;
 
     Not(Node* inRight);
-    std::string ToString(std::string inString) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
+    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
+};
+
+
+
+//if statements
+class IfClass : public Node{
+public:
+    Node* condition;
+    Scope* scope;
+
+    IfClass(Node* inCondition, Scope* inScope);
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
 };
 #endif

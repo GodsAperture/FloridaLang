@@ -1,3 +1,4 @@
+
 //Check if the given character is any of the left paired operators.
 bool POperatorLQ(char in){
 
