@@ -543,18 +543,20 @@ Scope* Parser::scope(){
 
         //The "linked list" of all the scope's variables.
         Variable* theVariables = currScope->variables;
-        //Current variable in the stack.
-        Variable* currVar = nullptr;
         //Head of the variables in the stack.
         Variable* headVariable = nullptr;
+        //Current variable in the stack.
+        Variable* currVar = nullptr;
         //Previous variable in the heap.
         Variable* lastVariable = nullptr;
 
         //If there are any local variables, be sure to append them.
         //Also, delete the Variables from the heap as I go along.
-        if(currScope != nullptr){
+        if(currScope->variables != nullptr){
             //Allocate the heap variable to the stack.
             currVar = stack->alloc<Variable>(theVariables);
+            //Get the head of the "linked list" of variables.
+            headVariable = currVar;
             //This is the previous variable.
             lastVariable = theVariables;
             //Move to the next variable in the heap.
@@ -576,17 +578,10 @@ Scope* Parser::scope(){
 
         }
         
-        //Check to see if there was some sort of body of code.
+        //If there's a body of code, then return the scope object.
         if(newBody != nullptr){
-            finalScope = stack->alloc<Scope>(newBody, headVariable);
+            finalScope = stack->alloc<Scope>(newBody, headVariable, currScope->parent);
             currScope = finalScope;
-        }
-
-        //If there was no code, just return it with nullptrs.
-        if((newBody == nullptr) & check("}")){
-            //Terminate newScope, as promised.
-            delete newScope;
-            return stack->alloc<Scope>(nullptr, nullptr);
         }
 
         //Pop this scope from the stack counter.

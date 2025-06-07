@@ -26,12 +26,18 @@
 
     }
 
-    Scope::Scope(Body* inBody, Variable* inVariables){
+    Scope::Scope(Body* inBody, Variable* inVariables, Scope* inParent){
         body = inBody;
         variables = inVariables;
+        parent = inParent;
     }
 
     void Scope::push(Variable* input){
+        //If there are no variables, then just slap the variable onto the list.
+        if(variables == nullptr){
+            variables = input;
+            return;
+        }
         Variable* currVar = variables;
         //Reach the tail end of the "linked list" of Variables.
         while(currVar->next != nullptr){
@@ -44,7 +50,7 @@
     }
 
     std::string Scope::ToString(std::string inLeft, std::string inRight){
-            return body->ToString(inLeft, inRight) + "\n";
+        return body->ToString(inLeft, inRight) + "\n";
     }
 
     void Scope::FLVMCodeGen(std::vector<Instruction>& inInstructions){
@@ -82,7 +88,7 @@
 
     std::string Body::ToString(std::string inLeft, std::string inRight){
         if(next != nullptr){
-                return inLeft + current->ToString(inLeft, inRight) + "\n" + next->ToString(inLeft, inRight);
+            return inLeft + current->ToString(inLeft, inRight) + "\n" + next->ToString(inLeft, inRight);
         }
 
         return inLeft + current->ToString(inLeft, inRight) + "\n";
@@ -104,12 +110,14 @@
         thisToken = inToken;
         distance = inDistance;
         isLocal = inIsLocal;
+        next = nullptr;
     }
 
     Variable::Variable(Variable* inVariable){
         thisToken = inVariable->thisToken;
         distance = inVariable->distance;
         isLocal = inVariable->isLocal;
+        next = inVariable->next;
     }
 
     std::string Variable::ToString(std::string inLeft, std::string inRight){

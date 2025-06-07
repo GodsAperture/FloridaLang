@@ -47,6 +47,12 @@ public:
 
     Variable(Token thisToken, int64_t inDistance, bool inIsLocal);
     Variable(Variable* inVariable);
+    void operator=(Variable* input){
+        this->thisToken = input->thisToken;
+        this->isLocal = input->isLocal;
+        this->distance = input->distance;
+        this->next = input->next;
+    };
     std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
 
@@ -67,7 +73,7 @@ class Scope : public Node{
         //Push a new variable into the scope's variable stack.
         void push(Variable* input);
         Scope();
-        Scope(Body* inBody, Variable* inScope);
+        Scope(Body* inBody, Variable* inScope, Scope* inParent);
         std::string ToString(std::string inLeft, std::string inRight) override;
         void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     
