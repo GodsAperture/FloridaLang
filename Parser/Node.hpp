@@ -294,9 +294,32 @@ public:
 class IfClass : public Node{
 public:
     Node* condition;
-    Scope* scope;
+    Scope* ifScope;
+    Scope* elseScope;
 
-    IfClass(Node* inCondition, Scope* inScope);
+    IfClass(Node* inCondition, Scope* inIfScope, Scope* inElseScope);
+    std::string ToString(std::string inLeft, std::string inRight) override;
+    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
+};
+
+class ForLoop : public Node{
+public:
+    Node* assign;
+    Node* condition;
+    Node* incrementer;
+    Scope* body;
+
+    ForLoop(Node* inAssign, Node* inCondition, Node* incrementer, Scope* body);
+    std::string ToString(std::string inLeft, std::string inRight) override;
+    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
+};
+
+class WhileLoop : public Node{
+public:
+    Node* condition;
+    Scope* body;
+
+    WhileLoop(Node* inCondition, Scope* inBody);
     std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
 };

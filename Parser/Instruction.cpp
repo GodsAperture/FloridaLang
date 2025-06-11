@@ -12,7 +12,8 @@ enum Operation{
     jump,
 
     initialize,
-    assign,
+    gassign,
+    lassign,
     push,
 
     //Math instructions

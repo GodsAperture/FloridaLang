@@ -50,7 +50,7 @@
     }
 
     std::string Scope::ToString(std::string inLeft, std::string inRight){
-        return body->ToString(inLeft, inRight) + "\n";
+        return body->ToString(inLeft, inRight);
     }
 
     void Scope::FLVMCodeGen(std::vector<Instruction>& inInstructions){
@@ -88,10 +88,10 @@
 
     std::string Body::ToString(std::string inLeft, std::string inRight){
         if(next != nullptr){
-            return inLeft + current->ToString(inLeft, inRight) + "\n" + next->ToString(inLeft, inRight);
+            return current->ToString(inLeft, inRight) + "\n" + next->ToString(inLeft, inRight);
         }
 
-        return inLeft + current->ToString(inLeft, inRight) + "\n";
+        return current->ToString(inLeft, inRight) + "\n";
     }
 
     void Body::FLVMCodeGen(std::vector<Instruction>& inInstructions){
@@ -158,14 +158,18 @@
     }
 
     std::string Assignment::ToString(std::string inLeft, std::string inRight){
-        return inLeft + thisVariable->thisToken.getName() + " = " + code->ToString(inLeft, inRight);
+        return inLeft + thisVariable->thisToken.getName() + " = " + code->ToString(inLeft, inRight) + ";";
     }
 
     void Assignment::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         //Generate code for the assignment.
         code->FLVMCodeGen(inInstructions);
         //Push back the instruction for assignment.
-        inInstructions.push_back(Instruction(assign, thisVariable->distance));
+        if(thisVariable->isLocal){
+            inInstructions.push_back(Instruction(lassign, thisVariable->distance));
+        } else {
+            inInstructions.push_back(Instruction(gassign, thisVariable->distance));
+        }
     }
 
 
@@ -442,19 +446,127 @@
 
 
 //if
-    IfClass::IfClass(Node* inCondition, Scope* inScope){
+    IfClass::IfClass(Node* inCondition, Scope* inIfScope, Scope* inElseScope){
         condition = inCondition;
-        scope = inScope;
+        ifScope = inIfScope;
+        elseScope = inElseScope;
     }
 
     std::string IfClass::ToString(std::string inLeft, std::string inRight){
-        return inLeft + "if(" + condition->ToString(inLeft, inRight) + ")\n{" + 
-        scope->ToString("\t" + inLeft, inRight) +
-        inLeft + "}";
+        if(elseScope == nullptr){
+            return inLeft + "if(" + condition->ToString(inLeft, inRight) + "){\n" + 
+            ifScope->ToString("  ", inRight) +
+            inLeft + "}";
+        } else {
+            return inLeft + "if(" + condition->ToString(inLeft, inRight) + "){\n" + 
+            ifScope->ToString("  ", inRight) +
+            inLeft + "} else {\n" + elseScope->ToString("  ", inRight) + "}";
+        }
     }
 
     void IfClass::FLVMCodeGen(std::vector<Instruction>& inInstructions){
-        condition->FLVMCodeGen(inInstructions);
-        inInstructions.push_back(Instruction(cjump));
-        scope->FLVMCodeGen(inInstructions);
+        //If there is not an else statement, generate code for just an if statement.
+        //otherwise, generate both bodies and cjumps as needed.
+        if(elseScope == nullptr){
+            //Generate the instructions for the if condition.
+            condition->FLVMCodeGen(inInstructions);
+
+            //Mark where the conditional jump instruction will be.
+            int64_t cjumpPosition = inInstructions.size();
+
+            //Push a cjump instruction. This will be edited later.
+            inInstructions.push_back(Instruction(cjump));
+            ifScope->FLVMCodeGen(inInstructions);
+
+            //Adjust the conditional jump destination.
+            inInstructions[cjumpPosition].literal.fixed64 = inInstructions.size();
+        } else {
+            //Generate the instructions for the if condition.
+            condition->FLVMCodeGen(inInstructions);
+
+            //Get the size of the instruction stack before the body.
+            //This is also where the cjump instruction will be.
+            int64_t cjumpPosition = inInstructions.size();
+
+            //Push a cjump instruction. This will be edited later.
+            inInstructions.push_back(Instruction(cjump));
+            ifScope->FLVMCodeGen(inInstructions);
+
+            //Push an unconditional jump to skip over the else statement.
+            //This will only be reached if the first branch is taken.
+            inInstructions.push_back(Instruction(jump));
+
+            //Get the size of the instructions set after the if body is made.
+            int64_t endIfSize = inInstructions.size();
+
+            //Adjust the conditional jump destination.
+            inInstructions[cjumpPosition].literal.fixed64 = endIfSize;
+            
+            //Generate the bytecode for the else statement.
+            elseScope->FLVMCodeGen(inInstructions);
+
+            //Adjust the unconditional jump destination.
+            inInstructions[endIfSize - 1].literal.fixed64 = inInstructions.size();
+        }
+
+    }
+
+
+
+//for
+    ForLoop::ForLoop(Node* inAssign, Node* inCondition, Node* inIncrementer, Scope* inBody){
+        assign = inAssign;
+        condition = inCondition;
+        incrementer = inIncrementer;
+        body = inBody;
+    }
+
+    std::string ForLoop::ToString(std::string inLeft, std::string inRight){
+        std::string finalString = "for(";
+        if(assign != nullptr){
+            finalString += assign->ToString(inLeft, inRight);
+        } else {
+            finalString += ";";
+        }
+
+        if(condition != nullptr){
+            finalString += condition->ToString(inLeft, inRight);
+        }
+        finalString += ";";
+
+        if(incrementer != nullptr){
+            finalString += incrementer->ToString(inLeft, inRight);
+        }
+        finalString += "){\n";
+
+        return finalString + body->ToString("  ", inRight) + "}";
+    }
+
+    void ForLoop::FLVMCodeGen(std::vector<Instruction>& inInstructions){
+        //The initial value of a for loop.
+        if(assign != nullptr){
+            assign->FLVMCodeGen(inInstructions);
+        }
+
+        //The condition for a for loop to terminate.
+        //If none is provided, then it will perpetually loop.
+        if(condition != nullptr){
+            condition->FLVMCodeGen(inInstructions);
+        } else {
+            inInstructions.push_back(Instruction(Operation::push, false));
+        }
+
+        //Pushing the conditional loop that can break the condition.
+        int64_t cjumpPosition = inInstructions.size();
+        inInstructions.push_back(Instruction(Operation::cjump));
+
+        //Add the body of instructions.
+        body->FLVMCodeGen(inInstructions);
+
+        //Add another line of code for changes at the end of the loop.
+        if(incrementer != nullptr){
+            incrementer->FLVMCodeGen(inInstructions);
+        }
+
+        inInstructions[cjumpPosition].literal.fixed64 = inInstructions.size();
     }

@@ -154,13 +154,16 @@ public:
     Node* compare();
 
     //0 priority
-    Node* OR();             //left: Bool1(), right: Bool1()
+    Node* OR();             //left: AND(), right: AND()
 
     //1 priority
     Node* AND();            //left: compare(), right: compare()
 
-    //If statement
+    //if statement
     Node* IF();
+
+    //for loop
+    Node* FOR();
 
     //This is so I can "pretty print" the number of errors found.
     //Example, if I have 99 errors I can print out:
@@ -189,7 +192,7 @@ public:
 
     Parser(std::vector<Token> inTokens, long size){
         //This is the Global scope.
-        currScope = new Scope();
+        currScope = nullptr;
         given = inTokens;
         stack = new StackAllocator(size);
         errorStack = std::vector<std::string>();
@@ -199,9 +202,7 @@ public:
     //Delete and free shit you don't need.
     //Stay in good habit of this.
     ~Parser(){
-        delete stack;
-        delete result;
-        delete currScope;
+        //Do nothing lmao.
     }
 
     Start currInfo(){

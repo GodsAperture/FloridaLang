@@ -92,8 +92,6 @@ int main(){
 		successful = FloridaParser.next();
 	}
 
-	//FloridaParser.print();
-
 	return 0;
 
 }

@@ -19,9 +19,8 @@ bool typeCheck(FloridaType inType){
 
 void Parser::parse(){
     //If it's not the nullptr, then it's successful.
-    stackCount.push_back(0);
-    result = body();
-    stackCount.pop_back();
+    result = scope();
+    std::cout << result->ToString("", "") << "\n";
 };
 
 void Parser::countInc(){
@@ -51,6 +50,10 @@ bool Parser::hasTokens(int64_t input){
 }
 
 bool Parser::check(std::string inString){
+    if(given.size() == iter){
+        return false;
+    }
+    
     if(given[iter].getName() == inString){
         iter++;
         return true;
@@ -155,10 +158,6 @@ Node* Parser::MulDiv(){
 }
 
 Node* Parser::primitive(){
-    if(!hasTokens(1)){
-        return nullptr;
-    }
-
     //Check for negations
     std::string current = given[iter].getName();
     if(check("-")){
@@ -206,10 +205,8 @@ Node* Parser::primitive(){
     if(thisVariable != nullptr){
         return thisVariable;
     }
-    //Undetectable object found.
-    std::cout << "[" + std::to_string(given[iter].row) + ", " + std::to_string(given[iter].column) + "] " + given[iter].getName() + " is not an identifiable object\n";
-    error = true;
 
+    //No primitives were found.
     return nullptr;
 }
 
@@ -521,94 +518,21 @@ Node* Parser::AND(){
 
 //Scopes
 Scope* Parser::scope(){
-    if(!hasTokens(2)){
-        return nullptr;
-    }
-
     //Create a new scope for the object.
-    //This will be terminated before returning.
-    Scope* newScope = new Scope();
-    Scope* finalScope = nullptr;
-
-    //Make the current scope the newly generated scope.
-    //currScope is guaranteed to not be a nullptr,
-    //because the Parser object starts with one.
-    newScope->parent = currScope;
+    Scope* newScope = stack->alloc<Scope>(nullptr, nullptr, currScope);
+    //Assign the newest scope to be the current scope.
     currScope = newScope;
 
-    //Check for some body of code enclosed by {}.
-    if(check("{")){
-        stackCount.push_back(0);
-        Body* newBody = body();
-
-        //The "linked list" of all the scope's variables.
-        Variable* theVariables = currScope->variables;
-        //Head of the variables in the stack.
-        Variable* headVariable = nullptr;
-        //Current variable in the stack.
-        Variable* currVar = nullptr;
-        //Previous variable in the heap.
-        Variable* lastVariable = nullptr;
-
-        //If there are any local variables, be sure to append them.
-        //Also, delete the Variables from the heap as I go along.
-        if(currScope->variables != nullptr){
-            //Allocate the heap variable to the stack.
-            currVar = stack->alloc<Variable>(theVariables);
-            //Get the head of the "linked list" of variables.
-            headVariable = currVar;
-            //This is the previous variable.
-            lastVariable = theVariables;
-            //Move to the next variable in the heap.
-            theVariables = theVariables->next;
-            //Delete the previous variable in the heap.
-            delete lastVariable;
-
-            //Repeat the process while there are still variables in the heap.
-            while(theVariables != nullptr){
-                //Allocate the heap variable to the stack.
-                currVar = stack->alloc<Variable>(theVariables);
-                //This is the previous variable.
-                lastVariable = theVariables;
-                //Move to the next variable in the heap.
-                theVariables = theVariables->next;
-                //Delete the previous variable in the heap.
-                delete lastVariable;
-            }
-
-        }
-        
-        //If there's a body of code, then return the scope object.
-        if(newBody != nullptr){
-            finalScope = stack->alloc<Scope>(newBody, headVariable, currScope->parent);
-            currScope = finalScope;
-        }
-
-        //Pop this scope from the stack counter.
-        stackCount.pop_back();
-        //Return to the outerscope.
-        currScope = currScope->parent;
-        //Increment for the "}", otherwise error.
-        if(!check("}")){
-            std::cout << "Expected '}' at line " << given[iter].row << ".\n";
-            error = true;
-            //Terminate newScope, as promised.
-            delete newScope;
-            return nullptr;
-        }
-
-        //Terminate newScope, as promised.
-        delete newScope;
-        return finalScope;
-
-    }
-
+    //Start a new relative stack counter.
+    stackCount.push_back(0);
+    //Get the body of code and attach it to the scope.
+    newScope->body = body();
+    //Pop this scope from the stack counter.
+    stackCount.pop_back();
+    //Return to the outerscope.
     currScope = currScope->parent;
 
-    //This isn't an error, just that a scope wasn't found.
-    //Scopes will always be enclosed by {}.
-    //Except for the global scope.
-    return nullptr;
+    return newScope;
 
 }
 
@@ -622,8 +546,6 @@ Body* Parser::body(){
     if(current == nullptr){
         return nullptr;
     }
-    //For debugging purposes.
-    std::cout << current->ToString("", "") << "\n";
     bodyStart = stack->alloc<Body>(current);
 
     //Treat the Body* as a "linked list."
@@ -636,8 +558,6 @@ Body* Parser::body(){
         if(current == nullptr){
             return bodyStart;
         }
-        //For debugging purposes.
-        std::cout << current->ToString("", "") << "\n";
         //Append code to the "linked list" of expressions.
         currentBody->next = stack->alloc<Body>(current);
         //Move down the "linked list."
@@ -678,7 +598,7 @@ Node* Parser::commonExpressions(){
         return result;
     }
 
-    result = AddSub();
+    result = FOR();
     if(result != nullptr){
         return result;
     }
@@ -688,7 +608,7 @@ Node* Parser::commonExpressions(){
 
 
 
-//If statement
+//if statement
 Node* Parser::IF(){
     if(!hasTokens(5)){
         return nullptr;
@@ -698,18 +618,37 @@ Node* Parser::IF(){
 
     //Check to see if the syntax matches properly.
     if(check("if") & check("(")){
-        Scope* thisScope = nullptr;
+        Scope* ifScope = nullptr;
 
         condition = OR();
         //Check for the end of the condition and the start of the body.
-        if((condition != nullptr) & check(")")){
-            thisScope = scope();
+        if((condition != nullptr) & check(")") & check("{")){
+            ifScope = scope();
         } else {
             error = true;
-            ///Error here
+            //Error here
+            return nullptr;
         }
 
-        return stack->alloc<IfClass>(condition, thisScope);
+        if(!check("}")){
+            std::cout << "Missing } expected on line: " << given[iter].row << "\n";
+            error = true;
+        }
+
+        //Check for an else statement.
+        Scope* elseScope = nullptr;
+        if(check("else") & check("{")){
+            elseScope = scope();
+        } else {
+            return stack->alloc<IfClass>(condition, ifScope, elseScope);
+        }
+
+        if(!check("}")){
+            std::cout << "Missing } expected on line: " << given[iter].row << "\n";
+            error = true;
+        }
+
+        return stack->alloc<IfClass>(condition, ifScope, elseScope);
 
     }
 
@@ -717,6 +656,73 @@ Node* Parser::IF(){
 
 }
 
+//for loop
+Node* Parser::FOR(){
+    Node* assign = nullptr;
+    Node* condition = nullptr;
+    Node* incrementer = nullptr;
+    Scope* thisBody = nullptr;
+
+    if(check("for") & check("(")){
+        //Make a new scope and assign it as the current scope.
+        thisBody = stack->alloc<Scope>(nullptr, nullptr, currScope);
+        currScope = thisBody;
+        stackCount.push_back(0);
+
+        //Get an assignment, if any.
+        if(!check(";")){
+            assign = assignment();
+            if(!check(";")){
+                error = true;
+                std::cout << "Missing ';' expected at [" + std::to_string(given[iter].row) + ", " + std::to_string(given[iter].column) +"]\n";
+            }
+        }
+        //Check for a condition, if any.
+        if(!check(";")){
+            condition = OR();
+            if(!check(";")){
+                error = true;
+                std::cout << "Missing ';' expected at [" + std::to_string(given[iter].row) + ", " + std::to_string(given[iter].column) +"]\n";
+            }
+        }
+        //Grab the incrementer, if any.
+        if(!check(")")){
+            incrementer = assignment();
+            if(!check(")")){
+                error = true;
+                currScope = currScope->parent;
+                stackCount.pop_back();
+                return nullptr;
+            }
+        }
+
+        //Build the body of code for the loop.
+        if(check("{")){
+            thisBody->body = body();
+        } else {
+            error = true;
+            std::cout << "Missing { expected on line: " << given[iter].row << "\n";
+            currScope = currScope->parent;
+            stackCount.pop_back();
+            return nullptr;
+        }
+
+        //Check for the last brace to end the for loop.
+        if(!check("}")){
+            std::cout << "Missing } expected on line: " << given[iter].row << "\n";
+            error = true;
+        }
+
+        //Return to the prior scope.
+        currScope = currScope->parent;
+        stackCount.pop_back();
+        return stack->alloc<ForLoop>(assign, condition, incrementer, thisBody);
+
+    }
+
+    return nullptr;
+    
+}
 
 
 //Variable stuff
@@ -739,7 +745,7 @@ Variable* Parser::variable(){
             }
         }
 
-        //The given variable does not exist.
+        //The given variable does not exist if where(given[iter].getName()) returns -1.
         if(thisScope->where(given[iter].getName()) == -1){
             std::cout << "Unknown variable: " << given[iter].getName() << "\n";
             return nullptr;
@@ -766,7 +772,7 @@ Variable* Parser::initialize(){
     if(bool1 & bool2){
         //Create a new variable object in the heap.
         //This will be stack allocated in scope().
-        Variable* newVariable = new Variable(given[iter + 1], count(), currScope->parent != nullptr);
+        Variable* newVariable = stack->alloc<Variable>(given[iter + 1], count(), currScope->parent != nullptr);
         //Add the variable to the current scope.
         currScope->push(newVariable);
         iter++;
@@ -842,35 +848,44 @@ bool Parser::next(){
     types result;
 
     //Check to see if all of instructions have been executed.
-    if(instructionNumber == programInstructions.size()){
+    if(instructionNumber >= programInstructions.size()){
         return false;
     }
 
     switch (programInstructions[instructionNumber].oper){
         case Operation::cjump:
-            //If it's true, then don't skip
+            //If it's true, then don't skip.
             if(!top().boolean){
                 //This is to adjust the position of the instruction number.
                 instructionNumber = programInstructions[instructionNumber].literal.fixed64;
-                //Move the position of the stack pointer back to "delete" the-
-                //boolean being used in the prior slot.
+                //Pop the boolean from the stack.
+                pop();
+                return true;
             }
+
+            //Pop the boolean from the stack.
+            pop();
+            instructionNumber++;
             return true;
         case Operation::jump:
             instructionNumber = programInstructions[instructionNumber].literal.fixed64;
             return true;
         case Operation::gfetch:
-            //Push the value into the stack.
+            //Push the global value onto the stack.
             computationVector.push_back(computationVector[programInstructions[instructionNumber].literal.fixed64]);
             instructionNumber++;
             return true;
         case Operation::lfetch:
-            //Push the value into the stack.
+            //Push the local value onto the stack.
             computationVector.push_back(computationVector[computationVector.size() - programInstructions[instructionNumber].literal.fixed64 - 1]);
             instructionNumber++;
             return true;
-        case Operation::assign:
+        case Operation::gassign:
             computationVector[programInstructions[instructionNumber].literal.fixed64] = top();
+            instructionNumber++;
+            return true;
+        case Operation::lassign:
+            computationVector[computationVector.size() - 1 - programInstructions[instructionNumber].literal.fixed64] = top();
             instructionNumber++;
             return true;
         case Operation::push:

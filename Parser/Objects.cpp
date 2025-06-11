@@ -21,7 +21,11 @@
     }
 
     std::string Boolean::ToString(std::string inLeft, std::string inRight){
-        return std::to_string(value);
+        if(value){
+            return "true";
+        } else {
+            return "false";
+        }
     }
 
     void Boolean::FLVMCodeGen(std::vector<Instruction>& inInstructions){
