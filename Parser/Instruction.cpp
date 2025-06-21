@@ -6,6 +6,8 @@
 #include "../Lexer/Token.hpp"
 
 enum Operation{
+    call,
+    ireturn,
     gfetch,
     lfetch,
     cjump,
@@ -15,6 +17,7 @@ enum Operation{
     gassign,
     lassign,
     push,
+    pop,
 
     //Math instructions
     multiply,

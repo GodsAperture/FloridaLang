@@ -1,5 +1,13 @@
-fixed8 w = 2;
+fixed8 x = 0;
+fixed8 y = 3;
 
-for(fixed8 i = 0; i < 10; i = i + 1){
-    i = i + 2;
+while(x < y){
+    if(x == 2){
+        fixed8 z = 3;
+        x = x + z;
+    } else {
+        fixed8 z = 1;
+        x = x - z;
+    }
+    x = x + 2;
 }

@@ -49,8 +49,9 @@
 			return false;
 		}
 
-		//Increment count and row by the size of the string.
+		//Increment count and column by the size of the string.
 		count += inString.size();
+		column += inString.size();
 
 		return true;
 	}

@@ -66,12 +66,17 @@ class Scope : public Node{
         Body* body = nullptr;
         //This will be the variables of the current scope.
         Variable* variables = nullptr;
+        //As variables go in and out of scope, the number will change.
+        //Although, all variables will be tied the `variables` variable.
+        //This ensures I can pop the correct number of variables.
+        size_t variableCount = 0;
 
         //Find where in some given Scope a particular variable lies.
         //If it does not exist in the scope, it returns -1.
         int64_t where(std::string input);
         //Push a new variable into the scope's variable stack.
         void push(Variable* input);
+        size_t count();
         Scope();
         Scope(Body* inBody, Variable* inScope, Scope* inParent);
         std::string ToString(std::string inLeft, std::string inRight) override;
@@ -92,8 +97,10 @@ public:
 class Initialize : public Node{
 public:
     Variable* thisVariable;
+    Node* code;
 
     Initialize(Variable* inVariable);
+    Initialize(Variable* inVariable, Node* inCode);
     std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
 };
@@ -294,10 +301,12 @@ public:
 class IfClass : public Node{
 public:
     Node* condition;
-    Scope* ifScope;
-    Scope* elseScope;
+    Body* ifBody;
+    Body* elseBody;
+    size_t ifVarCount = 0;
+    size_t elseVarCount = 0;
 
-    IfClass(Node* inCondition, Scope* inIfScope, Scope* inElseScope);
+    IfClass(Node* inCondition, Body* inIfScope, Body* inElseScope);
     std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
 };
@@ -307,9 +316,9 @@ public:
     Node* assign;
     Node* condition;
     Node* incrementer;
-    Scope* body;
+    Body* body;
 
-    ForLoop(Node* inAssign, Node* inCondition, Node* incrementer, Scope* body);
+    ForLoop(Node* inAssign, Node* inCondition, Node* inIncrementer, Body* inBody);
     std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
 };
@@ -317,10 +326,21 @@ public:
 class WhileLoop : public Node{
 public:
     Node* condition;
-    Scope* body;
+    Body* body;
 
-    WhileLoop(Node* inCondition, Scope* inBody);
+    WhileLoop(Node* inCondition, Body* inBody);
     std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
+};
+
+class Function : public Node{
+public:
+    bool returnable = false;
+    Scope* theFunction;
+
+    Function(bool inReturnable, Scope* inTheFunction);
+    std::string ToString(std::string inLeft, std::string inRight) override;
+    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
+
 };
 #endif

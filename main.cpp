@@ -4,13 +4,13 @@
 #include <typeinfo>
 #include "Lexer/Lexer.hpp"
 #include "Parser/Parser.hpp"
+#include "VirtualMachine/VM.hpp"
 
 	std::string readFile(std::string filePath){
 		std::fstream file = std::fstream(filePath);
 		std::string val((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 		return val;
 	}
-
 
 	// //A simple conditionally recursive integration method.
 	// double recint(double (fun)(double), double x0, double x2){
@@ -73,7 +73,7 @@ int main(){
 	}
 
 	//Parse over the list and make sure that the expression is acceptable.
-	Parser FloridaParser = Parser(theList, 100000);
+	Parser FloridaParser = Parser(theList, 10000);
 	FloridaParser.parse();
 
 	//If the error flag has been raised, then
@@ -83,14 +83,16 @@ int main(){
 		return -1;
 	}
 
-	//Begin making the instruction vector;
-	FloridaParser.FLVMCodeGen();
+	//Make the virtual machine
+	FloridaVM Florida = FloridaVM(FloridaParser);
 
 	//Execute the instructions
 	bool successful = true;
 	while(successful){
-		successful = FloridaParser.next();
+		successful = Florida.next();
 	}
+
+	printf("Hello!");
 
 	return 0;
 

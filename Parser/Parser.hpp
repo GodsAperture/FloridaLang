@@ -17,24 +17,20 @@ public:
     public:
         void* startNode;
         int64_t startIter;
-        int64_t startCount;
 
         Start(){
             startNode = nullptr;
             startIter = 0;
-            startCount = 0;
         }
 
-        Start(void* inStart, int64_t inIter, int64_t inCount){
+        Start(void* inStart, int64_t inIter){
             startNode = inStart;
             startIter = inIter;
-            startCount = inCount;
         }
 
         Start& operator=(Start input){
             startNode = input.startNode;
             startIter = input.startIter;
-            startCount = input.startCount;
 
             return *this;
         }
@@ -58,48 +54,10 @@ public:
     Node* result = nullptr;
     //The currently active scope.
     Scope* currScope = nullptr;
-    //Keeps track of the expected stack size.
-    //This value will be reset after a scope has been exited.
-    std::vector<int64_t> stackCount = std::vector<int64_t>(0);
 
-    //Increments the stack counter.
-    void countInc();
-    //Decrements the stack counter.
-    void countDec();
-    //Sets the counter
-    void countSet(int64_t input);
-    //Returns the current stack size.
-    int64_t count();
-
-
-    //These methods and members are for the virtual machine.
-
-    //The value that keeps track of where we are in the instructions.
-    size_t instructionNumber = 0;
-    //The instruction set for the program.
-    std::vector<Instruction> programInstructions = std::vector<Instruction>();
-    //The "stack"
-    std::vector<types> computationVector = std::vector<types>();
-    //Exceutes the current instruction in the virtual machine.
-    //Returns true if an instruction was successfully executed.
-    bool next();
-    //Prints the current object in the stack.
-    void print();
-    //Prints the stack from the bottom to the end of the vector.
-    void printStack();
 //Comments on the rightmost parts of the functions
 //are solely so I can build the parser properly.
 
-//ComputationVector related methods
-
-    //Push the given value to the computation vector.
-    void push(types input);
-    //Pop the current value from the computation vector.
-    types pop();
-    //Get the current value from the computation vector.
-    types top();
-    //Check to see if the given string is the next token.
-    //If it is, then increment the iterator.
     bool check(std::string inString);
 
 //Program related functions.
@@ -108,10 +66,13 @@ public:
     void parse();
     //Generate the code.
     void FLVMCodeGen();
+
+//Variables and related operations
+
     //Check for a variable.
     Variable* variable();
     //Check for an initialization.
-    Variable* initialize();
+    Node* initialize();
     //Check for an assignment.
     Node* assignment();
 
@@ -126,7 +87,8 @@ public:
     bool hasTokens();
     bool hasTokens(int64_t input);
 
-//Mathematical expressions
+//Mathematical expressions.
+//Technically, all mathematical expressions are subexpressions of boolean expressions.
 
     //0 priority
     //Addition and subtraction.
@@ -164,6 +126,10 @@ public:
 
     //for loop
     Node* FOR();
+    Node* WHILE();
+
+    //Functions and methods
+    Function* function();
 
     //This is so I can "pretty print" the number of errors found.
     //Example, if I have 99 errors I can print out:
@@ -206,13 +172,12 @@ public:
     }
 
     Start currInfo(){
-        return Start(stack->current, iter, count());
+        return Start(stack->current, iter);
     }
 
     void reset(Start input){
         stack->current = input.startNode;
         iter = input.startIter;
-        stackCount[stackCount.size() - 1] = input.startCount;
     }
     
 };

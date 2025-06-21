@@ -18,28 +18,11 @@ bool typeCheck(FloridaType inType){
 }
 
 void Parser::parse(){
-    //If it's not the nullptr, then it's successful.
+    //The entire program is essentially a scope.
     result = scope();
+    //Just a useful debugger to make sure I'm creating the AST properly.
     std::cout << result->ToString("", "") << "\n";
 };
-
-void Parser::countInc(){
-    stackCount[stackCount.size() - 1] = stackCount[stackCount.size() - 1] + 1;
-}
-
-void Parser::countDec(){
-    stackCount[stackCount.size() - 1] = stackCount[stackCount.size() - 1] - 1;
-}
-
-void Parser::countSet(int64_t input){
-    stackCount[stackCount.size() - 1] = input;
-}
-
-int64_t Parser::count(){
-    return stackCount[stackCount.size() - 1];
-}
-
-
 
 bool Parser::hasTokens(){
     return iter < given.size();
@@ -59,10 +42,6 @@ bool Parser::check(std::string inString){
         return true;
     }
     return false;
-}
-
-void Parser::FLVMCodeGen(){
-    result->FLVMCodeGen(programInstructions);
 }
 
 
@@ -96,13 +75,11 @@ Node* Parser::AddSub(){
 
         //Check for any sort of sum or difference.
         if(current == "+"){
-            countDec();
             left = stack->alloc<Add>(left, right);
             current = given[iter].name;
             continue;
         }
         if(current == "-"){
-            countDec();
             left = stack->alloc<Subtract>(left, right);
             current = given[iter].name;
             continue;
@@ -140,13 +117,11 @@ Node* Parser::MulDiv(){
 
         //Start checking for products or divisions.
         if(current == "*"){
-            countDec();
             left = stack->alloc<Multiply>(left, right);
             current = given[iter].name;
             continue;
         }
         if(current == "/"){
-            countDec();
             left = stack->alloc<Divide>(left, right);
             current = given[iter].name;
             continue;
@@ -165,7 +140,6 @@ Node* Parser::primitive(){
         //Increment for the minus sign;
         expression = stack->alloc<Negative>(MulDiv());
 
-        countInc();
         return expression;
     }
     //Check for expression within parentheses.
@@ -178,7 +152,6 @@ Node* Parser::primitive(){
             errorStack.push_back("Missing ')' on line " + std::to_string(given[iter].row));
         }
 
-        countInc();
         return expression;
     }
     //Check for numbers.
@@ -186,18 +159,15 @@ Node* Parser::primitive(){
         Fixed8* number = stack->alloc<Fixed8>(given[iter].getName());
         iter++; 
 
-        countInc();
         return number;
     }
     //Check for booleans.
     if(given[iter].type == FloridaType::Bool){
         if(given[iter].getName() == "true"){
             iter++;
-            countInc();
             return stack->alloc<Boolean>(true);
         } else {
             iter++;
-            countInc();
             return stack->alloc<Boolean>(false);
         }
     }
@@ -240,7 +210,6 @@ Node* Parser::equal(){
         return nullptr;
     }
 
-    countDec();
     return stack->alloc<Equal>(left, right);
 
 }
@@ -274,7 +243,6 @@ Node* Parser::notEqual(){
         return nullptr;
     }
 
-    countDec();
     return stack->alloc<NotEqual>(left, right);
 
 }
@@ -306,7 +274,6 @@ Node* Parser::greaterThan(){
         return nullptr;
     }
 
-    countDec();
     return stack->alloc<GreaterThan>(left, right);
 
 }
@@ -338,7 +305,6 @@ Node* Parser::greaterThanOr(){
         return nullptr;
     }
 
-    countDec();
     return stack->alloc<GreaterThanOr>(left, right);
 
 }
@@ -370,7 +336,6 @@ Node* Parser::lessThan(){
         return nullptr;
     }
 
-    countDec();
     return stack->alloc<LessThan>(left, right);
 
 }
@@ -402,7 +367,6 @@ Node* Parser::lessThanOr(){
         return nullptr;
     }
 
-    countDec();
     return stack->alloc<LessThanOr>(left, right);
 
 }
@@ -452,10 +416,6 @@ Node* Parser::compare(){
 
 
 Node* Parser::OR(){
-    if(!hasTokens(3)){
-        return nullptr;
-    }
-
     Start start = currInfo();
     Node* left = nullptr;
     Node* right = nullptr;
@@ -474,7 +434,6 @@ Node* Parser::OR(){
             return nullptr;
         }
 
-        countDec();
         left = stack->alloc<Or>(left, right);
 
     }
@@ -484,10 +443,6 @@ Node* Parser::OR(){
 }
 
 Node* Parser::AND(){
-    if(!hasTokens(3)){
-        return nullptr;
-    }
-
     Start start = currInfo();
     Node* left = nullptr;
     Node* right = nullptr;
@@ -506,7 +461,6 @@ Node* Parser::AND(){
             return nullptr;
         }
 
-        countDec();
         left = stack->alloc<And>(left, right);
 
     }
@@ -523,12 +477,8 @@ Scope* Parser::scope(){
     //Assign the newest scope to be the current scope.
     currScope = newScope;
 
-    //Start a new relative stack counter.
-    stackCount.push_back(0);
     //Get the body of code and attach it to the scope.
     newScope->body = body();
-    //Pop this scope from the stack counter.
-    stackCount.pop_back();
     //Return to the outerscope.
     currScope = currScope->parent;
 
@@ -602,6 +552,11 @@ Node* Parser::commonExpressions(){
     if(result != nullptr){
         return result;
     }
+    
+    result = WHILE();
+    if(result != nullptr){
+        return result;
+    }
 
     return nullptr;
 }
@@ -610,20 +565,23 @@ Node* Parser::commonExpressions(){
 
 //if statement
 Node* Parser::IF(){
-    if(!hasTokens(5)){
-        return nullptr;
-    }
-
     Node* condition = nullptr;
+    size_t variableCount = currScope->count();
+    size_t ifVariables = 0;
+    size_t elseVariables = 0;
+    IfClass* result = nullptr;
 
     //Check to see if the syntax matches properly.
     if(check("if") & check("(")){
-        Scope* ifScope = nullptr;
+        Body* ifBody = nullptr;
 
         condition = OR();
         //Check for the end of the condition and the start of the body.
         if((condition != nullptr) & check(")") & check("{")){
-            ifScope = scope();
+            ifBody = body();
+            //Get the proper number of variables in this pseudoscope.
+            ifVariables = currScope->variableCount - variableCount;
+            currScope->variableCount -= ifVariables;
         } else {
             error = true;
             //Error here
@@ -636,11 +594,20 @@ Node* Parser::IF(){
         }
 
         //Check for an else statement.
-        Scope* elseScope = nullptr;
+        Body* elseBody = nullptr; 
         if(check("else") & check("{")){
-            elseScope = scope();
+            elseBody = body();
+            //the count() method will include the number of variables in the if body.
+            elseVariables = currScope->variableCount - variableCount;
+            currScope->variableCount -= elseVariables;
         } else {
-            return stack->alloc<IfClass>(condition, ifScope, elseScope);
+            result = stack->alloc<IfClass>(condition, ifBody, elseBody);
+            //Get the number of variables to be popped.
+            result->ifVarCount = ifVariables;
+            result->elseVarCount = elseVariables;
+            //Adjust the current variable count appropriately.
+            currScope->variableCount -= result->ifVarCount;
+            return result;
         }
 
         if(!check("}")){
@@ -648,7 +615,11 @@ Node* Parser::IF(){
             error = true;
         }
 
-        return stack->alloc<IfClass>(condition, ifScope, elseScope);
+        //Get the number of variables to be popped.
+        result = stack->alloc<IfClass>(condition, ifBody, elseBody);
+        result->ifVarCount = ifVariables;
+        result->elseVarCount = elseVariables;
+        return result;
 
     }
 
@@ -658,25 +629,28 @@ Node* Parser::IF(){
 
 //for loop
 Node* Parser::FOR(){
+    //These first three can remain nullptrs.
     Node* assign = nullptr;
     Node* condition = nullptr;
     Node* incrementer = nullptr;
-    Scope* thisBody = nullptr;
+    //If the body is a nullptr, then the user provided no code.
+    Body* thisBody = nullptr;
 
     if(check("for") & check("(")){
-        //Make a new scope and assign it as the current scope.
-        thisBody = stack->alloc<Scope>(nullptr, nullptr, currScope);
-        currScope = thisBody;
-        stackCount.push_back(0);
 
         //Get an assignment, if any.
         if(!check(";")){
             assign = assignment();
+            //Edge case. A new variable could be made.
+            if(assign == nullptr){
+                assign = initialize();
+            }
             if(!check(";")){
                 error = true;
                 std::cout << "Missing ';' expected at [" + std::to_string(given[iter].row) + ", " + std::to_string(given[iter].column) +"]\n";
             }
         }
+
         //Check for a condition, if any.
         if(!check(";")){
             condition = OR();
@@ -690,20 +664,16 @@ Node* Parser::FOR(){
             incrementer = assignment();
             if(!check(")")){
                 error = true;
-                currScope = currScope->parent;
-                stackCount.pop_back();
                 return nullptr;
             }
         }
 
         //Build the body of code for the loop.
         if(check("{")){
-            thisBody->body = body();
+            thisBody = body();
         } else {
             error = true;
             std::cout << "Missing { expected on line: " << given[iter].row << "\n";
-            currScope = currScope->parent;
-            stackCount.pop_back();
             return nullptr;
         }
 
@@ -713,10 +683,10 @@ Node* Parser::FOR(){
             error = true;
         }
 
-        //Return to the prior scope.
-        currScope = currScope->parent;
-        stackCount.pop_back();
-        return stack->alloc<ForLoop>(assign, condition, incrementer, thisBody);
+        ForLoop* result = stack->alloc<ForLoop>(assign, condition, incrementer, thisBody);
+        //If there was an initialization, then a variable was generated.
+        currScope->variableCount -= result->assign != nullptr;
+        return result;
 
     }
 
@@ -724,13 +694,46 @@ Node* Parser::FOR(){
     
 }
 
+//while loop
+Node* Parser::WHILE(){
+    if(check("while") & check("(")){
+        Node* condition = nullptr;
+        Body* thisBody = nullptr;
+        WhileLoop* result = nullptr;
+
+        //If this is a nullptr, then it will run perpetually.
+        condition = OR();
+        if(!check(")")){
+            error = true;
+            return nullptr;
+        }
+
+        if(!check("{")){
+            error = true;
+            return nullptr;
+        }
+
+        thisBody = body();
+        if(thisBody == nullptr){
+            error = true;
+            return nullptr;
+        }
+
+        if(!check("}")){
+            error = true;
+            return nullptr;
+        }
+
+        result = stack->alloc<WhileLoop>(condition, thisBody);
+        return result;
+
+    }
+
+    return nullptr;
+}
 
 //Variable stuff
 Variable* Parser::variable(){
-    if(!hasTokens(1)){
-        return nullptr;
-    }
-
     //Check to see if the variable is a valid token.
     if(given[iter].getType() == FloridaType::Identifier){
         bool isLocal = false;
@@ -752,9 +755,15 @@ Variable* Parser::variable(){
         }
 
         //Assign the location of the variable in the scope.
-        Variable* newVariable = stack->alloc<Variable>(given[iter], thisScope->where(given[iter].getName()), isLocal);
+        Variable* newVariable = nullptr;
+        if(!isLocal){
+            newVariable = stack->alloc<Variable>(given[iter], thisScope->where(given[iter].getName()), false);
+        } else {
+            //The count - 1 is because count keeps track of the stack size.
+            //If I have a stack of size 1 and an element at 0, then I need to move back none.
+            newVariable = stack->alloc<Variable>(given[iter], thisScope->where(given[iter].getName()), true);
+        }
         iter++;
-        countInc();
         return newVariable;
     }
 
@@ -762,7 +771,7 @@ Variable* Parser::variable(){
     return nullptr;
 }
 
-Variable* Parser::initialize(){
+Node* Parser::initialize(){
     if(!hasTokens(2)){
         return nullptr;
     }
@@ -772,13 +781,29 @@ Variable* Parser::initialize(){
     if(bool1 & bool2){
         //Create a new variable object in the heap.
         //This will be stack allocated in scope().
-        Variable* newVariable = stack->alloc<Variable>(given[iter + 1], count(), currScope->parent != nullptr);
+        Variable* newVariable = stack->alloc<Variable>(given[iter + 1], currScope->variableCount, currScope->parent != nullptr);
+        //The expected stack size will be larger because of the new variable.
+        Initialize* newInitialize = stack->alloc<Initialize>(newVariable);
         //Add the variable to the current scope.
         currScope->push(newVariable);
         iter++;
         iter++;
 
-        return newVariable;
+        //Check for an assignment on top of the initialization.
+        if(check("=")){
+            Node* right = commonExpressions();
+            if(right != nullptr){
+                //Associate the code found with the initialization.
+                newInitialize->code = right;
+                //The resulting value will be popped from the stack.
+                return newInitialize;
+            } else {
+                error = true;
+                return nullptr;
+            }
+        }
+
+        return newInitialize;
     }
 
     //This isn't an error, just that a variable wasn't found.
@@ -786,24 +811,7 @@ Variable* Parser::initialize(){
 }
 
 Node* Parser::assignment(){
-    if(!hasTokens(3)){
-        return nullptr;
-    }
     Start start = currInfo();
-
-    Variable* thisInitialization = initialize();
-    if(thisInitialization != nullptr){
-        if(!check("=")){
-            return stack->alloc<Initialize>(thisInitialization);
-        }
-
-        Node* thisStatement = commonExpressions();
-        if(thisStatement != nullptr){
-            return stack->alloc<Assignment>(thisInitialization, thisStatement);
-        }
-
-        return nullptr;
-    }
 
     Variable* thisVariable = variable();
     if((thisVariable != nullptr) and check("=")){
@@ -821,215 +829,4 @@ Node* Parser::assignment(){
     }
     //This isn't an error, just that an assignment wasn't found.
     return nullptr;
-}
-
-//x++ returns x + 1;
-//++x returns x;
-
-void Parser::push(types input){
-    computationVector.push_back(input);
-}
-
-types Parser::pop(){
-    types result = computationVector.back();
-    computationVector.pop_back();
-
-    return result;
-}
-
-types Parser::top(){
-    return computationVector.back();
-}
-
-bool Parser::next(){
-    //left and right hand members for operations
-    types left;
-    types right;
-    types result;
-
-    //Check to see if all of instructions have been executed.
-    if(instructionNumber >= programInstructions.size()){
-        return false;
-    }
-
-    switch (programInstructions[instructionNumber].oper){
-        case Operation::cjump:
-            //If it's true, then don't skip.
-            if(!top().boolean){
-                //This is to adjust the position of the instruction number.
-                instructionNumber = programInstructions[instructionNumber].literal.fixed64;
-                //Pop the boolean from the stack.
-                pop();
-                return true;
-            }
-
-            //Pop the boolean from the stack.
-            pop();
-            instructionNumber++;
-            return true;
-        case Operation::jump:
-            instructionNumber = programInstructions[instructionNumber].literal.fixed64;
-            return true;
-        case Operation::gfetch:
-            //Push the global value onto the stack.
-            computationVector.push_back(computationVector[programInstructions[instructionNumber].literal.fixed64]);
-            instructionNumber++;
-            return true;
-        case Operation::lfetch:
-            //Push the local value onto the stack.
-            computationVector.push_back(computationVector[computationVector.size() - programInstructions[instructionNumber].literal.fixed64 - 1]);
-            instructionNumber++;
-            return true;
-        case Operation::gassign:
-            computationVector[programInstructions[instructionNumber].literal.fixed64] = top();
-            instructionNumber++;
-            return true;
-        case Operation::lassign:
-            computationVector[computationVector.size() - 1 - programInstructions[instructionNumber].literal.fixed64] = top();
-            instructionNumber++;
-            return true;
-        case Operation::push:
-            push(programInstructions[instructionNumber].literal);
-            instructionNumber++;
-            return true;
-        case Operation::add:
-            //Get the right operand;
-            right = pop();
-            //Get the left operand;
-            left = pop();
-            //Operate and push;
-            result.fixed64 = left.fixed64 + right.fixed64;
-            push(result);
-            instructionNumber++;
-            return true;
-        case Operation::subtract:
-            //Get the right operand;
-            right = pop();
-            //Get the left operand;
-            left = pop();
-            //Operate and push;
-            result.fixed64 = left.fixed64 - right.fixed64;
-            push(result);
-            instructionNumber++;
-            return true;
-        case Operation::negate:
-            //Negate the value;
-            result.fixed64 = -pop().fixed64;
-            push(result);
-            instructionNumber++;
-            return true;
-        case Operation::multiply:
-            //Get the right operand;
-            right = pop();
-            //Get the left operand;
-            left = pop();
-            //Operate and push;
-            result.fixed64 = left.fixed64 * right.fixed64;
-            push(result);
-            instructionNumber++;
-            return true;
-        case Operation::divide:
-            //Get the right operand;
-            right = pop();
-            //Get the left operand;
-            left = pop();
-            //Operate and push;
-            result.fixed64 = left.fixed64 / right.fixed64;
-            push(result);
-            instructionNumber++;
-            return true;
-        case equals:
-            //Get the right operand;
-            right = pop();
-            //Get the left operand;
-            left = pop();
-            //Operate and push;
-            result.boolean = left.fixed64 == right.fixed64;
-            push(result);
-            instructionNumber++;
-            return true;
-        case nequals:
-            //Get the right operand;
-            right = pop();
-            //Get the left operand;
-            left = pop();
-            //Operate and push;
-            result.boolean = left.fixed64 != right.fixed64;
-            push(result);
-            instructionNumber++;
-            return true;
-        case greater:
-            //Get the right operand;
-            right = pop();
-            //Get the left operand;
-            left = pop();
-            //Operate and push;
-            result.boolean = left.fixed64 > right.fixed64;
-            push(result);
-            instructionNumber++;
-            return true;
-            return true;
-        case greateror:
-            //Get the right operand;
-            right = pop();
-            //Get the left operand;
-            left = pop();
-            //Operate and push;
-            result.boolean = left.fixed64 >= right.fixed64;
-            push(result);
-            instructionNumber++;
-            return true;
-        case lesser:
-            //Get the right operand;
-            right = pop();
-            //Get the left operand;
-            left = pop();
-            //Operate and push;
-            result.boolean = left.fixed64 < right.fixed64;
-            push(result);
-            instructionNumber++;
-            return true;
-        case lesseror:
-            //Get the right operand;
-            right = pop();
-            //Get the left operand;
-            left = pop();
-            //Operate and push;
-            result.boolean = left.fixed64 <= right.fixed64;
-            push(result);
-            instructionNumber++;
-            return true;
-        case ior:
-            //Get the right operand;
-            right = pop();
-            //Get the left operand;
-            left = pop();
-            //Operate and push;
-            result.boolean = left.boolean or right.boolean;
-            push(result);
-            instructionNumber++;
-            return true;
-        case iand:
-            //Get the right operand;
-            right = pop();
-            //Get the left operand;
-            left = pop();
-            //Operate and push;
-            result.boolean = left.boolean and right.boolean;
-            push(result);
-            instructionNumber++;
-            return true;
-        case inot:
-            //Get the right operand;
-            right = pop();
-            //Operate and push;
-            result.boolean = !right.boolean;
-            push(result);
-            instructionNumber++;
-            return true;
-        default:
-            std::cout << "Error: Unknown instruction given.\nThe instruction number is " + std::to_string(programInstructions[instructionNumber].oper);
-            return false;
-    }
-
 }
