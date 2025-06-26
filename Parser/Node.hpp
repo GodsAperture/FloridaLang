@@ -76,6 +76,7 @@ class Scope : public Node{
         int64_t where(std::string input);
         //Push a new variable into the scope's variable stack.
         void push(Variable* input);
+        void pop();
         size_t count();
         Scope();
         Scope(Body* inBody, Variable* inScope, Scope* inParent);
@@ -336,6 +337,7 @@ public:
 class Function : public Node{
 public:
     bool returnable = false;
+    Variable* variables;
     Scope* theFunction;
 
     Function(bool inReturnable, Scope* inTheFunction);

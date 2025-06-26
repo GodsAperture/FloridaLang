@@ -581,6 +581,10 @@ Node* Parser::IF(){
             ifBody = body();
             //Get the proper number of variables in this pseudoscope.
             ifVariables = currScope->variableCount - variableCount;
+            //Remove the variables in the pseudoscope.
+            for(size_t i = 0; i < ifVariables; i++){
+                currScope->pop();
+            }
             currScope->variableCount -= ifVariables;
         } else {
             error = true;
@@ -829,4 +833,43 @@ Node* Parser::assignment(){
     }
     //This isn't an error, just that an assignment wasn't found.
     return nullptr;
+}
+
+
+
+//Function stuff
+Function* Parser::function(){
+    Variable* currVar = nullptr;
+    Variable* head = nullptr;
+    if(!hasTokens(3)){
+        return nullptr;
+    }
+
+    bool bool1 = typeCheck(given[iter].getType());
+    bool bool2 = given[iter + 1].getType() == FloridaType::Identifier;
+    bool bool3 = given[iter + 2].getName() == "(";
+
+    if(bool1 & bool2 & bool3){
+        iter++;
+        iter++;
+        iter++;
+
+        Node* hasInitialization = initialize();
+        if(hasInitialization != nullptr){
+            thisBody = stack->alloc<Body>(hasInitialization);
+            head = thisBody;
+            //Check for more initializations.
+            while(check(",")){
+                //Check for an initialization.
+                hasInitialization = initialize();
+                //Append it to the body in the order it was found.
+                thisBody->next = stack->alloc<Body>(hasInitialization);
+                //Move along the chain to keep adding the code.
+                thisBody = thisBody->next;
+            }
+        }
+
+
+    }
+
 }

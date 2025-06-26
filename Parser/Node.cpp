@@ -12,17 +12,19 @@
     int64_t Scope::where(std::string input){
         Variable* currVar = variables;
         int64_t count = 0;
+        int64_t result = -1;
         //If it exists, then we'll find the position.
         while(currVar != nullptr){
             if(currVar->thisToken.getName() == input){
-                return count;
+                result = count;
+                currVar = currVar->next;
             } else {
                 count++;
                 currVar = currVar->next;
             }
         }
         //If there is no such member, return -1.
-        return -1;
+        return result;
 
     }
 
@@ -49,6 +51,21 @@
         currVar->next = input;
         //Adjust the variable count appropriately.
         variableCount++;
+
+    }
+
+    //pop will remove variables that are going out of scope.
+    void Scope::pop(){
+        Variable* currVar = variables;
+        Variable* lastVar = nullptr;
+        if(currVar != nullptr){
+            while(currVar->next != nullptr){
+                lastVar = currVar;
+                currVar = currVar->next;
+            }
+            lastVar->next = nullptr;
+        }
+
 
     }
 

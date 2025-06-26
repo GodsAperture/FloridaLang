@@ -1,13 +1,7 @@
-fixed8 x = 0;
-fixed8 y = 3;
-
-while(x < y){
-    if(x == 2){
-        fixed8 z = 3;
-        x = x + z;
-    } else {
-        fixed8 z = 1;
-        x = x - z;
-    }
-    x = x + 2;
+fixed8 fun(fixed8 x){
+    return x * x;
 }
+
+fixed8 x = 5;
+
+x = fun(x);
