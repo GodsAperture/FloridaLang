@@ -6,6 +6,12 @@
 #include <string>
 #include <vector>
 
+std::string typeString(FloridaType input);
+
+FloridaType typeReturn(std::string inString);
+
+bool typeCheck(FloridaType inType);
+
 
 
 //If you need to be told what a node is, God help you.
@@ -44,6 +50,7 @@ public:
     bool isLocal = false;
     int64_t distance;
     Variable* next = nullptr;
+    FloridaType type = FloridaType::BadToken;
 
     Variable(Token thisToken, int64_t inDistance, bool inIsLocal);
     Variable(Variable* inVariable);
@@ -53,6 +60,7 @@ public:
         this->distance = input->distance;
         this->next = input->next;
     };
+    void append(Variable* input);
     std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
 
@@ -98,10 +106,19 @@ public:
 class Initialize : public Node{
 public:
     Variable* thisVariable;
-    Node* code;
 
     Initialize(Variable* inVariable);
-    Initialize(Variable* inVariable, Node* inCode);
+    std::string ToString(std::string inLeft, std::string inRight) override;
+    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
+};
+
+class InitializeAssign : public Node{
+public:
+    Variable* thisVariable;
+    Node* code;
+    FloridaType type;
+
+    InitializeAssign(Variable* inVariable, Node* inCode);
     std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
 };
@@ -336,13 +353,36 @@ public:
 
 class Function : public Node{
 public:
+    std::string_view name;
     bool returnable = false;
-    Variable* variables;
+    FloridaType type;
+    Scope* variables;
+    //This is the body of the function.
     Scope* theFunction;
 
-    Function(bool inReturnable, Scope* inTheFunction);
+    Function(bool inReturnable, std::string_view inName, Scope* inInitialize, Scope* inTheFunction);
     std::string ToString(std::string inLeft, std::string inRight) override;
+    void append(Variable* input);
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
 
+};
+
+class Call : public Node{
+public:
+    Function* function;
+    Body* arguments;
+
+    Call(Function* inFunction);
+    std::string ToString(std::string inLeft, std::string inRight) override;
+    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
+};
+
+class ReturnClass : public Node{
+public:
+    Node* statement;
+
+    ReturnClass(Node* input);
+    std::string ToString(std::string inLeft, std::string inRight) override;
+    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
 };
 #endif

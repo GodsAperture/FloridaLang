@@ -1,6 +1,8 @@
 #ifndef Types_h__
 #define Types_h__
 enum FloridaType{
+    //Void
+    tvoid,
     //Default type, for errors;
     Null,
 

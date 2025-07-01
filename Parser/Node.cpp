@@ -2,6 +2,90 @@
 #include <math.h>
 #include <stack>
 
+std::string typeString(FloridaType input){
+    switch(input){
+    //Boolean
+        case FloridaType::Bool:
+            return "boolean";
+    //Fixed point numbers
+        case FloridaType::fixed1:
+            return "fixed1";
+        case FloridaType::fixed2:
+            return "fixed2";
+        case FloridaType::fixed4:
+            return "fixed4";
+        case FloridaType::fixed8:
+            return "fixed8";
+        case FloridaType::fixedn:
+            return "fixedn";
+    //Floating point numbers
+        case FloridaType::float4:
+            return "float4";
+        case FloridaType::float8:
+            return "float8";
+        case FloridaType::floatn:
+            return "floatn";
+        default:
+            return "NULLERROR";
+    }
+
+    //This is unreachable, but appeases the compiler.
+    return "NULLERROR";
+}
+
+FloridaType typeReturn(std::string inString){
+    //Void
+    if(inString == "void"){
+        return FloridaType::tvoid;
+    }
+    //Boolean
+    if(inString == "boolean"){
+        return FloridaType::Bool;
+    }
+    //Fixed point numbers.
+    if(inString == "fixed1"){
+        return FloridaType::fixed1;
+    }
+    if(inString == "fixed2"){
+        return FloridaType::fixed2; 
+    }
+    if(inString == "fixed4"){
+        return FloridaType::fixed4;
+    }
+    if(inString == "fixed8"){
+        return FloridaType::fixed8;
+    }
+    if(inString == "fixedn"){
+        return FloridaType::fixedn;
+    }
+    //Floating point numbers.
+    if(inString == "float4"){
+        return FloridaType::float4;
+    }
+    if(inString == "float8"){
+        return FloridaType::float8;
+    }
+    if(inString == "floatn"){
+        return FloridaType::floatn;
+    }
+    return FloridaType::Null;
+}
+
+bool typeCheck(FloridaType inType){
+    switch(inType){
+        case FloridaType::fixed1:
+        case FloridaType::fixed2:
+        case FloridaType::fixed4:
+        case FloridaType::fixed8:
+        case FloridaType::Bool:
+            return true;
+        default:
+            return false;
+
+    }
+}
+
+
 //Scope
     Scope::Scope(){
         //Do nothing lol
@@ -151,6 +235,18 @@
         next = inVariable->next;
     }
 
+    void Variable::append(Variable* input){
+        Variable* currVar = this;
+        if(currVar->next != nullptr){
+            while(currVar->next != nullptr){
+                currVar = currVar->next;
+            }
+        }
+
+        currVar->next = input;
+
+    }
+
     std::string Variable::ToString(std::string inLeft, std::string inRight){
         return thisToken.getName();
     }
@@ -170,35 +266,42 @@
 //Initialize
     Initialize::Initialize(Variable* inVariable){
         thisVariable = inVariable;
-        code = nullptr;
-    }
-
-    Initialize::Initialize(Variable* inVariable, Node* inCode){
-        thisVariable = inVariable;
-        code = inCode;
     }
 
     std::string Initialize::ToString(std::string inLeft, std::string inRight){
-        if(code == nullptr){
-            return inLeft + thisVariable->thisToken.getName();
-        } else {
-            return inLeft + thisVariable->thisToken.getName() + " = " + code->ToString(inLeft, inRight);
-        }
+        return inLeft + typeString(thisVariable->thisToken.type) + " " + thisVariable->thisToken.getName();
     }
 
     void Initialize::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         //Push back a placeholder.
         inInstructions.push_back(Instruction(Operation::initialize, 0));
-        //Generate the code for the assignment, if any.
-        if(code != nullptr){
-            code->FLVMCodeGen(inInstructions);
-            if(thisVariable->isLocal){
-                inInstructions.push_back(Instruction(Operation::lassign, thisVariable->distance));
-            } else {
-                inInstructions.push_back(Instruction(Operation::gassign, thisVariable->distance));
-            }
-        }
+    }
 
+
+
+//InitializeAssign
+    InitializeAssign::InitializeAssign(Variable* inVariable, Node* inBody){
+        thisVariable = inVariable;
+        code = inBody;
+    }
+
+    std::string InitializeAssign::ToString(std::string inLeft, std::string inRight){
+        return inLeft + typeString(thisVariable->thisToken.type) + " " + thisVariable->thisToken.getName() + " = " + code->ToString(inLeft, inRight);
+    }
+
+    void InitializeAssign::FLVMCodeGen(std::vector<Instruction>& inInstructions){
+        //Push back a placeholder.
+        inInstructions.push_back(Instruction(Operation::initialize, 0));
+
+        //Generate the code for the right hand side.
+        code->FLVMCodeGen(inInstructions);
+
+        //Generate the assignment using the variable.
+        if(thisVariable->isLocal){
+            inInstructions.push_back(Instruction(lassign, thisVariable->distance));
+        } else {
+            inInstructions.push_back(Instruction(gassign, thisVariable->distance));
+        }
     }
 
 
@@ -210,7 +313,7 @@
     }
 
     std::string Assignment::ToString(std::string inLeft, std::string inRight){
-        return inLeft + thisVariable->thisToken.getName() + " = " + code->ToString(inLeft, inRight) + ";";
+        return inLeft + thisVariable->thisToken.getName() + " = " + code->ToString(inLeft, inRight);
     }
 
     void Assignment::FLVMCodeGen(std::vector<Instruction>& inInstructions){
@@ -675,4 +778,85 @@
         inInstructions.push_back(Instruction(Operation::jump, start));
         //Adjust where the unconditional jump will land.
         inInstructions[here].literal.fixed64 = inInstructions.size();
+    }
+
+
+
+//Function
+    Function::Function(bool inReturnable, std::string_view inName, Scope* inInitialize, Scope* inFunctionBody){
+        name = inName;
+        returnable = inReturnable;
+        variables = inInitialize;
+        theFunction = inFunctionBody;
+    }
+
+    std::string Function::ToString(std::string inLeft, std::string inRight){
+        std::string varString = "";
+        //                  scope    ->variables
+        Variable* currVar = variables->variables;
+
+        //Combine all the variables, if any.
+        if(variables != nullptr){
+            //Stop right before the last variable to not append an extra comma.
+            while(currVar->next != nullptr){
+                varString += typeString(currVar->thisToken.type) + " " + currVar->thisToken.getName() + ", ";
+                currVar = currVar->next;
+            }
+            //Append the last variable without an extra comma.
+            varString += typeString(currVar->thisToken.type) + " " + currVar->thisToken.getName();
+        }
+        //Return the function printed in the only correct format.
+        return inLeft + typeString(type) + " " + std::string(name) + "(" + varString + "){\n" + 
+            theFunction->ToString("  " + inLeft, inRight) +
+        inLeft + "}";
+    }
+
+    void Function::append(Variable* input){
+        //                  scope    ->variables;
+        Variable* currVar = variables->variables;
+        if(currVar != nullptr){
+            while(currVar->next != nullptr){
+                currVar = currVar->next;
+            }
+            currVar->next = input;
+        } else {
+            //scope  ->variables = input;
+            variables->variables = input;
+        }
+
+    }
+
+    void Function::FLVMCodeGen(std::vector<Instruction>& inInstructions){
+        //Do nothing for now
+    }
+
+
+
+//Function calls
+    Call::Call(Function* inFunction){
+        function = inFunction;
+    }
+
+    std::string Call::ToString(std::string inLeft, std::string inRight){
+        return std::string(function->name);
+    }
+
+    void Call::FLVMCodeGen(std::vector<Instruction>& inInstructions){
+        //Do nothing for the moment.
+    }
+
+
+
+//Return statements
+    ReturnClass::ReturnClass(Node* input){
+        statement = input;
+    }
+
+    std::string ReturnClass::ToString(std::string inLeft, std::string inRight){
+        return inLeft + "return " + statement->ToString(inLeft, inRight) + ";";
+    }
+
+    void ReturnClass::FLVMCodeGen(std::vector<Instruction>& inInstructions){
+        statement->FLVMCodeGen(inInstructions);
+        inInstructions.push_back(Instruction(Operation::ireturn));
     }

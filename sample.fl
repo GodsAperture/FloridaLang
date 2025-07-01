@@ -1,7 +1,7 @@
-fixed8 fun(fixed8 x){
+fixed4 x;
+fixed4 y = 2;
+x = 3;
+
+fixed8 f(fixed8 x){
     return x * x;
 }
-
-fixed8 x = 5;
-
-x = fun(x);

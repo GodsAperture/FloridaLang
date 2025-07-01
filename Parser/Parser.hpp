@@ -72,9 +72,11 @@ public:
     //Check for a variable.
     Variable* variable();
     //Check for an initialization.
-    Node* initialize();
+    Initialize* initialize();
+    //Check for an initialization with an assignment.
+    InitializeAssign* initializeAssign();
     //Check for an assignment.
-    Node* assignment();
+    Assignment* assignment();
 
 //Tree related functions.
 
@@ -84,6 +86,8 @@ public:
     //Helper function for common expresssions.
     //Assignments, functions, objects with methods, etc.
     Node* commonExpressions();
+    //Small subexpressions.
+    Node* commonStatements();
     bool hasTokens();
     bool hasTokens(int64_t input);
 
@@ -130,6 +134,8 @@ public:
 
     //Functions and methods
     Function* function();
+    Call* call();
+    ReturnClass* Return();
 
     //This is so I can "pretty print" the number of errors found.
     //Example, if I have 99 errors I can print out:

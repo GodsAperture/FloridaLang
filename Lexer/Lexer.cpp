@@ -157,6 +157,10 @@
 			return Token(FloridaType::Bool, std::string_view(file.data() + start, count - start), row, column - 5);
 		}
 
+		if(compare("return")){
+			return Token(FloridaType::Return, std::string_view(file.data() + start, count - start), row, column - 6);
+		}
+
 		// Grab the first character, and then decide what to do with it.
 		char currChar;
 		FloridaType currType;
@@ -506,9 +510,9 @@
 		if(POperatorLQ(currChar) or POperatorRQ(currChar)){
 			//Check if it's a left operator, otherwise it's a right operator.
 			if(POperatorLQ(currChar)){
-				return Token(POperatorL, currChar, row, column);
+				return Token(POperatorL, std::string_view(file.data() + start, count - start), row, column);
 			} else {
-				return Token(POperatorR, currChar, row, column);
+				return Token(POperatorR, std::string_view(file.data() + start, count - start), row, column);
 			}
 		}
 

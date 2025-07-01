@@ -3,25 +3,16 @@
 #include "StackAllocator.hpp"
 #include <iostream>
 
-bool typeCheck(FloridaType inType){
-    switch(inType){
-        case FloridaType::fixed1:
-        case FloridaType::fixed2:
-        case FloridaType::fixed4:
-        case FloridaType::fixed8:
-        case FloridaType::Bool:
-            return true;
-        default:
-            return false;
-
-    }
-}
-
 void Parser::parse(){
     //The entire program is essentially a scope.
     result = scope();
     //Just a useful debugger to make sure I'm creating the AST properly.
-    std::cout << result->ToString("", "") << "\n";
+    if(result == nullptr){
+        std::cout << "Failed to parse.\n";
+        return;
+    } else {
+        std::cout << result->ToString("", "") << "\n";
+    }
 };
 
 bool Parser::hasTokens(){
@@ -520,6 +511,25 @@ Body* Parser::body(){
 Node* Parser::commonExpressions(){
     Node* result;
 
+    result = Return();
+    if(result != nullptr){
+        return result;
+    }
+
+    result = function();
+    if(result != nullptr){
+        return result;
+    }
+
+    result = initializeAssign();
+    if(result != nullptr){
+        if(!check(";")){
+            error = true;
+            std::cout << "Missing ';' expected at [" + std::to_string(given[iter].row) + ", " + std::to_string(given[iter].column) +"]\n";
+        }
+        return result;
+    }
+
     result = assignment();
     if(result != nullptr){
         if(!check(";")){
@@ -558,10 +568,37 @@ Node* Parser::commonExpressions(){
         return result;
     }
 
+    //Reaching this is not problematic.
     return nullptr;
 }
 
+Node* Parser::commonStatements(){
+    Node* result = nullptr;
 
+    //Check for comparison statements.
+    result = OR();
+    if(result != nullptr){
+        if(!check(";")){
+            error = true;
+            std::cout << "Missing ';' expected at [" + std::to_string(given[iter].row) + ", " + std::to_string(given[iter].column) +"]\n";
+        }
+        return result;
+    }
+
+    //Check for assignments.
+    result = assignment();
+    if(result != nullptr){
+        if(!check(";")){
+            error = true;
+            std::cout << "Missing ';' expected at [" + std::to_string(given[iter].row) + ", " + std::to_string(given[iter].column) +"]\n";
+        }
+        return result;
+    }
+
+    //Reaching this is problematic.
+    return nullptr;
+
+}
 
 //if statement
 Node* Parser::IF(){
@@ -738,8 +775,11 @@ Node* Parser::WHILE(){
 
 //Variable stuff
 Variable* Parser::variable(){
+    if(!hasTokens(2)){
+        return nullptr;
+    }
     //Check to see if the variable is a valid token.
-    if(given[iter].getType() == FloridaType::Identifier){
+    if((given[iter].getType() == FloridaType::Identifier) & (given[iter + 1].getName() != "(")){
         bool isLocal = false;
         Scope* thisScope = currScope;
         //Find the variable in any of the prior connected scopes.
@@ -775,37 +815,26 @@ Variable* Parser::variable(){
     return nullptr;
 }
 
-Node* Parser::initialize(){
+Initialize* Parser::initialize(){
     if(!hasTokens(2)){
         return nullptr;
     }
     //Check to see if the variable is a valid token.
     bool bool1 = typeCheck(given[iter].getType());
+    Token theToken = given[iter + 1];
+    theToken.type = typeReturn(given[iter].getName());
     bool bool2 = given[iter + 1].getType() == FloridaType::Identifier;
+
     if(bool1 & bool2){
-        //Create a new variable object in the heap.
+        iter++;
+        iter++;
         //This will be stack allocated in scope().
-        Variable* newVariable = stack->alloc<Variable>(given[iter + 1], currScope->variableCount, currScope->parent != nullptr);
+        Variable* newVariable = stack->alloc<Variable>(theToken, currScope->variableCount, currScope->parent != nullptr);
+        newVariable->type = theToken.type;
         //The expected stack size will be larger because of the new variable.
         Initialize* newInitialize = stack->alloc<Initialize>(newVariable);
         //Add the variable to the current scope.
         currScope->push(newVariable);
-        iter++;
-        iter++;
-
-        //Check for an assignment on top of the initialization.
-        if(check("=")){
-            Node* right = commonExpressions();
-            if(right != nullptr){
-                //Associate the code found with the initialization.
-                newInitialize->code = right;
-                //The resulting value will be popped from the stack.
-                return newInitialize;
-            } else {
-                error = true;
-                return nullptr;
-            }
-        }
 
         return newInitialize;
     }
@@ -814,7 +843,44 @@ Node* Parser::initialize(){
     return nullptr;
 }
 
-Node* Parser::assignment(){
+InitializeAssign* Parser::initializeAssign(){
+    if(!hasTokens(3)){
+        return nullptr;
+    }
+    //Check to see if the variable is a valid token.
+    bool bool1 = typeCheck(given[iter].getType());
+    FloridaType type = typeReturn(given[iter].getName());
+    bool bool2 = given[iter + 1].getType() == FloridaType::Identifier;
+    Token theToken = given[iter + 1];
+    theToken.type = type;
+    bool bool3 = given[iter + 2].getName() == "=";
+
+    if(bool1 & bool2 & bool3){
+        iter++;
+        iter++;
+        iter++;
+        Node* code = nullptr;
+        InitializeAssign* result = stack->alloc<InitializeAssign>(nullptr, nullptr);
+        result->type = type;
+
+        //This will be stack allocated in the scope `currScope`.
+        Variable* newVariable = stack->alloc<Variable>(theToken, currScope->variableCount, currScope->parent != nullptr);
+        result->thisVariable = newVariable;
+        //Add the variable to the current scope.
+        currScope->push(newVariable);
+
+        code = commonExpressions();
+        result->code = code;
+
+        return result;
+
+    }
+
+    return nullptr;
+
+}
+
+Assignment* Parser::assignment(){
     Start start = currInfo();
 
     Variable* thisVariable = variable();
@@ -839,37 +905,66 @@ Node* Parser::assignment(){
 
 //Function stuff
 Function* Parser::function(){
-    Variable* currVar = nullptr;
-    Variable* head = nullptr;
     if(!hasTokens(3)){
         return nullptr;
     }
-
+    //Check if the function has a non-void return statement.
+    bool returnable = given[iter].getName() != "void";
+    FloridaType returnType = typeReturn(given[iter].getName());
     bool bool1 = typeCheck(given[iter].getType());
+    //Grab the function's name as a string_view.
+    std::string_view name = given[iter + 1].name;
     bool bool2 = given[iter + 1].getType() == FloridaType::Identifier;
     bool bool3 = given[iter + 2].getName() == "(";
 
     if(bool1 & bool2 & bool3){
+        Function* result = stack->alloc<Function>(returnable, name, nullptr, nullptr);
+        result->type = returnType;
+        Scope* newScope = stack->alloc<Scope>(nullptr, nullptr, currScope);
+        result->variables = newScope;
+        currScope = newScope;
         iter++;
         iter++;
         iter++;
 
-        Node* hasInitialization = initialize();
+        Initialize* hasInitialization = initialize();
         if(hasInitialization != nullptr){
-            thisBody = stack->alloc<Body>(hasInitialization);
-            head = thisBody;
             //Check for more initializations.
             while(check(",")){
-                //Check for an initialization.
                 hasInitialization = initialize();
-                //Append it to the body in the order it was found.
-                thisBody->next = stack->alloc<Body>(hasInitialization);
-                //Move along the chain to keep adding the code.
-                thisBody = thisBody->next;
             }
         }
 
+        if(!check(")") & !check("{")){
+            error = true;
+            return nullptr;
+        }
+
+        result->theFunction = scope();
+
+        if(!check("}")){
+            error = true;
+            return nullptr;
+        }
+
+        currScope = newScope->parent;
+        return result;
 
     }
+
+    return nullptr;
+
+}
+
+ReturnClass* Parser::Return(){
+    if(!hasTokens(2)){
+        return nullptr;
+    }
+    //Check for the string and then the statement that follows.
+    if(check("return")){
+        return stack->alloc<ReturnClass>(commonStatements());
+    }
+    //The return is a lie.
+    return nullptr;
 
 }
