@@ -93,7 +93,7 @@ bool typeCheck(FloridaType inType){
 
     //Determine where a particular variable exists in a given scope.
     //If it is not found, then return -1.
-    int64_t Scope::where(std::string input){
+    int64_t Scope::varWhere(std::string input){
         Variable* currVar = variables;
         int64_t count = 0;
         int64_t result = -1;
@@ -109,7 +109,22 @@ bool typeCheck(FloridaType inType){
         }
         //If there is no such member, return -1.
         return result;
+    }
 
+    //Determine if a particular function exists in a given scope.
+    //If it is found, then return its pointer.
+    //Otherwise, return the nullptr.
+    Function* Scope::funGet(std::string input){
+        Function* currFun = functions;
+        //If it exists, then we'll find the function.
+        while(currFun != nullptr){
+            if(currFun->name == input){
+                return currFun;
+            }
+            currFun = currFun->next;
+        }
+        //If there is no such member, return the nullptr.
+        return nullptr;
     }
 
     Scope::Scope(Body* inBody, Variable* inVariables, Scope* inParent){
@@ -122,7 +137,6 @@ bool typeCheck(FloridaType inType){
         //If there are no variables, then just slap the variable onto the list.
         if(variables == nullptr){
             variables = input;
-            variableCount++;
             return;
         }
         Variable* currVar = variables;
@@ -133,13 +147,28 @@ bool typeCheck(FloridaType inType){
 
         //Append the Variable to the tail end of the "linked list."
         currVar->next = input;
-        //Adjust the variable count appropriately.
-        variableCount++;
+
+    }
+
+    void Scope::push(Function* input){
+        //If there are no functions, then just slap the function onto the list.
+        if(functions == nullptr){
+            functions = input;
+            return;
+        }
+        Function* currFun = functions;
+        //Reach the tail end of the "linked list" of functions.
+        while(currFun->next != nullptr){
+            currFun = currFun->next;
+        }
+
+        //Append the function to the tail end of the "linked list."
+        currFun->next = input;
 
     }
 
     //pop will remove variables that are going out of scope.
-    void Scope::pop(){
+    void Scope::varPop(){
         Variable* currVar = variables;
         Variable* lastVar = nullptr;
         if(currVar != nullptr){
@@ -149,16 +178,25 @@ bool typeCheck(FloridaType inType){
             }
             lastVar->next = nullptr;
         }
-
-
     }
 
-    size_t Scope::count(){
+    size_t Scope::varCount(){
         size_t count = 0;
         Variable* currVar = variables;
         while(currVar != nullptr){
             count++;
             currVar = currVar->next;
+        }
+
+        return count;
+    }
+
+    size_t Scope::funCount(){
+        size_t count = 0;
+        Function* currFun = functions;
+        while(currFun != nullptr){
+            count++;
+            currFun = currFun->next;
         }
 
         return count;
@@ -170,22 +208,6 @@ bool typeCheck(FloridaType inType){
 
     void Scope::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         body->FLVMCodeGen(inInstructions);
-    }
-
-
-
-//Global scope
-    Global::Global(Node* inCode){
-        code = inCode;
-        globalScope = nullptr;
-    }
-
-    std::string Global::ToString(std::string inLeft, std::string inRight){
-        return code->ToString(inLeft, inRight);
-    }
-
-    void Global::FLVMCodeGen(std::vector<Instruction>& inInstructions){
-        code->FLVMCodeGen(inInstructions);
     }
 
 
@@ -206,7 +228,7 @@ bool typeCheck(FloridaType inType){
             return current->ToString(inLeft, inRight) + "\n" + next->ToString(inLeft, inRight);
         }
 
-        return current->ToString(inLeft, inRight) + "\n";
+        return current->ToString(inLeft, inRight);
     }
 
     void Body::FLVMCodeGen(std::vector<Instruction>& inInstructions){
@@ -808,7 +830,7 @@ bool typeCheck(FloridaType inType){
         //Return the function printed in the only correct format.
         return inLeft + typeString(type) + " " + std::string(name) + "(" + varString + "){\n" + 
             theFunction->ToString("  " + inLeft, inRight) +
-        inLeft + "}";
+        "\n" + inLeft + "}";
     }
 
     void Function::append(Variable* input){
@@ -827,7 +849,11 @@ bool typeCheck(FloridaType inType){
     }
 
     void Function::FLVMCodeGen(std::vector<Instruction>& inInstructions){
-        //Do nothing for now
+        //Change where this function starts in the program.
+        position = inInstructions.size();
+        if(theFunction != nullptr){
+            theFunction->FLVMCodeGen(inInstructions);
+        }
     }
 
 
@@ -838,11 +864,24 @@ bool typeCheck(FloridaType inType){
     }
 
     std::string Call::ToString(std::string inLeft, std::string inRight){
-        return std::string(function->name);
+        std::string stringArgs = "";
+        //If there are any arguments, then combine them in order.
+        if(arguments != nullptr){
+            Body* currBody = arguments;
+            //Append all arguments with commas.
+            while(currBody->next != nullptr){
+                stringArgs += currBody->ToString(inLeft, inRight) + ", ";
+            }
+            //Append the last one without a comma.
+            stringArgs += currBody->ToString(inLeft, inRight);
+        }
+
+        return std::string(function->name) + "(" + stringArgs + ")";
     }
 
     void Call::FLVMCodeGen(std::vector<Instruction>& inInstructions){
-        //Do nothing for the moment.
+        inInstructions.push_back(Instruction(Operation::call, function->position));
+        
     }
 
 

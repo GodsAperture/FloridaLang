@@ -511,6 +511,11 @@ Body* Parser::body(){
 Node* Parser::commonExpressions(){
     Node* result;
 
+    result = call();
+    if(result != nullptr){
+        return result;
+    }
+
     result = Return();
     if(result != nullptr){
         return result;
@@ -578,20 +583,12 @@ Node* Parser::commonStatements(){
     //Check for comparison statements.
     result = OR();
     if(result != nullptr){
-        if(!check(";")){
-            error = true;
-            std::cout << "Missing ';' expected at [" + std::to_string(given[iter].row) + ", " + std::to_string(given[iter].column) +"]\n";
-        }
         return result;
     }
 
     //Check for assignments.
     result = assignment();
     if(result != nullptr){
-        if(!check(";")){
-            error = true;
-            std::cout << "Missing ';' expected at [" + std::to_string(given[iter].row) + ", " + std::to_string(given[iter].column) +"]\n";
-        }
         return result;
     }
 
@@ -603,7 +600,7 @@ Node* Parser::commonStatements(){
 //if statement
 Node* Parser::IF(){
     Node* condition = nullptr;
-    size_t variableCount = currScope->count();
+    size_t variableCount = currScope->varCount();
     size_t ifVariables = 0;
     size_t elseVariables = 0;
     IfClass* result = nullptr;
@@ -617,12 +614,11 @@ Node* Parser::IF(){
         if((condition != nullptr) & check(")") & check("{")){
             ifBody = body();
             //Get the proper number of variables in this pseudoscope.
-            ifVariables = currScope->variableCount - variableCount;
+            ifVariables = currScope->varCount() - variableCount;
             //Remove the variables in the pseudoscope.
             for(size_t i = 0; i < ifVariables; i++){
-                currScope->pop();
+                currScope->varPop();
             }
-            currScope->variableCount -= ifVariables;
         } else {
             error = true;
             //Error here
@@ -639,15 +635,15 @@ Node* Parser::IF(){
         if(check("else") & check("{")){
             elseBody = body();
             //the count() method will include the number of variables in the if body.
-            elseVariables = currScope->variableCount - variableCount;
-            currScope->variableCount -= elseVariables;
+            elseVariables = currScope->varCount() - variableCount;
+            for(size_t i = 0; i < elseVariables; i++){
+                currScope->varPop();
+            }
         } else {
             result = stack->alloc<IfClass>(condition, ifBody, elseBody);
             //Get the number of variables to be popped.
             result->ifVarCount = ifVariables;
             result->elseVarCount = elseVariables;
-            //Adjust the current variable count appropriately.
-            currScope->variableCount -= result->ifVarCount;
             return result;
         }
 
@@ -678,10 +674,9 @@ Node* Parser::FOR(){
     Body* thisBody = nullptr;
 
     if(check("for") & check("(")){
-
         //Get an assignment, if any.
         if(!check(";")){
-            assign = assignment();
+            assign = initializeAssign();
             //Edge case. A new variable could be made.
             if(assign == nullptr){
                 assign = initialize();
@@ -726,7 +721,9 @@ Node* Parser::FOR(){
 
         ForLoop* result = stack->alloc<ForLoop>(assign, condition, incrementer, thisBody);
         //If there was an initialization, then a variable was generated.
-        currScope->variableCount -= result->assign != nullptr;
+        if(assign != nullptr){
+            currScope->varPop();
+        }
         return result;
 
     }
@@ -784,7 +781,7 @@ Variable* Parser::variable(){
         Scope* thisScope = currScope;
         //Find the variable in any of the prior connected scopes.
         while(thisScope->parent != nullptr){
-            if(thisScope->where(given[iter].getName()) != -1){
+            if(thisScope->varWhere(given[iter].getName()) != -1){
                 isLocal = true;
                 break;
             } else {
@@ -793,7 +790,7 @@ Variable* Parser::variable(){
         }
 
         //The given variable does not exist if where(given[iter].getName()) returns -1.
-        if(thisScope->where(given[iter].getName()) == -1){
+        if(thisScope->varWhere(given[iter].getName()) == -1){
             std::cout << "Unknown variable: " << given[iter].getName() << "\n";
             return nullptr;
         }
@@ -801,11 +798,11 @@ Variable* Parser::variable(){
         //Assign the location of the variable in the scope.
         Variable* newVariable = nullptr;
         if(!isLocal){
-            newVariable = stack->alloc<Variable>(given[iter], thisScope->where(given[iter].getName()), false);
+            newVariable = stack->alloc<Variable>(given[iter], thisScope->varWhere(given[iter].getName()), false);
         } else {
             //The count - 1 is because count keeps track of the stack size.
             //If I have a stack of size 1 and an element at 0, then I need to move back none.
-            newVariable = stack->alloc<Variable>(given[iter], thisScope->where(given[iter].getName()), true);
+            newVariable = stack->alloc<Variable>(given[iter], thisScope->varWhere(given[iter].getName()), true);
         }
         iter++;
         return newVariable;
@@ -829,7 +826,7 @@ Initialize* Parser::initialize(){
         iter++;
         iter++;
         //This will be stack allocated in scope().
-        Variable* newVariable = stack->alloc<Variable>(theToken, currScope->variableCount, currScope->parent != nullptr);
+        Variable* newVariable = stack->alloc<Variable>(theToken, currScope->varCount(), currScope->parent != nullptr);
         newVariable->type = theToken.type;
         //The expected stack size will be larger because of the new variable.
         Initialize* newInitialize = stack->alloc<Initialize>(newVariable);
@@ -864,7 +861,7 @@ InitializeAssign* Parser::initializeAssign(){
         result->type = type;
 
         //This will be stack allocated in the scope `currScope`.
-        Variable* newVariable = stack->alloc<Variable>(theToken, currScope->variableCount, currScope->parent != nullptr);
+        Variable* newVariable = stack->alloc<Variable>(theToken, currScope->varCount(), currScope->parent != nullptr);
         result->thisVariable = newVariable;
         //Add the variable to the current scope.
         currScope->push(newVariable);
@@ -940,6 +937,7 @@ Function* Parser::function(){
             return nullptr;
         }
 
+        //It doesn't matter if this is a nullptr or not.
         result->theFunction = scope();
 
         if(!check("}")){
@@ -948,6 +946,50 @@ Function* Parser::function(){
         }
 
         currScope = newScope->parent;
+        //Include the function for use in its respective scope.
+        currScope->push(result);
+        return result;
+
+    }
+
+    return nullptr;
+
+}
+
+Call* Parser::call(){
+    if(!hasTokens(3)){
+        return nullptr;
+    }
+
+    bool bool1 = given[iter].type == FloridaType::Identifier;
+    std::string name = given[iter].getName();
+    bool bool2 = given[iter + 1].getName() == "(";
+
+    if(bool1 & bool2){
+        if(currScope->funGet(given[iter].getName()) == nullptr){
+            error = true;
+            std::cout << "Unknown function";
+            return nullptr;
+        }
+        iter++;
+        iter++;
+        Call* result = stack->alloc<Call>(nullptr);
+        result->function = currScope->funGet(name);
+        Body* arguments = stack->alloc<Body>(nullptr);
+        result->arguments = arguments;
+        arguments->current = commonStatements();
+        //Check for all arguments.
+        while(check(",")){
+            //Move along the "linked list" of arguments.
+            arguments->next = stack->alloc<Body>(commonStatements());
+            arguments = arguments->next;
+        }
+
+        if(!check(")")){
+            error = true;
+            return nullptr;
+        }
+
         return result;
 
     }
@@ -962,7 +1004,12 @@ ReturnClass* Parser::Return(){
     }
     //Check for the string and then the statement that follows.
     if(check("return")){
-        return stack->alloc<ReturnClass>(commonStatements());
+        ReturnClass* result = stack->alloc<ReturnClass>(commonStatements());
+        if(!check(";")){
+            error = true;
+            std::cout << "Missing ';' expected at [" + std::to_string(given[iter].row) + ", " + std::to_string(given[iter].column) +"]\n";
+        }
+        return result;
     }
     //The return is a lie.
     return nullptr;

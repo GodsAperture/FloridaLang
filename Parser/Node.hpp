@@ -5,6 +5,9 @@
 #include "../Lexer/Types.hpp"
 #include <string>
 #include <vector>
+//Forward declarations, idfk *why* though.
+//My C/C++ understanding is still hindering me.
+class Function;
 
 std::string typeString(FloridaType input);
 
@@ -35,8 +38,8 @@ public:
 
 class Body : public Node{
 public:
-    Node* current;
-    Body* next;
+    Node* current = nullptr;
+    Body* next = nullptr;
 
     Body(Node* inCurrent, Body* inNext);
     Body(Node* inCurrent);
@@ -74,38 +77,34 @@ class Scope : public Node{
         Body* body = nullptr;
         //This will be the variables of the current scope.
         Variable* variables = nullptr;
-        //As variables go in and out of scope, the number will change.
-        //Although, all variables will be tied the `variables` variable.
-        //This ensures I can pop the correct number of variables.
-        size_t variableCount = 0;
+        //A "linked list" of functions for the current scope.
+        Function* functions = nullptr;
 
         //Find where in some given Scope a particular variable lies.
         //If it does not exist in the scope, it returns -1.
-        int64_t where(std::string input);
+        int64_t varWhere(std::string input);
+        //Find where in some given Scope a particular variable lies.
+        //If it does not exist in the scope, it returns -1.
+        Function* funGet(std::string input);
         //Push a new variable into the scope's variable stack.
         void push(Variable* input);
-        void pop();
-        size_t count();
+        void push(Function* input);
+        void varPop();
+        //funPop isn't needed because they don't disappear in pseudoscopes.
+        size_t varCount();
+        size_t funCount();
         Scope();
+
+        //Standard methods.
         Scope(Body* inBody, Variable* inScope, Scope* inParent);
         std::string ToString(std::string inLeft, std::string inRight) override;
         void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     
     };
 
-class Global : public Node{
-public:
-    Scope* globalScope;
-    Node* code;
-
-    Global(Node* inCode);
-    std::string ToString(std::string inLeft, std::string inRight) override;
-    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-};
-
 class Initialize : public Node{
 public:
-    Variable* thisVariable;
+    Variable* thisVariable = nullptr;
 
     Initialize(Variable* inVariable);
     std::string ToString(std::string inLeft, std::string inRight) override;
@@ -114,8 +113,8 @@ public:
 
 class InitializeAssign : public Node{
 public:
-    Variable* thisVariable;
-    Node* code;
+    Variable* thisVariable = nullptr;
+    Node* code = nullptr;
     FloridaType type;
 
     InitializeAssign(Variable* inVariable, Node* inCode);
@@ -125,8 +124,8 @@ public:
 
 class Assignment : public Node{
 public:
-    Variable* thisVariable;
-    Node* code;
+    Variable* thisVariable = nullptr;
+    Node* code = nullptr;
 
     Assignment(Variable* inVariable, Node* inCode);
     std::string ToString(std::string inLeft, std::string inRight) override;
@@ -137,8 +136,8 @@ public:
 
 class Add : public Node{
 public:
-    Node* left;
-    Node* right;
+    Node* left = nullptr;
+    Node* right = nullptr;
 
     Add(Node* LHE, Node* RHE);
     std::string ToString(std::string inLeft, std::string inRight) override;
@@ -147,8 +146,8 @@ public:
 
 class Subtract : public Node{
 public:
-    Node* left;
-    Node* right;
+    Node* left = nullptr;
+    Node* right = nullptr;
 
     Subtract(Node* LHE, Node* RHE);
     std::string ToString(std::string inLeft, std::string inRight) override;
@@ -159,8 +158,8 @@ public:
 
 class Multiply : public Node{
 public: 
-    Node* left;
-    Node* right;
+    Node* left = nullptr;
+    Node* right = nullptr;
 
     Multiply(Node* LHE, Node* RHE);
     std::string ToString(std::string inLeft, std::string inRight) override;
@@ -169,8 +168,8 @@ public:
 
 class Divide : public Node{
 public: 
-    Node* left;
-    Node* right;
+    Node* left = nullptr;
+    Node* right = nullptr;
 
     Divide(Node* LHE, Node* RHE);
     std::string ToString(std::string inLeft, std::string inRight) override;
@@ -181,7 +180,7 @@ public:
 
 class Parentheses : public Node{
 public:
-    Node* subexpression;
+    Node* subexpression = nullptr;
 
     Parentheses(Node* input);
     std::string ToString(std::string inLeft, std::string inRight) override;
@@ -190,7 +189,7 @@ public:
 
 class Negative : public Node{
 public:
-    Node* right;
+    Node* right = nullptr;
 
     Negative(Node* input);
     std::string ToString(std::string inLeft, std::string inRight) override;
@@ -223,8 +222,8 @@ public:
 //Object comparisons
 class Equal : public Node{
 public:
-    Node* left;
-    Node* right;
+    Node* left = nullptr;
+    Node* right = nullptr;
 
     Equal(Node* inLeft, Node* inRight);
     std::string ToString(std::string inLeft, std::string inRight) override;
@@ -233,8 +232,8 @@ public:
 
 class NotEqual : public Node{
 public:
-    Node* left;
-    Node* right;
+    Node* left = nullptr;
+    Node* right = nullptr;
 
     NotEqual(Node* inLeft, Node* inRight);
     std::string ToString(std::string inLeft, std::string inRight) override;
@@ -243,8 +242,8 @@ public:
 
 class GreaterThan : public Node{
 public:
-    Node* left;
-    Node* right;
+    Node* left = nullptr;
+    Node* right = nullptr;
 
     GreaterThan(Node* inLeft, Node* inRight);
     std::string ToString(std::string inLeft, std::string inRight) override;
@@ -253,8 +252,8 @@ public:
 
 class GreaterThanOr : public Node{
 public:
-    Node* left;
-    Node* right;
+    Node* left = nullptr;
+    Node* right = nullptr;
 
     GreaterThanOr(Node* inLeft, Node* inRight);
     std::string ToString(std::string inLeft, std::string inRight) override;
@@ -263,8 +262,8 @@ public:
 
 class LessThan : public Node{
 public:
-    Node* left;
-    Node* right;
+    Node* left = nullptr;
+    Node* right = nullptr;
 
     LessThan(Node* inLeft, Node* inRight);
     std::string ToString(std::string inLeft, std::string inRight) override;
@@ -273,8 +272,8 @@ public:
 
 class LessThanOr : public Node{
 public:
-    Node* left;
-    Node* right;
+    Node* left = nullptr;
+    Node* right = nullptr;
 
     LessThanOr(Node* inLeft, Node* inRight);
     std::string ToString(std::string inLeft, std::string inRight) override;
@@ -286,8 +285,8 @@ public:
 //Boolean algebra
 class Or : public Node{
 public:
-    Node* left;
-    Node* right;
+    Node* left = nullptr;
+    Node* right = nullptr;
 
     Or(Node* inLeft, Node* inRight);
     std::string ToString(std::string inLeft, std::string inRight) override;
@@ -296,8 +295,8 @@ public:
 
 class And : public Node{
 public:
-    Node* left;
-    Node* right;
+    Node* left = nullptr;
+    Node* right = nullptr;
 
     And(Node* inLeft, Node* inRight);
     std::string ToString(std::string inLeft, std::string inRight) override;
@@ -306,7 +305,7 @@ public:
 
 class Not : public Node{
 public:
-    Node* right;
+    Node* right = nullptr;
 
     Not(Node* inRight);
     std::string ToString(std::string inLeft, std::string inRight) override;
@@ -318,9 +317,9 @@ public:
 //if statements
 class IfClass : public Node{
 public:
-    Node* condition;
-    Body* ifBody;
-    Body* elseBody;
+    Node* condition = nullptr;
+    Body* ifBody = nullptr;
+    Body* elseBody = nullptr;
     size_t ifVarCount = 0;
     size_t elseVarCount = 0;
 
@@ -331,10 +330,10 @@ public:
 
 class ForLoop : public Node{
 public:
-    Node* assign;
-    Node* condition;
-    Node* incrementer;
-    Body* body;
+    Node* assign = nullptr;
+    Node* condition = nullptr;
+    Node* incrementer = nullptr;
+    Body* body = nullptr;
 
     ForLoop(Node* inAssign, Node* inCondition, Node* inIncrementer, Body* inBody);
     std::string ToString(std::string inLeft, std::string inRight) override;
@@ -343,8 +342,8 @@ public:
 
 class WhileLoop : public Node{
 public:
-    Node* condition;
-    Body* body;
+    Node* condition = nullptr;
+    Body* body = nullptr;
 
     WhileLoop(Node* inCondition, Body* inBody);
     std::string ToString(std::string inLeft, std::string inRight) override;
@@ -356,9 +355,13 @@ public:
     std::string_view name;
     bool returnable = false;
     FloridaType type;
-    Scope* variables;
+    //This is where the instruction set begings.
+    int64_t position;
+    Scope* variables = nullptr;
     //This is the body of the function.
-    Scope* theFunction;
+    Scope* theFunction = nullptr;
+    //For use in the parser and VM.
+    Function* next = nullptr;
 
     Function(bool inReturnable, std::string_view inName, Scope* inInitialize, Scope* inTheFunction);
     std::string ToString(std::string inLeft, std::string inRight) override;
@@ -369,8 +372,8 @@ public:
 
 class Call : public Node{
 public:
-    Function* function;
-    Body* arguments;
+    Function* function = nullptr;
+    Body* arguments = nullptr;
 
     Call(Function* inFunction);
     std::string ToString(std::string inLeft, std::string inRight) override;
@@ -379,7 +382,7 @@ public:
 
 class ReturnClass : public Node{
 public:
-    Node* statement;
+    Node* statement = nullptr;
 
     ReturnClass(Node* input);
     std::string ToString(std::string inLeft, std::string inRight) override;
