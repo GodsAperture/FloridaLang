@@ -75,6 +75,7 @@ int main(){
 	//Parse over the list and make sure that the expression is acceptable.
 	Parser FloridaParser = Parser(theList, 10000);
 	FloridaParser.parse();
+	std::cout << FloridaParser.result->ToString("", ";") << "\n";
 
 	//If the error flag has been raised, then
 	//terminate the program and print out the errors.
@@ -85,14 +86,14 @@ int main(){
 
 	//Make the virtual machine
 	FloridaVM Florida = FloridaVM(FloridaParser);
+	std::cout << "\n";
+	Florida.printInstructions();
 
 	//Execute the instructions
 	bool successful = true;
 	while(successful){
 		successful = Florida.next();
 	}
-
-	printf("Hello!");
 
 	return 0;
 

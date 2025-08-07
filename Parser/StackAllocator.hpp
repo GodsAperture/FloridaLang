@@ -42,6 +42,13 @@ public:
         }
     }
 
+    //This only exists to create the ZEROPTR, ONEPTR, and FUNPTR.
+    void* give(){
+        void* result = current;
+        current = (void*) ((std::size_t) current + 8);
+        return result;
+    }
+
     template<typename T>
     void mdealloc(T* ptr){
         current = (void*) ((long long) current - sizeof(T));

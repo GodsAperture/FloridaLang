@@ -6,6 +6,7 @@
 #include "../Lexer/Token.hpp"
 
 enum Operation{
+    scope,
     call,
     ireturn,
     gfetch,

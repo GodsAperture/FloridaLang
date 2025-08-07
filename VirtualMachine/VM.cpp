@@ -15,6 +15,114 @@ types FloridaVM::top(){
     return computationVector.back();
 }
 
+inline void padRight(std::string input){
+    for(size_t i = 0; i < 12 - input.size(); i++){
+        input += " ";
+    }
+
+    std::cout << input + "\n";
+
+}
+
+inline void padRight(std::string input, std::string number){
+    size_t size = input.size();
+    for(size_t i = 0; i < 12 - size; i++){
+        input += " ";
+    }
+
+    std::cout << input + number + "\n";
+
+}
+
+void FloridaVM::printInstructions(){
+    Operation oper;
+    int64_t literal;
+    for(size_t i = 0; i < programInstructions.size(); i++){
+        oper  = programInstructions[i].oper;
+        literal = programInstructions[i].literal.fixed64;
+        switch(oper){
+            case Operation::scope:
+                padRight("scope");
+                continue;
+            case Operation::call:
+                padRight("call", std::to_string(literal));
+                continue;
+            case Operation::ireturn:
+                padRight("ireturn");
+                continue;
+            case Operation::gfetch:
+                padRight("gfetch", std::to_string(literal));
+                continue;
+            case Operation::lfetch:
+                padRight("lfetch", std::to_string(literal));
+                continue;
+            case Operation::cjump:
+                padRight("cjump", std::to_string(literal));
+                continue;
+            case Operation::jump:
+                padRight("jump", std::to_string(literal));
+                continue;
+            case Operation::initialize:
+                padRight("initialize");
+                continue;
+            case Operation::gassign:
+                padRight("gassign", std::to_string(literal));
+                continue;
+            case Operation::lassign:
+                padRight("lassign", std::to_string(literal));
+                continue;
+            case Operation::push:
+                padRight("push", std::to_string(literal));
+                continue;
+            case Operation::pop:
+                padRight("pop");
+                continue;
+            case Operation::multiply:
+                padRight("multiply");
+                continue;
+            case Operation::divide:
+                padRight("divide");
+                continue;
+            case Operation::add:
+                padRight("add");
+                continue;
+            case Operation::negate:
+                padRight("negate");
+                continue;
+            case Operation::equals:
+                padRight("equals");
+                continue;
+            case Operation::nequals:
+                padRight("nequals");
+                continue;
+            case Operation::greater:
+                padRight("greater");
+                continue;
+            case Operation::greateror:
+                padRight("greaterOr");
+                continue;
+            case Operation::lesser:
+                padRight("lesser");
+                continue;
+            case Operation::lesseror:
+                padRight("lesseror");
+                continue;
+            case Operation::ior:
+                padRight("ior");
+                continue;
+            case Operation::iand:
+                padRight("iand");
+                continue;
+            case Operation::inot:
+                padRight("inot");
+                continue;
+            default:
+                padRight("UNKOWN");
+                return;
+        }
+    }
+}
+
 bool FloridaVM::next(){
     //left and right hand members for operations
     types left;
@@ -28,22 +136,34 @@ bool FloridaVM::next(){
 
     switch (programInstructions[instructionNumber].oper){
         case Operation::call:
-            //Start a new relative stack scope.
-            left.fixed64 = reference;
-            computationVector.push_back(left);
-            //We start at the value *after* the last out of scope variable.
+            left.ufixed64 = instructionNumber;
+            push(left);
+            instructionNumber = programInstructions[instructionNumber].literal.fixed64;
+            return true;
+        case Operation::scope:
+            //Place down the instruction number and the reference size.
+            right.ufixed64 = reference;
+            push(right);
+            //The new reference frame is the size of the vector.
             reference = computationVector.size();
-            return true;
+            break;
         case Operation::ireturn:
-            computationVector[reference - 1] = top();
-            //To do, when functions arrive and return statements exist.
-            return true;
+            //Adjust these to pre-scope values.
+            instructionNumber = computationVector[reference - 2].fixed64;
+            reference = computationVector[reference - 1].fixed64;
+            //Move the result to the top of the old stack.
+            computationVector[reference] = top();
+            //Shed all elements above the original top of the stack.
+            for(size_t i = 0; i < computationVector.size() - reference; i++){
+                computationVector.pop_back();
+            }
+            break;
         case Operation::cjump:
             //If it's true, then don't skip.
             if(top().boolean){
                 //Pop the boolean from the stack.
-                instructionNumber++;
                 pop();
+                instructionNumber++;
                 return true;
             } else {
                 //This is to adjust the position of the instruction number.
@@ -54,40 +174,33 @@ bool FloridaVM::next(){
             }
         case Operation::jump:
             instructionNumber = programInstructions[instructionNumber].literal.fixed64;
-            return true;
+            break;
         case Operation::gfetch:
             //Push the global value onto the stack.
             computationVector.push_back(computationVector[programInstructions[instructionNumber].literal.fixed64]);
-            instructionNumber++;
-            return true;
+            break;
         case Operation::lfetch:
             //Push the local value onto the stack.
             computationVector.push_back(computationVector[reference + programInstructions[instructionNumber].literal.fixed64]);
-            instructionNumber++;
-            return true;
+            break;
         case Operation::initialize:
             left.fixed64 = 0;
             computationVector.push_back(left);
-            instructionNumber++;
-            return true;
+            break;
         case Operation::gassign:
             computationVector[programInstructions[instructionNumber].literal.fixed64] = top();
             pop();
-            instructionNumber++;
-            return true;
+            break;
         case Operation::lassign:
             computationVector[reference + programInstructions[instructionNumber].literal.fixed64] = top();
-            instructionNumber++;
-            pop();
-            return true;
+            pop();            
+            break;
         case Operation::push:
             push(programInstructions[instructionNumber].literal);
-            instructionNumber++;
-            return true;
+            break;
         case Operation::pop:
             computationVector.pop_back();
-            instructionNumber++;
-            return true;
+            break;
         case Operation::add:
             //Get the right operand;
             right = pop();
@@ -96,8 +209,7 @@ bool FloridaVM::next(){
             //Operate and push;
             result.fixed64 = left.fixed64 + right.fixed64;
             push(result);
-            instructionNumber++;
-            return true;
+            break;
         case Operation::subtract:
             //Get the right operand;
             right = pop();
@@ -106,13 +218,11 @@ bool FloridaVM::next(){
             //Operate and push;
             result.fixed64 = left.fixed64 - right.fixed64;
             push(result);
-            instructionNumber++;
-            return true;
+            break;
         case Operation::negate:
             //Negate the value;
             computationVector[computationVector.size() - 1].fixed64 = -computationVector[computationVector.size() - 1].fixed64;
-            instructionNumber++;
-            return true;
+            break;
         case Operation::multiply:
             //Get the right operand;
             right = pop();
@@ -121,8 +231,7 @@ bool FloridaVM::next(){
             //Operate and push;
             result.fixed64 = left.fixed64 * right.fixed64;
             push(result);
-            instructionNumber++;
-            return true;
+            break;
         case Operation::divide:
             //Get the right operand;
             right = pop();
@@ -131,8 +240,7 @@ bool FloridaVM::next(){
             //Operate and push;
             result.fixed64 = left.fixed64 / right.fixed64;
             push(result);
-            instructionNumber++;
-            return true;
+            break;
         case equals:
             //Get the right operand;
             right = pop();
@@ -141,8 +249,7 @@ bool FloridaVM::next(){
             //Operate and push;
             result.boolean = left.fixed64 == right.fixed64;
             push(result);
-            instructionNumber++;
-            return true;
+            break;
         case nequals:
             //Get the right operand;
             right = pop();
@@ -151,8 +258,7 @@ bool FloridaVM::next(){
             //Operate and push;
             result.boolean = left.fixed64 != right.fixed64;
             push(result);
-            instructionNumber++;
-            return true;
+            break;
         case greater:
             //Get the right operand;
             right = pop();
@@ -161,9 +267,7 @@ bool FloridaVM::next(){
             //Operate and push;
             result.boolean = left.fixed64 > right.fixed64;
             push(result);
-            instructionNumber++;
-            return true;
-            return true;
+            break;
         case greateror:
             //Get the right operand;
             right = pop();
@@ -172,8 +276,7 @@ bool FloridaVM::next(){
             //Operate and push;
             result.boolean = left.fixed64 >= right.fixed64;
             push(result);
-            instructionNumber++;
-            return true;
+            break;
         case lesser:
             //Get the right operand;
             right = pop();
@@ -182,8 +285,7 @@ bool FloridaVM::next(){
             //Operate and push;
             result.boolean = left.fixed64 < right.fixed64;
             push(result);
-            instructionNumber++;
-            return true;
+            break;
         case lesseror:
             //Get the right operand;
             right = pop();
@@ -192,8 +294,7 @@ bool FloridaVM::next(){
             //Operate and push;
             result.boolean = left.fixed64 <= right.fixed64;
             push(result);
-            instructionNumber++;
-            return true;
+            break;
         case ior:
             //Get the right operand;
             right = pop();
@@ -202,8 +303,7 @@ bool FloridaVM::next(){
             //Operate and push;
             result.boolean = left.boolean or right.boolean;
             push(result);
-            instructionNumber++;
-            return true;
+            break;
         case iand:
             //Get the right operand;
             right = pop();
@@ -212,19 +312,18 @@ bool FloridaVM::next(){
             //Operate and push;
             result.boolean = left.boolean and right.boolean;
             push(result);
-            instructionNumber++;
-            return true;
+            break;
         case inot:
             //Get the right operand;
             right = pop();
             //Operate and push;
             result.boolean = !right.boolean;
             push(result);
-            instructionNumber++;
-            return true;
+            break;
         default:
             std::cout << "Error: Unknown instruction given.\nThe instruction number is " + std::to_string(programInstructions[instructionNumber].oper);
             return false;
     }
-
+    instructionNumber++;
+    return true;
 }

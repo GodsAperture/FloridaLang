@@ -1,9 +1,14 @@
-fixed4 x;
-fixed4 y = 2;
-x = 3;
+fixed8 x = 4;
 
 fixed8 f(fixed8 x){
-    return x * x;
+    fixed8 sin(fixed8 x){
+        return x * 2 + x;
+    }
+    return sin(x) * x;
 }
 
-x = f(3);
+fixed8 add2(fixed8 x, fixed8 y){
+    return x + y;
+}
+
+fixed8 z = f(x);

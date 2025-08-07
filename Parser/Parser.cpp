@@ -4,16 +4,46 @@
 #include <iostream>
 
 void Parser::parse(){
+    //Assign to the optimization pointers.
+    ZEROPTR = (Node*) stack->give();
+    ONEPTR = (Node*) stack->give();
+    FUNPTR = (Node*) stack->give();
+
     //The entire program is essentially a scope.
     result = scope();
     //Just a useful debugger to make sure I'm creating the AST properly.
-    if(result == nullptr){
-        std::cout << "Failed to parse.\n";
-        return;
-    } else {
-        std::cout << result->ToString("", "") << "\n";
+    if(error){
+        std::cout << "The parser failed to parse the full file.\n";
     }
 };
+
+void Parser::functionAppend(Function* input){
+    //Add the function to the current scope.
+    if(currScope->functions != nullptr){
+        Function* currFun = currScope->functions;
+        while(currFun->next != nullptr){
+            currFun = currFun->next;
+        }
+
+        //Add the given function to the end of the "linked list."
+        currFun->next = input;
+    } else {
+        currScope->functions = input;
+    }
+
+    //Add the function to the list of all functions.
+    if(allFunctions != nullptr){
+        Function* currFun = allFunctions;
+        while(currFun->allFunctions != nullptr){
+            currFun = currFun->allFunctions;
+        }
+
+        currFun->allFunctions = input;
+    } else {
+        //If there are no functions, append this one first.
+        allFunctions = input;
+    }
+}
 
 bool Parser::hasTokens(){
     return iter < given.size();
@@ -166,7 +196,10 @@ Node* Parser::primitive(){
     if(thisVariable != nullptr){
         return thisVariable;
     }
-
+    Call* thisCall = call();
+    if(thisCall != nullptr){
+        return thisCall;
+    }
     //No primitives were found.
     return nullptr;
 }
@@ -185,7 +218,7 @@ Node* Parser::equal(){
 
     left = AddSub();
     if(left == nullptr){
-        reset(currInfo());
+        reset(start);
         return nullptr;
     }
 
@@ -467,6 +500,10 @@ Scope* Parser::scope(){
     Scope* newScope = stack->alloc<Scope>(nullptr, nullptr, currScope);
     //Assign the newest scope to be the current scope.
     currScope = newScope;
+    //If there is no other scope, then make it the global scope.
+    if(globalScope == nullptr){
+        globalScope = currScope;
+    }
 
     //Get the body of code and attach it to the scope.
     newScope->body = body();
@@ -474,21 +511,24 @@ Scope* Parser::scope(){
     currScope = currScope->parent;
 
     return newScope;
-
 }
 
 Body* Parser::body(){
     Node* current = nullptr;
     Body* currentBody = nullptr;
-    Body* bodyStart = nullptr;
-
+    Body* bodyStart = stack->alloc<Body>();
+    
     //Look out for anything familiar such as assignments or if statements.
     current = commonExpressions();
     if(current == nullptr){
         return nullptr;
     }
-    bodyStart = stack->alloc<Body>(current);
-
+    if(current != FUNPTR){
+        Body* tempBody = stack->alloc<Body>();
+        tempBody->current = current;
+        bodyStart->append(tempBody);
+        //std::cout << current->ToString(">>", ";") << "\n";
+    }
     //Treat the Body* as a "linked list."
     currentBody = bodyStart;
 
@@ -499,10 +539,16 @@ Body* Parser::body(){
         if(current == nullptr){
             return bodyStart;
         }
+        if(current == FUNPTR){
+            continue;
+        } else {
+            //std::cout << current->ToString(">>", ";") << "\n";
+        }
         //Append code to the "linked list" of expressions.
-        currentBody->next = stack->alloc<Body>(current);
+        currentBody = stack->alloc<Body>(current);
         //Move down the "linked list."
-        currentBody = currentBody->next;
+        bodyStart->append(currentBody);
+
     }
 
     return bodyStart;
@@ -523,7 +569,7 @@ Node* Parser::commonExpressions(){
 
     result = function();
     if(result != nullptr){
-        return result;
+        return FUNPTR;
     }
 
     result = initializeAssign();
@@ -901,7 +947,7 @@ Assignment* Parser::assignment(){
 
 
 //Function stuff
-Function* Parser::function(){
+Node* Parser::function(){
     if(!hasTokens(3)){
         return nullptr;
     }
@@ -915,10 +961,10 @@ Function* Parser::function(){
     bool bool3 = given[iter + 2].getName() == "(";
 
     if(bool1 & bool2 & bool3){
-        Function* result = stack->alloc<Function>(returnable, name, nullptr, nullptr);
+        Function* result = stack->alloc<Function>(returnable, name, nullptr);
         result->type = returnType;
         Scope* newScope = stack->alloc<Scope>(nullptr, nullptr, currScope);
-        result->variables = newScope;
+        result->code = newScope;
         currScope = newScope;
         iter++;
         iter++;
@@ -938,7 +984,8 @@ Function* Parser::function(){
         }
 
         //It doesn't matter if this is a nullptr or not.
-        result->theFunction = scope();
+        result->code->body = body();
+        //std::cout << result->code->ToString(">>", ";");
 
         if(!check("}")){
             error = true;
@@ -947,8 +994,8 @@ Function* Parser::function(){
 
         currScope = newScope->parent;
         //Include the function for use in its respective scope.
-        currScope->push(result);
-        return result;
+        functionAppend(result);
+        return FUNPTR;
 
     }
 
@@ -968,20 +1015,21 @@ Call* Parser::call(){
     if(bool1 & bool2){
         if(currScope->funGet(given[iter].getName()) == nullptr){
             error = true;
-            std::cout << "Unknown function";
+            std::cout << "Unknown function: " + name + "\n";
             return nullptr;
         }
         iter++;
         iter++;
         Call* result = stack->alloc<Call>(nullptr);
         result->function = currScope->funGet(name);
-        Body* arguments = stack->alloc<Body>(nullptr);
+        Arguments* arguments = stack->alloc<Arguments>();
         result->arguments = arguments;
         arguments->current = commonStatements();
+        
         //Check for all arguments.
         while(check(",")){
             //Move along the "linked list" of arguments.
-            arguments->next = stack->alloc<Body>(commonStatements());
+            arguments->next = stack->alloc<Arguments>(commonStatements());
             arguments = arguments->next;
         }
 

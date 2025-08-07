@@ -2,6 +2,15 @@
 #include <math.h>
 #include <stack>
 
+inline std::string padding(std::string input){
+    for(size_t i = 0; i < 12 - input.size(); i++){
+        input += " ";
+    }
+
+    return input;
+
+}
+
 std::string typeString(FloridaType input){
     switch(input){
     //Boolean
@@ -203,24 +212,53 @@ bool typeCheck(FloridaType inType){
     }
 
     std::string Scope::ToString(std::string inLeft, std::string inRight){
-        return body->ToString(inLeft, inRight);
+        if((functions == nullptr) && (body == nullptr)){
+            return "";
+        }
+        if(functions != nullptr){
+            return functions->ToString(inLeft, inRight) + body->ToString(inLeft, ";");
+        }
+        return body->ToString(inLeft, ";");
+    }
+
+    std::string Scope::printAll(){
+        return body->printAll();
     }
 
     void Scope::FLVMCodeGen(std::vector<Instruction>& inInstructions){
-        body->FLVMCodeGen(inInstructions);
+        if(body != nullptr){
+            body->FLVMCodeGen(inInstructions);
+        }
     }
 
 
 
 //Body
-    Body::Body(Node* inCurrent, Body* inNext){
-        current = inCurrent;
-        next = inNext;
+    Body::Body(){
+        current = nullptr;
+        next = nullptr;
     }
 
-    Body::Body(Node* inCurrent){
-        current = inCurrent;
+    Body::Body(Node* input){
+        current = input;
         next = nullptr;
+    }
+
+    //Append the body to the end of the linked list.
+    Body* Body::append(Body* input){
+        if(current == nullptr){
+            current = input;
+            return this;
+        }
+
+        Body* currBody = this;
+        while(currBody->next != nullptr){
+            currBody = currBody->next;
+        }
+
+        currBody->next = input;
+        return this;
+
     }
 
     std::string Body::ToString(std::string inLeft, std::string inRight){
@@ -229,6 +267,12 @@ bool typeCheck(FloridaType inType){
         }
 
         return current->ToString(inLeft, inRight);
+    }
+
+    std::string Body::printAll(){
+        if(next != nullptr){
+            return current->printAll() + next->printAll();
+        }
     }
 
     void Body::FLVMCodeGen(std::vector<Instruction>& inInstructions){
@@ -273,6 +317,10 @@ bool typeCheck(FloridaType inType){
         return thisToken.getName();
     }
 
+    std::string Variable::printAll(){
+        return padding("push") + std::to_string(distance) + "\n";
+    }
+
     void Variable::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         if(isLocal){
             //Push back the instruction for local variable.
@@ -291,7 +339,11 @@ bool typeCheck(FloridaType inType){
     }
 
     std::string Initialize::ToString(std::string inLeft, std::string inRight){
-        return inLeft + typeString(thisVariable->thisToken.type) + " " + thisVariable->thisToken.getName();
+        return inLeft + typeString(thisVariable->thisToken.type) + " " + thisVariable->thisToken.getName() + inRight;
+    }
+
+    std::string Initialize::printAll(){
+        return "initialize\n";
     }
 
     void Initialize::FLVMCodeGen(std::vector<Instruction>& inInstructions){
@@ -308,7 +360,15 @@ bool typeCheck(FloridaType inType){
     }
 
     std::string InitializeAssign::ToString(std::string inLeft, std::string inRight){
-        return inLeft + typeString(thisVariable->thisToken.type) + " " + thisVariable->thisToken.getName() + " = " + code->ToString(inLeft, inRight);
+        return inLeft + typeString(thisVariable->thisToken.type) + " " + thisVariable->thisToken.getName() + " = " + code->ToString(inLeft, inRight) + inRight;
+    }
+
+    std::string InitializeAssign::printAll(){
+        std::string thing = "gassign";
+        if(thisVariable->isLocal){
+            thing = "lassign";
+        }
+        return "initialize\n" + code->printAll() + padding(thing) + std::to_string(thisVariable->distance) + "\n";
     }
 
     void InitializeAssign::FLVMCodeGen(std::vector<Instruction>& inInstructions){
@@ -335,7 +395,15 @@ bool typeCheck(FloridaType inType){
     }
 
     std::string Assignment::ToString(std::string inLeft, std::string inRight){
-        return inLeft + thisVariable->thisToken.getName() + " = " + code->ToString(inLeft, inRight);
+        return inLeft + thisVariable->thisToken.getName() + " = " + code->ToString(inLeft, inRight) + inRight;
+    }
+
+    std::string Assignment::printAll(){
+        if(thisVariable->isLocal){
+            return padding("lassign") + std::to_string(thisVariable->distance) + "(*" + thisVariable->thisToken.getName() + "*)\n";
+        } else {
+            return padding("gassign") + std::to_string(thisVariable->distance) + "(*" + thisVariable->thisToken.getName() + "*)\n";
+        }
     }
 
     void Assignment::FLVMCodeGen(std::vector<Instruction>& inInstructions){
@@ -358,7 +426,13 @@ bool typeCheck(FloridaType inType){
     }
 
     std::string Add::ToString(std::string inLeft, std::string inRight){
-        return left->ToString(inLeft, inRight) + " + " + right->ToString(inLeft, inRight);
+        std::string leftString = left->ToString(inLeft, inRight);
+        std::string rightString = right->ToString(inLeft, inRight);
+        return leftString + " + " + rightString;
+    }
+
+    std::string Add::printAll(){
+        return left->printAll() + right->printAll() + "add\n";
     }
 
     void Add::FLVMCodeGen(std::vector<Instruction>& inInstructions){
@@ -379,6 +453,10 @@ bool typeCheck(FloridaType inType){
         return left->ToString(inLeft, inRight) + " - " + right->ToString(inLeft, inRight);
     }
 
+    std::string Subtract::printAll(){
+        return left->printAll() + right->printAll() + "subtract\n";
+    }
+
     void Subtract::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         left->FLVMCodeGen(inInstructions);
         right->FLVMCodeGen(inInstructions);
@@ -395,6 +473,10 @@ bool typeCheck(FloridaType inType){
 
     std::string Multiply::ToString(std::string inLeft, std::string inRight){
         return left->ToString(inLeft, inRight) + " * " + right->ToString(inLeft, inRight);
+    }
+
+    std::string Multiply::printAll(){
+        return left->printAll() + right->printAll() + "multiply\n";
     }
 
     void Multiply::FLVMCodeGen(std::vector<Instruction>& inInstructions){
@@ -415,6 +497,10 @@ bool typeCheck(FloridaType inType){
         return left->ToString(inLeft, inRight) + " / " + right->ToString(inLeft, inRight);
     }
 
+    std::string Divide::printAll(){
+        return left->printAll() + right->printAll() + "divide\n";
+    }
+
     void Divide::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         left->FLVMCodeGen(inInstructions);
         right->FLVMCodeGen(inInstructions);
@@ -432,6 +518,10 @@ bool typeCheck(FloridaType inType){
         return "(" + subexpression->ToString(inLeft, inRight) + ")";
     }
 
+    std::string Parentheses::printAll(){
+        return subexpression->printAll();
+    }
+
     void Parentheses::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         subexpression->FLVMCodeGen(inInstructions);
     }
@@ -445,6 +535,10 @@ bool typeCheck(FloridaType inType){
 
     std::string Negative::ToString(std::string inLeft, std::string inRight){
         return "-" + right->ToString(inLeft, inRight);
+    }
+
+    std::string Negative::printAll(){
+        return right->printAll() + "negate\n";
     }
 
     void Negative::FLVMCodeGen(std::vector<Instruction>& inInstructions){
@@ -462,6 +556,10 @@ bool typeCheck(FloridaType inType){
 
     std::string Equal::ToString(std::string inLeft, std::string inRight){
         return left->ToString(inLeft, inRight) + " == " + right->ToString(inLeft, inRight);
+    }
+
+    std::string Equal::printAll(){
+        return left->printAll() + right->printAll() + "equals\n";
     }
 
     void Equal::FLVMCodeGen(std::vector<Instruction>& inInstructions){
@@ -483,6 +581,10 @@ bool typeCheck(FloridaType inType){
         return left->ToString(inLeft, inRight) + " != " + right->ToString(inLeft, inRight);
     }
 
+    std::string NotEqual::printAll(){
+        return left->printAll() + right->printAll() + "nequals\n";
+    }
+
     void NotEqual::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         left->FLVMCodeGen(inInstructions);
         right->FLVMCodeGen(inInstructions);
@@ -500,6 +602,10 @@ bool typeCheck(FloridaType inType){
 
     std::string GreaterThan::ToString(std::string inLeft, std::string inRight){
         return left->ToString(inLeft, inRight) + " > " + right->ToString(inLeft, inRight);
+    }
+
+    std::string GreaterThan::printAll(){
+        return left->printAll() + right->printAll() + "greater\n";
     }
 
     void GreaterThan::FLVMCodeGen(std::vector<Instruction>& inInstructions){
@@ -521,6 +627,10 @@ bool typeCheck(FloridaType inType){
         return left->ToString(inLeft, inRight) + " >= " + right->ToString(inLeft, inRight);
     }
 
+    std::string GreaterThanOr::printAll(){
+        return left->printAll() + right->printAll() + "greateror\n";
+    }
+
     void GreaterThanOr::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         left->FLVMCodeGen(inInstructions);
         right->FLVMCodeGen(inInstructions);
@@ -538,6 +648,10 @@ bool typeCheck(FloridaType inType){
 
     std::string LessThan::ToString(std::string inLeft, std::string inRight){
         return left->ToString(inLeft, inRight) + " < " + right->ToString(inLeft, inRight);
+    }
+
+    std::string LessThan::printAll(){
+        return left->printAll() + right->printAll() + "lesser\n";
     }
 
     void LessThan::FLVMCodeGen(std::vector<Instruction>& inInstructions){
@@ -559,6 +673,10 @@ bool typeCheck(FloridaType inType){
         return left->ToString(inLeft, inRight) + " <= " + right->ToString(inLeft, inRight);
     }
 
+    std::string LessThanOr::printAll(){
+        return left->printAll() + right->printAll() + "lesseror\n";
+    }
+
     void LessThanOr::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         left->FLVMCodeGen(inInstructions);
         right->FLVMCodeGen(inInstructions);
@@ -576,6 +694,10 @@ bool typeCheck(FloridaType inType){
 
     std::string Or::ToString(std::string inLeft, std::string inRight){
         return left->ToString(inLeft, inRight) + " OR " + right->ToString(inLeft, inRight);
+    }
+
+    std::string Or::printAll(){
+        return left->printAll() + right->printAll() + "ior\n";
     }
 
     void Or::FLVMCodeGen(std::vector<Instruction>& inInstructions){
@@ -597,6 +719,10 @@ bool typeCheck(FloridaType inType){
         return left->ToString(inLeft, inRight) + " AND " + right->ToString(inLeft, inRight);
     }
 
+    std::string And::printAll(){
+        return left->printAll() + right->printAll() + "iand\n";
+    }
+    
     void And::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         left->FLVMCodeGen(inInstructions);
         right->FLVMCodeGen(inInstructions);
@@ -613,6 +739,10 @@ bool typeCheck(FloridaType inType){
 
     std::string Not::ToString(std::string inLeft, std::string inRight){
         return "!" + right->ToString(inLeft, inRight);
+    }
+
+    std::string Not::printAll(){
+        return right->printAll() + "inot\n";
     }
 
     void Not::FLVMCodeGen(std::vector<Instruction>& inInstructions){
@@ -632,13 +762,25 @@ bool typeCheck(FloridaType inType){
     std::string IfClass::ToString(std::string inLeft, std::string inRight){
         if(elseBody == nullptr){
             return inLeft + "if(" + condition->ToString(inLeft, inRight) + "){\n" + 
-            ifBody->ToString("  " + inLeft, inRight) +
+            ifBody->ToString("  " + inLeft, ";") +
             inLeft + "}";
         } else {
-            return inLeft + "if(" + condition->ToString(inLeft, inRight) + "){\n" + 
+            return inLeft + "if(" + condition->ToString(inLeft, ";") + "){\n" + 
             ifBody->ToString("  ", inRight) +
-            inLeft + "} else {\n" + elseBody->ToString("  " + inLeft, inRight) + inLeft + "}";
+            inLeft + "} else {\n" + elseBody->ToString("  " + inLeft, ";") + inLeft + "}";
         }
+    }
+
+    std::string IfClass::printAll(){
+        std::string result = "(*condition*)\n" + condition->printAll();
+        if(ifBody != nullptr){
+            result += "(*if body*)\n" + ifBody->printAll();
+        }
+        if(elseBody != nullptr){
+            result += "(*else body*)\n" + elseBody->printAll();
+        }
+
+        return result;
     }
 
     void IfClass::FLVMCodeGen(std::vector<Instruction>& inInstructions){
@@ -716,13 +858,13 @@ bool typeCheck(FloridaType inType){
     std::string ForLoop::ToString(std::string inLeft, std::string inRight){
         std::string finalString = "for(";
         if(assign != nullptr){
-            finalString += assign->ToString(inLeft, inRight);
+            finalString += assign->ToString(inLeft, ";");
         } else {
             finalString += ";";
         }
 
         if(condition != nullptr){
-            finalString += condition->ToString(inLeft, inRight);
+            finalString += condition->ToString(inLeft, ";");
         }
         finalString += ";";
 
@@ -732,6 +874,27 @@ bool typeCheck(FloridaType inType){
         finalString += "){\n";
 
         return finalString + body->ToString("  ", inRight) + "}";
+    }
+
+    std::string ForLoop::printAll(){
+        std::string result = "";
+        if(assign != nullptr){
+            result += "(*assignment*)\n" + assign->printAll();
+        }
+        if(condition != nullptr){
+            result += "(*condition*)\n" + condition->printAll() + 
+                "negate\n" + 
+                padding("cjump") + "(*cjump out of the loop*)\n";
+        }
+        if(body != nullptr){
+            result += "(*body*)\n" + body->printAll();
+        }
+        if(incrementer != nullptr){
+            result += "(*incrementer*)\n" + incrementer->printAll();
+        }
+        result += padding("cjump") + "(*cjump to the condition start*)";
+
+        return result;
     }
 
     void ForLoop::FLVMCodeGen(std::vector<Instruction>& inInstructions){
@@ -785,6 +948,21 @@ bool typeCheck(FloridaType inType){
         return inLeft + "while(" + condition->ToString(inLeft, inRight) + "){\n" + body->ToString("  " + inLeft, inRight) + inLeft + "}";
     }
 
+    std::string WhileLoop::printAll(){
+        std::string result = "";
+        if(condition != nullptr){
+            result += "(*condition*)\n" + condition->printAll() + 
+                "negate\n" +
+                padding("cjump") + "(*cjump to escape the loop*)\n";
+        }
+        if(body != nullptr){
+            result += "(*body*)\n" + body->printAll() + 
+                padding("cjump") + "(*cjump to the condition*)";
+        }
+
+        return result;
+    }
+
     void WhileLoop::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         //Where the unconditional jump will always land.
         size_t start = inInstructions.size();
@@ -805,20 +983,18 @@ bool typeCheck(FloridaType inType){
 
 
 //Function
-    Function::Function(bool inReturnable, std::string_view inName, Scope* inInitialize, Scope* inFunctionBody){
+    Function::Function(bool inReturnable, std::string_view inName, Scope* inCode){
         name = inName;
         returnable = inReturnable;
-        variables = inInitialize;
-        theFunction = inFunctionBody;
+        code = inCode;
     }
 
     std::string Function::ToString(std::string inLeft, std::string inRight){
         std::string varString = "";
-        //                  scope    ->variables
-        Variable* currVar = variables->variables;
+        Variable* currVar = code->variables;
 
         //Combine all the variables, if any.
-        if(variables != nullptr){
+        if(code->variables != nullptr){
             //Stop right before the last variable to not append an extra comma.
             while(currVar->next != nullptr){
                 varString += typeString(currVar->thisToken.type) + " " + currVar->thisToken.getName() + ", ";
@@ -828,31 +1004,49 @@ bool typeCheck(FloridaType inType){
             varString += typeString(currVar->thisToken.type) + " " + currVar->thisToken.getName();
         }
         //Return the function printed in the only correct format.
-        return inLeft + typeString(type) + " " + std::string(name) + "(" + varString + "){\n" + 
-            theFunction->ToString("  " + inLeft, inRight) +
-        "\n" + inLeft + "}";
+        std::string result = inLeft + typeString(type) + " " + std::string(name) + "(" + varString + "){\n" + 
+            code->ToString("  " + inLeft, ";") +
+        "\n" + inLeft + "}\n\n";
+
+        if(next != nullptr){
+            return result + next->ToString(inLeft, inRight);
+        } else {
+            return result;
+        }
+
+    }
+
+    std::string Function::printAll(){
+        std::string result = "(*function " + std::string(name) + "*)\n";
+        if(code->body != nullptr){
+            result += code->body->printAll();
+        }
+        if(allFunctions != nullptr){
+            return result + allFunctions->printAll();
+        }
+        return result;
     }
 
     void Function::append(Variable* input){
-        //                  scope    ->variables;
-        Variable* currVar = variables->variables;
+        Variable* currVar = code->variables;
         if(currVar != nullptr){
             while(currVar->next != nullptr){
                 currVar = currVar->next;
             }
             currVar->next = input;
         } else {
-            //scope  ->variables = input;
-            variables->variables = input;
+            code->variables = input;
         }
-
     }
 
     void Function::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         //Change where this function starts in the program.
         position = inInstructions.size();
-        if(theFunction != nullptr){
-            theFunction->FLVMCodeGen(inInstructions);
+        if(code != nullptr){
+            code->FLVMCodeGen(inInstructions);
+        }
+        if(allFunctions != nullptr){
+            allFunctions->FLVMCodeGen(inInstructions);
         }
     }
 
@@ -864,24 +1058,70 @@ bool typeCheck(FloridaType inType){
     }
 
     std::string Call::ToString(std::string inLeft, std::string inRight){
-        std::string stringArgs = "";
-        //If there are any arguments, then combine them in order.
-        if(arguments != nullptr){
-            Body* currBody = arguments;
-            //Append all arguments with commas.
-            while(currBody->next != nullptr){
-                stringArgs += currBody->ToString(inLeft, inRight) + ", ";
-            }
-            //Append the last one without a comma.
-            stringArgs += currBody->ToString(inLeft, inRight);
-        }
+        std::string theName = std::string(function->name);
+        std::string theArguments = arguments->ToString(inLeft, "");
+        return theName + "(" + theArguments + ")";
+    }
 
-        return std::string(function->name) + "(" + stringArgs + ")";
+    std::string Call::printAll(){
+        return padding("call") + "(*function " + std::string(function->name) + "*)";
     }
 
     void Call::FLVMCodeGen(std::vector<Instruction>& inInstructions){
+        //Where the scope instruction sits.
+        //size_t where = inInstructions.size();
+        //Make the function call after the function's arguments are created.
+        inInstructions.push_back(Instruction(Operation::scope, 0));
+        if(arguments != nullptr){
+            Arguments* currBody = arguments;
+            int64_t count = 0;
+            while(currBody != nullptr){
+                //Initialize for the argument
+                inInstructions.push_back(Instruction(Operation::initialize, 0));
+                //Generate code for the argument.
+                currBody->current->FLVMCodeGen(inInstructions);
+                //Move to the next node in the linked list.
+                currBody = currBody->next;
+                //Assign it to the initialization made before.
+                inInstructions.push_back(Instruction(Operation::lassign, count));
+                count++;
+            }
+        }
+
+        //Make the function call after the function's arguments are created.
         inInstructions.push_back(Instruction(Operation::call, function->position));
-        
+    }
+
+
+
+//Arguments
+    Arguments::Arguments(){
+        //Do nothing lmfao
+        //The default settings are already in place.
+    }
+
+    Arguments::Arguments(Node* input){
+        current = input;
+    }
+
+    std::string Arguments::ToString(std::string inLeft, std::string inRight){
+        if(next != nullptr){
+            return current->ToString(inLeft, "") + ", " + next->ToString(inLeft, "");
+        } else {
+            return current->ToString(inLeft, "");
+        }
+
+        //Unreachable, just like uncountable infinity.
+        return "";
+
+    }
+
+    void Arguments::FLVMCodeGen(std::vector<Instruction>& inInstructions){
+        Arguments* currArgs = this;
+        while(currArgs != nullptr){
+            currArgs->current->FLVMCodeGen(inInstructions);
+            currArgs = currArgs->next;
+        }
     }
 
 
@@ -892,10 +1132,37 @@ bool typeCheck(FloridaType inType){
     }
 
     std::string ReturnClass::ToString(std::string inLeft, std::string inRight){
-        return inLeft + "return " + statement->ToString(inLeft, inRight) + ";";
+        return inLeft + "return " + statement->ToString(inLeft, inRight) + inRight;
     }
 
     void ReturnClass::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         statement->FLVMCodeGen(inInstructions);
         inInstructions.push_back(Instruction(Operation::ireturn));
+    }
+
+
+
+//CallStack
+    CallStack::CallStack(Scope* inTheScope, uint64_t inReference, uint64_t inInstNumber){
+        thisScope = inTheScope;
+        reference = inReference;
+        instNumber = inInstNumber;
+    }
+
+    int64_t CallStack::where(Variable* inVariable){
+        if(thisScope->variables == nullptr){
+            return -1;
+        }
+
+        Variable* currVar = thisScope->variables;
+        int64_t count = 0;
+        while(currVar != nullptr){
+            if(currVar->thisToken.getName() == inVariable->thisToken.getName()){
+                return count;
+            }
+            currVar = currVar->next;
+            count++;
+        }
+
+        return -1;
     }
