@@ -3,12 +3,19 @@
 #include <stack>
 
 inline std::string padding(std::string input){
-    for(size_t i = 0; i < 12 - input.size(); i++){
+    for(size_t i = input.size(); i < 12; i++){
         input += " ";
     }
 
     return input;
+}
 
+inline std::string padding2(std::string input){
+    for(size_t i = input.size(); i < 16; i++){
+        input += " ";
+    }
+
+    return input;
 }
 
 std::string typeString(FloridaType input){
@@ -272,6 +279,8 @@ bool typeCheck(FloridaType inType){
     std::string Body::printAll(){
         if(next != nullptr){
             return current->printAll() + next->printAll();
+        } else {
+            return current->printAll();
         }
     }
 
@@ -318,7 +327,11 @@ bool typeCheck(FloridaType inType){
     }
 
     std::string Variable::printAll(){
-        return padding("push") + std::to_string(distance) + "\n";
+        if(isLocal){
+            return padding2(padding("lfetch") + std::to_string(distance)) + "(*Variable " + thisToken.getName() + "*)\n";
+        } else {
+            return padding2(padding("gfetch") + std::to_string(distance)) + "(*Variable " + thisToken.getName() + "*)\n";
+        }
     }
 
     void Variable::FLVMCodeGen(std::vector<Instruction>& inInstructions){
@@ -343,7 +356,7 @@ bool typeCheck(FloridaType inType){
     }
 
     std::string Initialize::printAll(){
-        return "initialize\n";
+        return padding2("initialize") + "(*Variable " + thisVariable->thisToken.getName() + "*)\n";
     }
 
     void Initialize::FLVMCodeGen(std::vector<Instruction>& inInstructions){
@@ -368,7 +381,7 @@ bool typeCheck(FloridaType inType){
         if(thisVariable->isLocal){
             thing = "lassign";
         }
-        return "initialize\n" + code->printAll() + padding(thing) + std::to_string(thisVariable->distance) + "\n";
+        return padding2("initialize") + "(*Variable " + thisVariable->thisToken.getName() + "*)\n" + code->printAll() + padding2(padding(thing) + std::to_string(thisVariable->distance)) + "(*Variable " + thisVariable->thisToken.getName() + "*)\n";
     }
 
     void InitializeAssign::FLVMCodeGen(std::vector<Instruction>& inInstructions){
@@ -400,9 +413,9 @@ bool typeCheck(FloridaType inType){
 
     std::string Assignment::printAll(){
         if(thisVariable->isLocal){
-            return padding("lassign") + std::to_string(thisVariable->distance) + "(*" + thisVariable->thisToken.getName() + "*)\n";
+            return padding2(padding("lassign") + std::to_string(thisVariable->distance)) + "(*Variable " + thisVariable->thisToken.getName() + "*)\n";
         } else {
-            return padding("gassign") + std::to_string(thisVariable->distance) + "(*" + thisVariable->thisToken.getName() + "*)\n";
+            return padding2(padding("gassign") + std::to_string(thisVariable->distance)) + "(*Variable " + thisVariable->thisToken.getName() + "*)\n";
         }
     }
 
@@ -884,7 +897,7 @@ bool typeCheck(FloridaType inType){
         if(condition != nullptr){
             result += "(*condition*)\n" + condition->printAll() + 
                 "negate\n" + 
-                padding("cjump") + "(*cjump out of the loop*)\n";
+                padding2("cjump") + "(*cjump out of the loop*)\n";
         }
         if(body != nullptr){
             result += "(*body*)\n" + body->printAll();
@@ -892,7 +905,7 @@ bool typeCheck(FloridaType inType){
         if(incrementer != nullptr){
             result += "(*incrementer*)\n" + incrementer->printAll();
         }
-        result += padding("cjump") + "(*cjump to the condition start*)";
+        result += padding2("cjump") + "(*cjump to the condition start*)";
 
         return result;
     }
@@ -953,11 +966,11 @@ bool typeCheck(FloridaType inType){
         if(condition != nullptr){
             result += "(*condition*)\n" + condition->printAll() + 
                 "negate\n" +
-                padding("cjump") + "(*cjump to escape the loop*)\n";
+                padding2("cjump") + "(*cjump to escape the loop*)\n";
         }
         if(body != nullptr){
             result += "(*body*)\n" + body->printAll() + 
-                padding("cjump") + "(*cjump to the condition*)";
+                padding2("cjump") + "(*cjump to the condition*)";
         }
 
         return result;
@@ -1017,9 +1030,9 @@ bool typeCheck(FloridaType inType){
     }
 
     std::string Function::printAll(){
-        std::string result = "(*function " + std::string(name) + "*)\n";
+        std::string result = "(*Function " + std::string(name) + "*)\n";
         if(code->body != nullptr){
-            result += code->body->printAll();
+            result += code->body->printAll() + "\n";
         }
         if(allFunctions != nullptr){
             return result + allFunctions->printAll();
@@ -1064,7 +1077,9 @@ bool typeCheck(FloridaType inType){
     }
 
     std::string Call::printAll(){
-        return padding("call") + "(*function " + std::string(function->name) + "*)";
+        std::string result = "";
+
+        return arguments->printAll() + padding2("call") + "(*Function " + std::string(function->name) + "*)\n";
     }
 
     void Call::FLVMCodeGen(std::vector<Instruction>& inInstructions){
@@ -1116,6 +1131,18 @@ bool typeCheck(FloridaType inType){
 
     }
 
+    std::string Arguments::printAll(){
+        if(next != nullptr){
+            return current->printAll() + next->printAll();
+        } else {
+            return current->printAll();
+        }
+
+        //Unreachable, just like that 1600 SAT score.
+        return "";
+
+    }
+
     void Arguments::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         Arguments* currArgs = this;
         while(currArgs != nullptr){
@@ -1135,6 +1162,10 @@ bool typeCheck(FloridaType inType){
         return inLeft + "return " + statement->ToString(inLeft, inRight) + inRight;
     }
 
+    std::string ReturnClass::printAll(){
+        return statement->printAll() + "return\n";
+    }
+
     void ReturnClass::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         statement->FLVMCodeGen(inInstructions);
         inInstructions.push_back(Instruction(Operation::ireturn));
@@ -1143,6 +1174,12 @@ bool typeCheck(FloridaType inType){
 
 
 //CallStack
+    CallStack::CallStack(){
+        thisScope = nullptr;
+        reference = 0;
+        instNumber = 0;
+    }
+
     CallStack::CallStack(Scope* inTheScope, uint64_t inReference, uint64_t inInstNumber){
         thisScope = inTheScope;
         reference = inReference;

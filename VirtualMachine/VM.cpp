@@ -34,6 +34,44 @@ inline void padRight(std::string input, std::string number){
 
 }
 
+
+
+void FloridaVM::callNew(){
+    if(allCalls->head < allCalls->end){
+        allCalls->head = new(allCalls->current) CallStack();
+        allCalls->current = (CallStack*) (sizeof(CallStack) + (size_t) allCalls->current);
+    } else {
+        std::cout << "The callAllocator does not have enough memory.\nThe limit of " + std::to_string(((size_t)(allCalls->end) - (size_t)(allCalls->head)) / sizeof(CallStack)) + " was exceeded.";
+        std::bad_alloc();
+    }
+}
+
+void FloridaVM::callPop(){
+    if(allCalls->current != allCalls->head){
+        allCalls->current = allCalls->head;
+        allCalls->head = (CallStack*) ((size_t) (allCalls->head) - sizeof(CallStack));
+    } else {
+        std::cout << "The virtual machine has attempted to release a scope it does not have.";
+    }
+}
+
+CallStack* FloridaVM::callTop(){
+    return allCalls->top;
+}
+
+
+
+void FloridaVM::printAll(){
+    std::string result = "";
+    if(allFunctions != nullptr){
+        result += allFunctions->printAll();
+    }
+
+    result += "(*MAIN SCRIPT*)\n";
+
+    std::cout << result + AST->printAll();
+}
+
 void FloridaVM::printInstructions(){
     Operation oper;
     int64_t literal;
@@ -136,25 +174,22 @@ bool FloridaVM::next(){
 
     switch (programInstructions[instructionNumber].oper){
         case Operation::call:
-            left.ufixed64 = instructionNumber;
-            push(left);
+            //Move the instruction to the start of its instruction set.
             instructionNumber = programInstructions[instructionNumber].literal.fixed64;
             return true;
         case Operation::scope:
-            //Place down the instruction number and the reference size.
-            right.ufixed64 = reference;
-            push(right);
             //The new reference frame is the size of the vector.
+            callNew();
+            callTop()->reference = reference;
             reference = computationVector.size();
             break;
         case Operation::ireturn:
             //Adjust these to pre-scope values.
-            instructionNumber = computationVector[reference - 2].fixed64;
-            reference = computationVector[reference - 1].fixed64;
+
             //Move the result to the top of the old stack.
             computationVector[reference] = top();
             //Shed all elements above the original top of the stack.
-            for(size_t i = 0; i < computationVector.size() - reference; i++){
+            for(size_t i = computationVector.size(); i >= reference; i--){
                 computationVector.pop_back();
             }
             break;

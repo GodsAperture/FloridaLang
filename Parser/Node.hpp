@@ -440,6 +440,7 @@ public:
     uint64_t reference;
     uint64_t instNumber;
 
+    CallStack();
     CallStack(Scope* inTheScope, uint64_t inReference, uint64_t inInstNumber);
     int64_t where(Variable* inVariable);
 };

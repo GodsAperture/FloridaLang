@@ -86,8 +86,8 @@ int main(){
 
 	//Make the virtual machine
 	FloridaVM Florida = FloridaVM(FloridaParser);
-	std::cout << "\n";
-	Florida.printInstructions();
+	std::cout << "\nInstruction set debugger:\n";
+	Florida.printAll();
 
 	//Execute the instructions
 	bool successful = true;
