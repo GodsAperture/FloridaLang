@@ -1,6 +1,7 @@
 #include "Node.hpp"
 #include <math.h>
 #include <stack>
+#include <iostream>
 
 inline std::string padding(std::string input){
     for(size_t i = input.size(); i < 12; i++){
@@ -413,9 +414,9 @@ bool typeCheck(FloridaType inType){
 
     std::string Assignment::printAll(){
         if(thisVariable->isLocal){
-            return padding2(padding("lassign") + std::to_string(thisVariable->distance)) + "(*Variable " + thisVariable->thisToken.getName() + "*)\n";
+            return code->printAll() + padding2(padding("lassign") + std::to_string(thisVariable->distance)) + "(*Variable " + thisVariable->thisToken.getName() + "*)\n";
         } else {
-            return padding2(padding("gassign") + std::to_string(thisVariable->distance)) + "(*Variable " + thisVariable->thisToken.getName() + "*)\n";
+            return code->printAll() + padding2(padding("gassign") + std::to_string(thisVariable->distance)) + "(*Variable " + thisVariable->thisToken.getName() + "*)\n";
         }
     }
 
@@ -869,43 +870,43 @@ bool typeCheck(FloridaType inType){
     }
 
     std::string ForLoop::ToString(std::string inLeft, std::string inRight){
-        std::string finalString = "for(";
+        std::string finalString = inLeft + "for(";
         if(assign != nullptr){
-            finalString += assign->ToString(inLeft, ";");
+            finalString += assign->ToString("", ";");
         } else {
             finalString += ";";
         }
 
         if(condition != nullptr){
-            finalString += condition->ToString(inLeft, ";");
+            finalString += " " + condition->ToString("", ";");
         }
         finalString += ";";
 
         if(incrementer != nullptr){
-            finalString += incrementer->ToString(inLeft, inRight);
+            finalString += " " + incrementer->ToString("", "");
         }
         finalString += "){\n";
 
-        return finalString + body->ToString("  ", inRight) + "}";
+        return finalString + inLeft + body->ToString("  " + inLeft, inRight) + inLeft + "\n" + inLeft + "}";
     }
 
     std::string ForLoop::printAll(){
-        std::string result = "";
+        std::string result = "  (*Start of for loop*)\n";
         if(assign != nullptr){
-            result += "(*assignment*)\n" + assign->printAll();
+            result += "  (*assignment*)\n" + assign->printAll();
         }
         if(condition != nullptr){
-            result += "(*condition*)\n" + condition->printAll() + 
+            result += "  (*condition*)\n" + condition->printAll() + 
                 "negate\n" + 
                 padding2("cjump") + "(*cjump out of the loop*)\n";
         }
         if(body != nullptr){
-            result += "(*body*)\n" + body->printAll();
+            result += "  (*body*)\n" + body->printAll();
         }
         if(incrementer != nullptr){
-            result += "(*incrementer*)\n" + incrementer->printAll();
+            result += "  (*incrementer*)\n" + incrementer->printAll();
         }
-        result += padding2("cjump") + "(*cjump to the condition start*)";
+        result += padding2("cjump") + "(*cjump to the condition start*)\n  (*End of for loop*)\n";
 
         return result;
     }

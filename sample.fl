@@ -1,14 +1,11 @@
 fixed8 x = 4;
 
 fixed8 f(fixed8 x){
-    fixed8 sin(fixed8 x){
-        return x * 2 + x;
+    for(fixed8 i = 0; i < 5; i = i + 1){
+        x = x + 1;
     }
-    return sin(x) * x;
-}
 
-fixed8 add2(fixed8 x, fixed8 y){
-    return x + y;
+    return x * x;
 }
 
 fixed8 z = f(x);

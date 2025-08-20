@@ -62,6 +62,7 @@ CallStack* FloridaVM::callTop(){
 
 
 void FloridaVM::printAll(){
+    std::cout << "\n    ====Instruction set debugger====\n\n";
     std::string result = "";
     if(allFunctions != nullptr){
         result += allFunctions->printAll();
