@@ -162,7 +162,7 @@ void FloridaVM::printInstructions(){
 }
 
 bool FloridaVM::next(){
-    //left and right hand members for operations
+    //left and right hand members for operations.
     types left;
     types right;
     types result;
@@ -176,6 +176,7 @@ bool FloridaVM::next(){
         case Operation::call:
             //Move the instruction to the start of its instruction set.
             instructionNumber = programInstructions[instructionNumber].literal.fixed64;
+            callTop()->instNumber = instructionNumber;
             return true;
         case Operation::scope:
             //The new reference frame is the size of the vector.
@@ -185,11 +186,14 @@ bool FloridaVM::next(){
             break;
         case Operation::ireturn:
             //Adjust these to pre-scope values.
-
+            reference = callTop()->reference;
+            instructionNumber = callTop()->instNumber;
+            //Remove the scope
+            callPop();
             //Move the result to the top of the old stack.
             computationVector[reference] = top();
             //Shed all elements above the original top of the stack.
-            for(size_t i = computationVector.size(); i >= reference; i--){
+            for(size_t i = computationVector.size(); i > reference; i--){
                 computationVector.pop_back();
             }
             break;
