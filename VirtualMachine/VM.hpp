@@ -80,6 +80,11 @@ public:
     FloridaVM(Parser input){
         //Generate the function bytecode.
         input.allFunctions->FLVMCodeGen(programInstructions);
+        //Create the first call, which is the main program.
+        callNew();
+        //Make it so that the first call will end the program upon returning.
+        callTop()->instNumber = programInstructions.size();
+        callTop()->reference = 0;
         //Adjust the start of the program.
         instructionNumber = programInstructions.size();
         //Generate the rest of the instructions.

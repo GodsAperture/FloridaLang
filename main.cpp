@@ -84,8 +84,9 @@ int main(){
 		return -1;
 	}
 
-	//Make the virtual machine
+	//Make the virtual machine.
 	FloridaVM Florida = FloridaVM(FloridaParser);
+	//Debug the bytecode.
 	Florida.printAll();
 
 	//Execute the instructions
