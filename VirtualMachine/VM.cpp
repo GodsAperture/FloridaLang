@@ -39,6 +39,7 @@ inline void padRight(std::string input, std::string number){
 void FloridaVM::callNew(){
     if(allCalls->head < allCalls->end){
         allCalls->head = new(allCalls->current) CallStack();
+        allCalls->top = allCalls->current;
         allCalls->current = (CallStack*) (sizeof(CallStack) + (size_t) allCalls->current);
     } else {
         std::cout << "The callAllocator does not have enough memory.\nThe limit of " + std::to_string(((size_t)(allCalls->end) - (size_t)(allCalls->head)) / sizeof(CallStack)) + " was exceeded.";

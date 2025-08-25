@@ -887,7 +887,7 @@ bool typeCheck(FloridaType inType){
         }
         finalString += "){\n";
 
-        return finalString + inLeft + body->ToString("  " + inLeft, inRight) + inLeft + "\n" + inLeft + "}";
+        return finalString + inLeft + body->ToString(inLeft, inRight) + inLeft + "\n" + inLeft + "}";
     }
 
     std::string ForLoop::printAll(){

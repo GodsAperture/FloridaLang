@@ -80,6 +80,8 @@ public:
     FloridaVM(Parser input){
         //Generate the function bytecode.
         input.allFunctions->FLVMCodeGen(programInstructions);
+        //The function stack. The stack for the functions.
+        allCalls = new callAllocator(100 * sizeof(CallStack));
         //Create the first call, which is the main program.
         callNew();
         //Make it so that the first call will end the program upon returning.
@@ -93,8 +95,6 @@ public:
         AST = input.result;
         //Obtain all function definitions
         allFunctions = input.allFunctions;
-        //The function stack. The stack for the functions.
-        allCalls = new callAllocator(100 * sizeof(CallStack));
     }
 
     ~FloridaVM(){
