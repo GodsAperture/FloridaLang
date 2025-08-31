@@ -21,6 +21,7 @@
                     "${file}",
                     "-o",
                     "${fileDirname}/main",
+                    "${fileDirname}/Debugger/*.cpp",
                     "${fileDirname}/Lexer/*.cpp",
                     "${fileDirname}/Parser/*.cpp",
                     "${fileDirname}/VirtualMachine/*.cpp",

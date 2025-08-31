@@ -63,7 +63,7 @@ int main(){
 
 	//Load the first token and begin the while loop.
 	Token thisToken = FloridaLexer.next();
-	std::vector<Token> theList;
+	std::vector<Token> theList;	
 
 	//Generate tokens up until EOF is reached.
 	while(thisToken.getType() != FloridaType::eof) {

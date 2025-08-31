@@ -56,6 +56,9 @@ public:
     //Exceutes the current instruction in the virtual machine.
     //Returns true if an instruction was successfully executed.
     bool next();
+    //Prints the current instruction, the next instruction, and the instruction number.
+    //Returns `true` if an instruction was successfully executed.
+    bool debuggerNext();
     //Prints all of the instructions and any relevant values.
     void printInstructions();
     //Prints the stack from the bottom to the end of the vector.

@@ -368,3 +368,7 @@ bool FloridaVM::next(){
     instructionNumber++;
     return true;
 }
+
+bool FloridaVM::debuggerNext(){
+    return true;
+}

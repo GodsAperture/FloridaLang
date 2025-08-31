@@ -1,7 +1,7 @@
 fixed8 x = 4;
 
 fixed8 f(fixed8 x){
-    for(fixed8 i = 0; i < 5; i = i + 1){
+    for(fixed8 i = 0; x < 5; i = i + 1){
         x = x + 1;
     }
 

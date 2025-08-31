@@ -374,7 +374,7 @@ bool typeCheck(FloridaType inType){
     }
 
     std::string InitializeAssign::ToString(std::string inLeft, std::string inRight){
-        return inLeft + typeString(thisVariable->thisToken.type) + " " + thisVariable->thisToken.getName() + " = " + code->ToString(inLeft, inRight) + inRight;
+        return inLeft + "\x1b[36m" + typeString(thisVariable->thisToken.type) + "\x1b[0m " + thisVariable->ToString(inLeft, inRight) + " = " + code->ToString(inLeft, inRight) + inRight;
     }
 
     std::string InitializeAssign::printAll(){
@@ -409,7 +409,7 @@ bool typeCheck(FloridaType inType){
     }
 
     std::string Assignment::ToString(std::string inLeft, std::string inRight){
-        return inLeft + thisVariable->thisToken.getName() + " = " + code->ToString(inLeft, inRight) + inRight;
+        return inLeft + thisVariable->ToString(inLeft, inRight) + " = " + code->ToString(inLeft, inRight) + inRight;
     }
 
     std::string Assignment::printAll(){
@@ -870,7 +870,7 @@ bool typeCheck(FloridaType inType){
     }
 
     std::string ForLoop::ToString(std::string inLeft, std::string inRight){
-        std::string finalString = inLeft + "for(";
+        std::string finalString = inLeft + "\x1b[34mfor\x1b[0m(";
         if(assign != nullptr){
             finalString += assign->ToString("", ";");
         } else {
@@ -897,7 +897,6 @@ bool typeCheck(FloridaType inType){
         }
         if(condition != nullptr){
             result += "  (*condition*)\n" + condition->printAll() + 
-                "negate\n" + 
                 padding2("cjump") + "(*cjump out of the loop*)\n";
         }
         if(body != nullptr){
@@ -1011,14 +1010,14 @@ bool typeCheck(FloridaType inType){
         if(code->variables != nullptr){
             //Stop right before the last variable to not append an extra comma.
             while(currVar->next != nullptr){
-                varString += typeString(currVar->thisToken.type) + " " + currVar->thisToken.getName() + ", ";
+                varString += "\x1b[36m" + typeString(currVar->thisToken.type) + "\x1b[0m " + currVar->thisToken.getName() + ", ";
                 currVar = currVar->next;
             }
             //Append the last variable without an extra comma.
-            varString += typeString(currVar->thisToken.type) + " " + currVar->thisToken.getName();
+            varString += "\x1b[36m" + typeString(currVar->thisToken.type) + "\x1b[0m " + currVar->thisToken.getName();
         }
         //Return the function printed in the only correct format.
-        std::string result = inLeft + typeString(type) + " " + std::string(name) + "(" + varString + "){\n" + 
+        std::string result = inLeft + "\x1b[36m" + typeString(type) + "\x1b[35m " + std::string(name) + "\x1b[0m(" + varString + "){\n" + 
             code->ToString("  " + inLeft, ";") +
         "\n" + inLeft + "}\n\n";
 
@@ -1072,7 +1071,7 @@ bool typeCheck(FloridaType inType){
     }
 
     std::string Call::ToString(std::string inLeft, std::string inRight){
-        std::string theName = std::string(function->name);
+        std::string theName = "\x1b[35m" + std::string(function->name) + "\x1b[0m";
         std::string theArguments = arguments->ToString(inLeft, "");
         return theName + "(" + theArguments + ")";
     }
@@ -1160,7 +1159,7 @@ bool typeCheck(FloridaType inType){
     }
 
     std::string ReturnClass::ToString(std::string inLeft, std::string inRight){
-        return inLeft + "return " + statement->ToString(inLeft, inRight) + inRight;
+        return inLeft + "\x1b[34mreturn\x1b[0m " + statement->ToString(inLeft, inRight) + inRight;
     }
 
     std::string ReturnClass::printAll(){

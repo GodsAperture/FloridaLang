@@ -15,7 +15,7 @@ inline std::string padding(std::string input){
     }
 
     std::string Fixed8::ToString(std::string inLeft, std::string inRight){
-        return std::to_string(value);
+        return "\x1b[37m" + std::to_string(value) + "\x1b[0m";
     }
 
     std::string Fixed8::printAll(){
@@ -35,9 +35,9 @@ inline std::string padding(std::string input){
 
     std::string Boolean::ToString(std::string inLeft, std::string inRight){
         if(value){
-            return "true";
+            return "\x1b[32mtrue\x1b[0m";
         } else {
-            return "false";
+            return "\x1b[31mfalse\x1b[0m";
         }
     }
 
