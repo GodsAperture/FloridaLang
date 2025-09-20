@@ -5,6 +5,7 @@
 #include "Lexer/Lexer.hpp"
 #include "Parser/Parser.hpp"
 #include "VirtualMachine/VM.hpp"
+#include "Debugger/Debugger.hpp"
 
 	std::string readFile(std::string filePath){
 		std::fstream file = std::fstream(filePath);
@@ -75,6 +76,10 @@ int main(){
 	//Parse over the list and make sure that the expression is acceptable.
 	Parser FloridaParser = Parser(theList, 10000);
 	FloridaParser.parse();
+	std::cout << "\n\n\nHello world!\n\x1b[1A";
+	std::cout << "Bye bye!\n\n\n";
+	printf("\x1b[1;1H");
+	printf("Hello again!\n");
 	std::cout << FloridaParser.result->ToString("", ";") << "\n";
 
 	//If the error flag has been raised, then

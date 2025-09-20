@@ -4,6 +4,7 @@
 #include <utility>
 #include <new>
 #include <iostream>
+#include "Node.hpp"
 
 class StackAllocator{
 public:
@@ -11,8 +12,14 @@ public:
     void* current = nullptr;
     void* end = nullptr;
 
+    Node* AST = nullptr;
+    Node* ZEROPTR = nullptr;
+    Node* ONEPTR = nullptr;
+
     StackAllocator(long input){
         head = std::malloc(input);
+        ZEROPTR = (Node*) give();
+        ONEPTR = (Node*) give();
         current = head;
         end = (void*) ((size_t) input + (size_t) head);
     }
@@ -57,6 +64,18 @@ public:
     template<typename T>
     T* peek(){
         return (T*) current;
+    }
+
+    //For the statement `StackAllocator.copy(input)`, `input` is made a copy of `StackAllocator`.
+    void copy(StackAllocator& input){
+        //Find out how large the AST is within the original allocation.
+        long long diff = ((long long) current - (long long) head);
+        //Create an allocation of that size.
+        input.head = malloc(diff);
+        //Adjust current to be at `input.head`.
+        input.current = input.head;
+        //Set `input.end`
+        input.end = (void*) ((long long) head + diff);
     }
 };
 #endif

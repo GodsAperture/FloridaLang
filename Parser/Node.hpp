@@ -32,6 +32,7 @@ public:
     virtual std::string ToString(std::string inLeft, std::string inRight) = 0;
     virtual std::string printAll() = 0;
     virtual void FLVMCodeGen(std::vector<Instruction>& inInstructions) = 0;
+    virtual Node* copy() = 0;
 
     virtual ~Node(){};
 };
