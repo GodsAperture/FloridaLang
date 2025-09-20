@@ -24,6 +24,10 @@ public:
         end = (void*) ((size_t) input + (size_t) head);
     }
 
+    ~StackAllocator(){
+        delete ZEROPTR;
+    }
+
     // Allocates one object at the top of the stack, and allows you to pass parameters to that object's constructor through it's parameters
     template<typename T, typename... Args>
     T* alloc(Args&&... args) {
