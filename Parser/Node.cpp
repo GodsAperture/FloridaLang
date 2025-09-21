@@ -239,6 +239,10 @@ bool typeCheck(FloridaType inType){
         }
     }
 
+    void Scope::copy(StackAllocator& input){
+        Scope* thisPtr = input.alloc<Scope>();
+        thisPtr->
+    }
 
 
 //Body

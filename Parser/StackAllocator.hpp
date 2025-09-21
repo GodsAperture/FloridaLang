@@ -12,20 +12,25 @@ public:
     void* current = nullptr;
     void* end = nullptr;
 
-    Node* AST = nullptr;
     Node* ZEROPTR = nullptr;
     Node* ONEPTR = nullptr;
+    Node* FUNPTR = nullptr;
+    Node* AST = nullptr;
 
     StackAllocator(long input){
         head = std::malloc(input);
         ZEROPTR = (Node*) give();
         ONEPTR = (Node*) give();
+        FUNPTR = (Node*) give();
         current = head;
         end = (void*) ((size_t) input + (size_t) head);
     }
 
     ~StackAllocator(){
         delete ZEROPTR;
+        delete ONEPTR;
+        delete FUNPTR;
+        delete head;
     }
 
     // Allocates one object at the top of the stack, and allows you to pass parameters to that object's constructor through it's parameters
