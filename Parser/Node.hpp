@@ -33,7 +33,7 @@ public:
     virtual std::string ToString(std::string inLeft, std::string inRight) = 0;
     virtual std::string printAll() = 0;
     virtual void FLVMCodeGen(std::vector<Instruction>& inInstructions) = 0;
-    virtual void copy(StackAllocator& input) = 0;
+    virtual Node* copy(StackAllocator& input) = 0;
 
     virtual ~Node(){};
 };
@@ -49,7 +49,7 @@ public:
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    void copy(StackAllocator& input) override;
+    Node* copy(StackAllocator& input) override;
 };
 
 class Variable : public Node{
@@ -73,7 +73,7 @@ public:
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    void copy(StackAllocator& input) override;
+    Node* copy(StackAllocator& input) override;
 
 };
 
@@ -87,6 +87,8 @@ class Scope : public Node{
         Variable* variables = nullptr;
         //A "linked list" of functions for the current scope.
         Function* functions = nullptr;
+        //All the classes that exist in the scope.
+        //
 
         //Find where in some given Scope a particular variable lies.
         //If it does not exist in the scope, it returns -1.
@@ -101,7 +103,6 @@ class Scope : public Node{
         //funPop isn't needed because they don't disappear in pseudoscopes.
         size_t varCount();
         size_t funCount();
-        Scope();
 
         //Standard methods.
         Scope();
@@ -109,7 +110,7 @@ class Scope : public Node{
         std::string ToString(std::string inLeft, std::string inRight) override;
         std::string printAll() override;
         void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-        void copy(StackAllocator& input) override;
+        Node* copy(StackAllocator& input) override;
     
     };
 
@@ -121,7 +122,7 @@ public:
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    void copy(StackAllocator& input) override;
+    Node* copy(StackAllocator& input) override;
 };
 
 class InitializeAssign : public Node{
@@ -134,7 +135,7 @@ public:
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    void copy(StackAllocator& input) override;
+    Node* copy(StackAllocator& input) override;
 };
 
 class Assignment : public Node{
@@ -146,7 +147,7 @@ public:
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    void copy(StackAllocator& input) override;
+    Node* copy(StackAllocator& input) override;
 };
 
 
@@ -160,7 +161,7 @@ public:
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    void copy(StackAllocator& input) override;
+    Node* copy(StackAllocator& input) override;
 };
 
 class Subtract : public Node{
@@ -172,7 +173,7 @@ public:
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    void copy(StackAllocator& input) override;
+    Node* copy(StackAllocator& input) override;
 };
 
 
@@ -186,7 +187,7 @@ public:
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    void copy(StackAllocator& input) override;
+    Node* copy(StackAllocator& input) override;
 };
 
 class Divide : public Node{
@@ -198,7 +199,7 @@ public:
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    void copy(StackAllocator& input) override;
+    Node* copy(StackAllocator& input) override;
 };
 
 
@@ -211,7 +212,7 @@ public:
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    void copy(StackAllocator& input) override;
+    Node* copy(StackAllocator& input) override;
 };
 
 class Negative : public Node{
@@ -222,7 +223,7 @@ public:
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    void copy(StackAllocator& input) override;
+    Node* copy(StackAllocator& input) override;
 };
 
 
@@ -236,7 +237,7 @@ public:
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    void copy(StackAllocator& input) override;
+    Node* copy(StackAllocator& input) override;
 };
 
 class Boolean : public Node{
@@ -247,7 +248,7 @@ public:
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    void copy(StackAllocator& input) override;
+    Node* copy(StackAllocator& input) override;
 };
 
 
@@ -262,7 +263,7 @@ public:
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    void copy(StackAllocator& input) override;
+    Node* copy(StackAllocator& input) override;
 };
 
 class NotEqual : public Node{
@@ -274,7 +275,7 @@ public:
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    void copy(StackAllocator& input) override;
+    Node* copy(StackAllocator& input) override;
 };
 
 class GreaterThan : public Node{
@@ -286,7 +287,7 @@ public:
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    void copy(StackAllocator& input) override;
+    Node* copy(StackAllocator& input) override;
 };
 
 class GreaterThanOr : public Node{
@@ -298,7 +299,7 @@ public:
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    void copy(StackAllocator& input) override;
+    Node* copy(StackAllocator& input) override;
 };
 
 class LessThan : public Node{
@@ -310,7 +311,7 @@ public:
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    void copy(StackAllocator& input) override;
+    Node* copy(StackAllocator& input) override;
 };
 
 class LessThanOr : public Node{
@@ -322,7 +323,7 @@ public:
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    void copy(StackAllocator& input) override;
+    Node* copy(StackAllocator& input) override;
 };
 
 
@@ -337,7 +338,7 @@ public:
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    void copy(StackAllocator& input) override;
+    Node* copy(StackAllocator& input) override;
 };
 
 class And : public Node{
@@ -349,7 +350,7 @@ public:
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    void copy(StackAllocator& input) override;
+    Node* copy(StackAllocator& input) override;
 };
 
 class Not : public Node{
@@ -360,7 +361,7 @@ public:
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    void copy(StackAllocator& input) override;
+    Node* copy(StackAllocator& input) override;
 };
 
 
@@ -378,7 +379,7 @@ public:
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    void copy(StackAllocator& input) override;
+    Node* copy(StackAllocator& input) override;
 };
 
 class ForLoop : public Node{
@@ -392,7 +393,7 @@ public:
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    void copy(StackAllocator& input) override;
+    Node* copy(StackAllocator& input) override;
 };
 
 class WhileLoop : public Node{
@@ -404,7 +405,7 @@ public:
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    void copy(StackAllocator& input) override;
+    Node* copy(StackAllocator& input) override;
 };
 
 class Function : public Node{
@@ -421,13 +422,15 @@ public:
     Function* next = nullptr;
     //This connects all functions across scopes.
     Function* allFunctions = nullptr;
+    //This makes sure code isn't generated twice.
+    bool alreadyGenerated = false;
 
     Function(bool inReturnable, std::string_view inName, Scope* inCode);
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     void append(Variable* input);
-    void copy(StackAllocator& input) override;
+    Node* copy(StackAllocator& input) override;
 };
 
 class Arguments : public Node{
@@ -441,7 +444,7 @@ public:
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     void append(Arguments* input);
-    void copy(StackAllocator& input) override;
+    Node* copy(StackAllocator& input) override;
 };
 
 class Call : public Node{
@@ -453,7 +456,7 @@ public:
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    void copy(StackAllocator& input) override;
+    Node* copy(StackAllocator& input) override;
 };
 
 class ReturnClass : public Node{
@@ -464,7 +467,7 @@ public:
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    void copy(StackAllocator& input) override;
+    Node* copy(StackAllocator& input) override;
 };
 
 class CallStack{

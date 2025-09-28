@@ -4,14 +4,9 @@
 #include <iostream>
 
 void Parser::parse(){
-    //Assign to the optimization pointers.
-    ZEROPTR = (Node*) stack->give();
-    ONEPTR = (Node*) stack->give();
-    FUNPTR = (Node*) stack->give();
-
     //The entire program is essentially a scope.
-    result = scope();
-    //Just a useful debugger to make sure I'm creating the AST properly.
+    stack->AST = scope();
+    //Just a "useful" debugger to make sure I'm creating the AST properly.
     if(error){
         std::cout << "The parser failed to parse the full file.\n";
     }
@@ -19,8 +14,8 @@ void Parser::parse(){
 
 void Parser::functionAppend(Function* input){
     //Add the function to the current scope.
-    if(currScope->functions != nullptr){
-        Function* currFun = currScope->functions;
+    if(stack->currScope->functions != nullptr){
+        Function* currFun = stack->currScope->functions;
         while(currFun->next != nullptr){
             currFun = currFun->next;
         }
@@ -28,12 +23,12 @@ void Parser::functionAppend(Function* input){
         //Add the given function to the end of the "linked list."
         currFun->next = input;
     } else {
-        currScope->functions = input;
+        stack->currScope->functions = input;
     }
 
     //Add the function to the list of all functions.
-    if(allFunctions != nullptr){
-        Function* currFun = allFunctions;
+    if(stack->allFunctions != nullptr){
+        Function* currFun = stack->allFunctions;
         while(currFun->allFunctions != nullptr){
             currFun = currFun->allFunctions;
         }
@@ -41,7 +36,7 @@ void Parser::functionAppend(Function* input){
         currFun->allFunctions = input;
     } else {
         //If there are no functions, append this one first.
-        allFunctions = input;
+        stack->allFunctions = input;
     }
 }
 
@@ -497,18 +492,18 @@ Node* Parser::AND(){
 //Scopes
 Scope* Parser::scope(){
     //Create a new scope for the object.
-    Scope* newScope = stack->alloc<Scope>(nullptr, nullptr, currScope);
+    Scope* newScope = stack->alloc<Scope>(nullptr, nullptr, stack->currScope);
     //Assign the newest scope to be the current scope.
-    currScope = newScope;
+    stack->currScope = newScope;
     //If there is no other scope, then make it the global scope.
-    if(globalScope == nullptr){
-        globalScope = currScope;
+    if(stack->globalScope == nullptr){
+        stack->globalScope = stack->currScope;
     }
 
     //Get the body of code and attach it to the scope.
     newScope->body = body();
     //Return to the outerscope.
-    currScope = currScope->parent;
+    stack->currScope = stack->currScope->parent;
 
     return newScope;
 }
@@ -523,12 +518,10 @@ Body* Parser::body(){
     if(current == nullptr){
         return nullptr;
     }
-    if(current != FUNPTR){
-        Body* tempBody = stack->alloc<Body>();
-        tempBody->current = current;
-        bodyStart->append(tempBody);
-        //std::cout << current->ToString(">>", ";") << "\n";
-    }
+    Body* tempBody = stack->alloc<Body>();
+    tempBody->current = current;
+    bodyStart->append(tempBody);
+    //std::cout << current->ToString(">>", ";") << "\n";
     //Treat the Body* as a "linked list."
     currentBody = bodyStart;
 
@@ -538,11 +531,6 @@ Body* Parser::body(){
         current = commonExpressions();
         if(current == nullptr){
             return bodyStart;
-        }
-        if(current == FUNPTR){
-            continue;
-        } else {
-            //std::cout << current->ToString(">>", ";") << "\n";
         }
         //Append code to the "linked list" of expressions.
         currentBody = stack->alloc<Body>(current);
@@ -569,7 +557,7 @@ Node* Parser::commonExpressions(){
 
     result = function();
     if(result != nullptr){
-        return FUNPTR;
+        return result;
     }
 
     result = initializeAssign();
@@ -646,7 +634,7 @@ Node* Parser::commonStatements(){
 //if statement
 Node* Parser::IF(){
     Node* condition = nullptr;
-    size_t variableCount = currScope->varCount();
+    size_t variableCount = stack->currScope->varCount();
     size_t ifVariables = 0;
     size_t elseVariables = 0;
     IfClass* result = nullptr;
@@ -660,10 +648,10 @@ Node* Parser::IF(){
         if((condition != nullptr) & check(")") & check("{")){
             ifBody = body();
             //Get the proper number of variables in this pseudoscope.
-            ifVariables = currScope->varCount() - variableCount;
+            ifVariables = stack->currScope->varCount() - variableCount;
             //Remove the variables in the pseudoscope.
             for(size_t i = 0; i < ifVariables; i++){
-                currScope->varPop();
+                stack->currScope->varPop();
             }
         } else {
             error = true;
@@ -681,9 +669,9 @@ Node* Parser::IF(){
         if(check("else") & check("{")){
             elseBody = body();
             //the count() method will include the number of variables in the if body.
-            elseVariables = currScope->varCount() - variableCount;
+            elseVariables = stack->currScope->varCount() - variableCount;
             for(size_t i = 0; i < elseVariables; i++){
-                currScope->varPop();
+                stack->currScope->varPop();
             }
         } else {
             result = stack->alloc<IfClass>(condition, ifBody, elseBody);
@@ -768,7 +756,7 @@ Node* Parser::FOR(){
         ForLoop* result = stack->alloc<ForLoop>(assign, condition, incrementer, thisBody);
         //If there was an initialization, then a variable was generated.
         if(assign != nullptr){
-            currScope->varPop();
+            stack->currScope->varPop();
         }
         return result;
 
@@ -824,7 +812,7 @@ Variable* Parser::variable(){
     //Check to see if the variable is a valid token.
     if((given[iter].getType() == FloridaType::Identifier) & (given[iter + 1].getName() != "(")){
         bool isLocal = false;
-        Scope* thisScope = currScope;
+        Scope* thisScope = stack->currScope;
         //Find the variable in any of the prior connected scopes.
         while(thisScope->parent != nullptr){
             if(thisScope->varWhere(given[iter].getName()) != -1){
@@ -872,12 +860,12 @@ Initialize* Parser::initialize(){
         iter++;
         iter++;
         //This will be stack allocated in scope().
-        Variable* newVariable = stack->alloc<Variable>(theToken, currScope->varCount(), currScope->parent != nullptr);
+        Variable* newVariable = stack->alloc<Variable>(theToken, stack->currScope->varCount(), stack->currScope->parent != nullptr);
         newVariable->type = theToken.type;
         //The expected stack size will be larger because of the new variable.
         Initialize* newInitialize = stack->alloc<Initialize>(newVariable);
         //Add the variable to the current scope.
-        currScope->push(newVariable);
+        stack->currScope->push(newVariable);
 
         return newInitialize;
     }
@@ -907,10 +895,10 @@ InitializeAssign* Parser::initializeAssign(){
         result->type = type;
 
         //This will be stack allocated in the scope `currScope`.
-        Variable* newVariable = stack->alloc<Variable>(theToken, currScope->varCount(), currScope->parent != nullptr);
+        Variable* newVariable = stack->alloc<Variable>(theToken, stack->currScope->varCount(), stack->currScope->parent != nullptr);
         result->thisVariable = newVariable;
         //Add the variable to the current scope.
-        currScope->push(newVariable);
+        stack->currScope->push(newVariable);
 
         code = commonExpressions();
         result->code = code;
@@ -963,9 +951,9 @@ Node* Parser::function(){
     if(bool1 & bool2 & bool3){
         Function* result = stack->alloc<Function>(returnable, name, nullptr);
         result->type = returnType;
-        Scope* newScope = stack->alloc<Scope>(nullptr, nullptr, currScope);
+        Scope* newScope = stack->alloc<Scope>(nullptr, nullptr, stack->currScope);
         result->code = newScope;
-        currScope = newScope;
+        stack->currScope = newScope;
         iter++;
         iter++;
         iter++;
@@ -992,10 +980,10 @@ Node* Parser::function(){
             return nullptr;
         }
 
-        currScope = newScope->parent;
+        stack->currScope = newScope->parent;
         //Include the function for use in its respective scope.
         functionAppend(result);
-        return FUNPTR;
+        return result;
 
     }
 
@@ -1013,7 +1001,7 @@ Call* Parser::call(){
     bool bool2 = given[iter + 1].getName() == "(";
 
     if(bool1 & bool2){
-        if(currScope->funGet(given[iter].getName()) == nullptr){
+        if(stack->currScope->funGet(given[iter].getName()) == nullptr){
             error = true;
             std::cout << "Unknown function: " + name + "\n";
             return nullptr;
@@ -1021,7 +1009,7 @@ Call* Parser::call(){
         iter++;
         iter++;
         Call* result = stack->alloc<Call>(nullptr);
-        result->function = currScope->funGet(name);
+        result->function = stack->currScope->funGet(name);
         Arguments* arguments = stack->alloc<Arguments>();
         result->arguments = arguments;
         arguments->current = commonStatements();

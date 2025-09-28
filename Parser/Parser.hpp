@@ -48,28 +48,6 @@ public:
     //The StackAllocator keeps my program slightly tidier.
     StackAllocator* stack = nullptr;
 
-//Identification pointers
-
-    //This will be used for optimizing derivatives.
-    //This emulates 0.
-    Node* ZEROPTR;
-    //This will be used for optimizing derivatives.
-    //This emulates 1.
-    Node* ONEPTR;
-    //This is to let the body() skip adding functions to its body.
-    Node* FUNPTR;
-
-
-
-    //This will be the resulting AST.
-    Scope* result = nullptr;
-    //The global scope...wasn't that obvious?
-    Scope* globalScope = nullptr;
-    //The currently active scope.
-    Scope* currScope = nullptr;
-    //A linked list of all the functions in the program.
-    Function* allFunctions = nullptr;
-
 //Comments on the rightmost parts of the functions
 //are solely so I can build the parser properly.
 
@@ -180,7 +158,7 @@ public:
 
     Parser(std::vector<Token> inTokens, long size){
         //This is the Global scope.
-        currScope = nullptr;
+        stack->currScope = nullptr;
         given = inTokens;
         stack = new StackAllocator(size);
         errorStack = std::vector<std::string>();

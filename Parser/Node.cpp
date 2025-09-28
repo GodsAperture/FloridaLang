@@ -239,9 +239,23 @@ bool typeCheck(FloridaType inType){
         }
     }
 
-    void Scope::copy(StackAllocator& input){
-        Scope* thisPtr = input.alloc<Scope>();
-        thisPtr->
+    Node* Scope::copy(StackAllocator& input){
+        Scope* thisptr = input.alloc<Scope>();
+        //If this is the first scope, then it's global and current.
+        if(input.currScope == nullptr){
+            input.globalScope = thisptr;
+            input.currScope = thisptr;
+        } else {
+        //Otherwise, the currScope is now the parent
+        //and change thisptr to be the currScope.
+            thisptr->parent = input.currScope;
+            input.currScope = thisptr;
+        }
+        //Don't directly copy the variables, functions, or classes.
+        //Add them as you find them to avoid future issues.
+        if(body != nullptr){
+            thisptr->body = (Body*) body->copy(input);
+        }
     }
 
 
@@ -298,6 +312,15 @@ bool typeCheck(FloridaType inType){
         }
     }
 
+    Node* Body::copy(StackAllocator& input){
+        Body* thisptr = input.alloc<Body>();
+        if(next == nullptr){
+            thisptr->current = current->copy(input);
+        } else {
+            thisptr->current = current->copy(input);
+            thisptr->next = (Body*) next->copy(input);
+        }
+    }
 
 
 //Variable
@@ -1058,12 +1081,14 @@ bool typeCheck(FloridaType inType){
 
     void Function::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         //Change where this function starts in the program.
-        position = inInstructions.size();
-        if(code != nullptr){
-            code->FLVMCodeGen(inInstructions);
-        }
-        if(allFunctions != nullptr){
-            allFunctions->FLVMCodeGen(inInstructions);
+        if(!alreadyGenerated){
+            position = inInstructions.size();
+            if(code != nullptr){
+                code->FLVMCodeGen(inInstructions);
+            }
+            if(allFunctions != nullptr){
+                allFunctions->FLVMCodeGen(inInstructions);
+            }
         }
     }
 

@@ -56,7 +56,8 @@
         "iomanip": "cpp",
         "span": "cpp",
         "sstream": "cpp",
-        "variant": "cpp"
+        "variant": "cpp",
+        "stack": "cpp"
     },
     "cmake.configureOnOpen": true
 }

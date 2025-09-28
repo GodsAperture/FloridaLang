@@ -12,25 +12,32 @@ public:
     void* current = nullptr;
     void* end = nullptr;
 
+    //Other pointers
     Node* ZEROPTR = nullptr;
     Node* ONEPTR = nullptr;
-    Node* FUNPTR = nullptr;
+    //The Abstract Syntax Tree
     Node* AST = nullptr;
+
+    //The global scope...wasn't that obvious?
+    Scope* globalScope = nullptr;
+    //The currently active scope.
+    Scope* currScope = nullptr;
+    //A linked list of all the functions in the program.
+    Function* allFunctions = nullptr;
 
     StackAllocator(long input){
         head = std::malloc(input);
         ZEROPTR = (Node*) give();
         ONEPTR = (Node*) give();
-        FUNPTR = (Node*) give();
         current = head;
         end = (void*) ((size_t) input + (size_t) head);
     }
 
     ~StackAllocator(){
-        delete ZEROPTR;
-        delete ONEPTR;
-        delete FUNPTR;
         delete head;
+        head = nullptr;
+        ZEROPTR = nullptr;
+        ONEPTR = nullptr;
     }
 
     // Allocates one object at the top of the stack, and allows you to pass parameters to that object's constructor through it's parameters
@@ -85,6 +92,10 @@ public:
         input.current = input.head;
         //Set `input.end`
         input.end = (void*) ((long long) head + diff);
+        input.ZEROPTR = (Node*) input.give();
+        input.ONEPTR = (Node*) input.give();
+        //Copy the AST from the original to the new StackAllocator. 
+        AST->copy(input);
     }
 };
 #endif
