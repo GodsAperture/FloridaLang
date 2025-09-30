@@ -50,13 +50,15 @@ public:
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     Node* copy(StackAllocator& input) override;
+    Body* pcopy(StackAllocator& input);
 };
 
 class Variable : public Node{
 public:
-    Token thisToken;//There exists a default Token().
+    Token thisToken;//There exists a default Token() constructor.
     bool isLocal = false;
     int64_t distance = -1;
+    types value;
     Variable* next = nullptr;
     FloridaType type = FloridaType::BadToken;
 
@@ -74,7 +76,7 @@ public:
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     Node* copy(StackAllocator& input) override;
-
+    Variable* pcopy(StackAllocator& input);
 };
 
 class Scope : public Node{
@@ -111,7 +113,7 @@ class Scope : public Node{
         std::string printAll() override;
         void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
         Node* copy(StackAllocator& input) override;
-    
+        Scope* pcopy(StackAllocator& input);
     };
 
 class Initialize : public Node{
@@ -123,6 +125,7 @@ public:
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     Node* copy(StackAllocator& input) override;
+    Initialize* pcopy(StackAllocator& input);
 };
 
 class InitializeAssign : public Node{
@@ -136,6 +139,7 @@ public:
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     Node* copy(StackAllocator& input) override;
+    InitializeAssign pcopy(StackAllocator& input);
 };
 
 class Assignment : public Node{
@@ -148,6 +152,7 @@ public:
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     Node* copy(StackAllocator& input) override;
+    Assignment pcopy(StackAllocator& input);
 };
 
 
@@ -162,6 +167,7 @@ public:
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     Node* copy(StackAllocator& input) override;
+    Add* pcopy(StackAllocator& input);
 };
 
 class Subtract : public Node{
@@ -174,6 +180,7 @@ public:
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     Node* copy(StackAllocator& input) override;
+    Subtract* pcopy(StackAllocator& input);
 };
 
 
@@ -188,6 +195,7 @@ public:
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     Node* copy(StackAllocator& input) override;
+    Multiply* pcopy(StackAllocator& input);
 };
 
 class Divide : public Node{
@@ -200,6 +208,7 @@ public:
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     Node* copy(StackAllocator& input) override;
+    Divide* pcopy(StackAllocator& input);
 };
 
 
@@ -213,6 +222,7 @@ public:
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     Node* copy(StackAllocator& input) override;
+    Parentheses* pcopy(StackAllocator& input);
 };
 
 class Negative : public Node{
@@ -224,6 +234,7 @@ public:
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     Node* copy(StackAllocator& input) override;
+    Negative* pcopy(StackAllocator& input);
 };
 
 
@@ -238,6 +249,7 @@ public:
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     Node* copy(StackAllocator& input) override;
+    Fixed8* pcopy(StackAllocator& input);
 };
 
 class Boolean : public Node{
@@ -249,6 +261,7 @@ public:
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     Node* copy(StackAllocator& input) override;
+    Boolean* pcopy(StackAllocator& input);
 };
 
 
@@ -264,6 +277,7 @@ public:
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     Node* copy(StackAllocator& input) override;
+    Equal* pcopy(StackAllocator& input);
 };
 
 class NotEqual : public Node{
@@ -276,6 +290,7 @@ public:
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     Node* copy(StackAllocator& input) override;
+    NotEqual* pcopy(StackAllocator& input);
 };
 
 class GreaterThan : public Node{
@@ -288,6 +303,7 @@ public:
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     Node* copy(StackAllocator& input) override;
+    GreaterThan* pcopy(StackAllocator& input);
 };
 
 class GreaterThanOr : public Node{
@@ -300,6 +316,7 @@ public:
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     Node* copy(StackAllocator& input) override;
+    GreaterThanOr* pcopy(StackAllocator& input);
 };
 
 class LessThan : public Node{
@@ -312,6 +329,7 @@ public:
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     Node* copy(StackAllocator& input) override;
+    LessThan* pcopy(StackAllocator& input);
 };
 
 class LessThanOr : public Node{
@@ -324,6 +342,7 @@ public:
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     Node* copy(StackAllocator& input) override;
+    LessThanOr* pcopy(StackAllocator& input);
 };
 
 
@@ -339,6 +358,7 @@ public:
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     Node* copy(StackAllocator& input) override;
+    Or* pcopy(StackAllocator& input);
 };
 
 class And : public Node{
@@ -351,6 +371,7 @@ public:
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     Node* copy(StackAllocator& input) override;
+    And* pcopy(StackAllocator& input);
 };
 
 class Not : public Node{
@@ -362,6 +383,7 @@ public:
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     Node* copy(StackAllocator& input) override;
+    Not* pcopy(StackAllocator& input);
 };
 
 
@@ -380,6 +402,7 @@ public:
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     Node* copy(StackAllocator& input) override;
+    IfClass* pcopy(StackAllocator& input);
 };
 
 class ForLoop : public Node{
@@ -394,6 +417,7 @@ public:
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     Node* copy(StackAllocator& input) override;
+    ForLoop* pcopy(StackAllocator& input);
 };
 
 class WhileLoop : public Node{
@@ -406,6 +430,7 @@ public:
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     Node* copy(StackAllocator& input) override;
+    WhileLoop* pcopy(StackAllocator& input);
 };
 
 class Function : public Node{
@@ -431,6 +456,7 @@ public:
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     void append(Variable* input);
     Node* copy(StackAllocator& input) override;
+    Function* pcopy(StackAllocator& input);
 };
 
 class Arguments : public Node{
@@ -445,6 +471,7 @@ public:
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     void append(Arguments* input);
     Node* copy(StackAllocator& input) override;
+    Arguments* pcopy(StackAllocator& input);
 };
 
 class Call : public Node{
@@ -457,6 +484,7 @@ public:
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     Node* copy(StackAllocator& input) override;
+    Call* pcopy(StackAllocator& input);
 };
 
 class ReturnClass : public Node{
@@ -468,6 +496,7 @@ public:
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     Node* copy(StackAllocator& input) override;
+    ReturnClass* pcopy(StackAllocator& input);
 };
 
 class CallStack{

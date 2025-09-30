@@ -256,7 +256,32 @@ bool typeCheck(FloridaType inType){
         if(body != nullptr){
             thisptr->body = (Body*) body->copy(input);
         }
+
+        return thisptr;
     }
+
+    Scope* Scope::pcopy(StackAllocator& input){
+        Scope* thisptr = input.alloc<Scope>();
+        //If this is the first scope, then it's global and current.
+        if(input.currScope == nullptr){
+            input.globalScope = thisptr;
+            input.currScope = thisptr;
+        } else {
+        //Otherwise, the currScope is now the parent
+        //and change thisptr to be the currScope.
+            thisptr->parent = input.currScope;
+            input.currScope = thisptr;
+        }
+        //Don't directly copy the variables, functions, or classes.
+        //Add them as you find them to avoid future issues.
+        if(body != nullptr){
+            thisptr->body = (Body*) body->copy(input);
+        }
+
+        return thisptr;
+    }
+
+
 
 
 //Body
