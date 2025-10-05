@@ -345,10 +345,28 @@ bool typeCheck(FloridaType inType){
             thisptr->current = current->copy(input);
             thisptr->next = (Body*) next->copy(input);
         }
+
+        return thisptr;
+    }
+
+    Body* Body::pcopy(StackAllocator& input){
+                Body* thisptr = input.alloc<Body>();
+        if(next == nullptr){
+            thisptr->current = current->copy(input);
+        } else {
+            thisptr->current = current->copy(input);
+            thisptr->next = (Body*) next->copy(input);
+        }
+
+        return thisptr;
     }
 
 
 //Variable
+    Variable::Variable(){
+        //Do nothing. It's not a problem.
+    }
+
     Variable::Variable(Token inToken, int64_t inDistance, bool inIsLocal){
         thisToken = inToken;
         distance = inDistance;
@@ -397,9 +415,39 @@ bool typeCheck(FloridaType inType){
         }
     }
 
+    Node* Variable::copy(StackAllocator& input){
+        Variable* thisptr = input.alloc<Variable>();
+
+        thisptr->thisToken = thisToken;
+        thisptr->isLocal = isLocal;
+        thisptr->distance = distance;
+        thisptr->value = value;
+        thisptr->next = next->pcopy(input);
+        thisptr->type = type;
+
+        return thisptr;
+    }
+
+    Variable* Variable::pcopy(StackAllocator& input){
+        Variable* thisptr = input.alloc<Variable>();
+
+        thisptr->thisToken = thisToken;
+        thisptr->isLocal = isLocal;
+        thisptr->distance = distance;
+        thisptr->value = value;
+        thisptr->next = next->pcopy(input);
+        thisptr->type = type;
+
+        return thisptr;
+    }
+
 
 
 //Initialize
+    Initialize::Initialize(){
+        //Do nothing.
+    };
+
     Initialize::Initialize(Variable* inVariable){
         thisVariable = inVariable;
     }
@@ -417,9 +465,29 @@ bool typeCheck(FloridaType inType){
         inInstructions.push_back(Instruction(Operation::initialize, 0));
     }
 
+    Node* Initialize::copy(StackAllocator& input){
+        Initialize* thisptr = input.alloc<Initialize>();
+
+        thisptr->thisVariable = thisVariable->pcopy(input);
+
+        return thisptr;
+    }
+
+    Initialize* Initialize::pcopy(StackAllocator& input){
+        Initialize* thisptr = input.alloc<Initialize>();
+
+        thisptr->thisVariable = thisVariable->pcopy(input);
+
+        return thisptr;
+    }
+
 
 
 //InitializeAssign
+    InitializeAssign::InitializeAssign(){
+        //Do nothing
+    }
+
     InitializeAssign::InitializeAssign(Variable* inVariable, Node* inBody){
         thisVariable = inVariable;
         code = inBody;
@@ -452,9 +520,33 @@ bool typeCheck(FloridaType inType){
         }
     }
 
+    Node* InitializeAssign::copy(StackAllocator& input){
+        InitializeAssign* thisptr = input.alloc<InitializeAssign>();
+
+        thisptr->thisVariable = thisVariable->pcopy(input);
+        thisptr->code = code->copy(input);
+        thisptr->type = type;
+
+        return thisptr;
+    }
+
+    InitializeAssign* InitializeAssign::pcopy(StackAllocator& input){
+        InitializeAssign* thisptr = input.alloc<InitializeAssign>();
+
+        thisptr->thisVariable = thisVariable->pcopy(input);
+        thisptr->code = code->copy(input);
+        thisptr->type = type;
+
+        return thisptr;
+    }
+
 
 
 //Assignment
+    Assignment::Assignment(){
+        //Do nothing
+    };
+
     Assignment::Assignment(Variable* inVariable, Node* inCode){
         thisVariable = inVariable;
         code = inCode;
@@ -483,9 +575,31 @@ bool typeCheck(FloridaType inType){
         }
     }
 
+    Node* Assignment::copy(StackAllocator& input){
+        Assignment* thisptr = input.alloc<Assignment>();
+
+        thisptr->thisVariable = thisVariable->pcopy(input);
+        thisptr->code = code->copy(input);
+
+        return thisptr;
+    }
+
+    Assignment* Assignment::pcopy(StackAllocator& input){
+        Assignment* thisptr = input.alloc<Assignment>();
+
+        thisptr->thisVariable = thisVariable->pcopy(input);
+        thisptr->code = code->copy(input);
+
+        return thisptr;
+    }
+
 
     
 //Add +
+    Add::Add(){
+        //Do nothing
+    }
+
     Add::Add(Node* LHE, Node* RHE){
         left = LHE;
         right = RHE;
@@ -507,9 +621,31 @@ bool typeCheck(FloridaType inType){
         inInstructions.push_back(Instruction(Operation::add, -1));
     }
 
+    Node* Add::copy(StackAllocator& input){
+        Add* thisptr = input.alloc<Add>();
+
+        thisptr->left = left->copy(input);
+        thisptr->right = right->copy(input);
+
+        return thisptr;
+    }
+
+    Add* Add::pcopy(StackAllocator& input){
+        Add* thisptr = input.alloc<Add>();
+
+        thisptr->left = left->copy(input);
+        thisptr->right = right->copy(input);
+
+        return thisptr;
+    }
+
 
 
 //Subtract -
+    Subtract::Subtract(){
+        //Do nothing
+    }
+
     Subtract::Subtract(Node* LHE, Node* RHE){
         left = LHE;
         right = RHE;
@@ -529,9 +665,31 @@ bool typeCheck(FloridaType inType){
         inInstructions.push_back(Instruction(Operation::subtract, -1));
     }
 
+    Node* Subtract::copy(StackAllocator& input){
+        Subtract* thisptr = input.alloc<Subtract>();
+
+        thisptr->left = left->copy(input);
+        thisptr->right = right->copy(input);
+
+        return thisptr;
+    }
+
+    Subtract* Subtract::pcopy(StackAllocator& input){
+        Subtract* thisptr = input.alloc<Subtract>();
+
+        thisptr->left = left->copy(input);
+        thisptr->right = right->copy(input);
+
+        return thisptr;
+    }
+
 
 
 //Multiply *
+    Multiply::Multiply(){
+        //Do nothing
+    }
+
     Multiply::Multiply(Node* LHE, Node* RHE){
         left = LHE;
         right = RHE;
@@ -551,9 +709,31 @@ bool typeCheck(FloridaType inType){
         inInstructions.push_back(Instruction(Operation::multiply, -1));
     }
 
+    Node* Multiply::copy(StackAllocator& input){
+        Multiply* thisptr = input.alloc<Multiply>();
+
+        thisptr->left = left->copy(input);
+        thisptr->right = right->copy(input);
+
+        return thisptr;
+    }
+
+    Multiply* Multiply::pcopy(StackAllocator& input){
+        Multiply* thisptr = input.alloc<Multiply>();
+
+        thisptr->left = left->copy(input);
+        thisptr->right = right->copy(input);
+
+        return thisptr;
+    }
+
 
 
 //Divide /
+    Divide::Divide(){
+        //Do nothing
+    };
+
     Divide::Divide(Node* LHE, Node* RHE){
         left = LHE;
         right = RHE;
@@ -573,9 +753,31 @@ bool typeCheck(FloridaType inType){
         inInstructions.push_back(Instruction(Operation::divide, -1));
     }
 
+    Node* Divide::copy(StackAllocator& input){
+        Divide* thisptr = input.alloc<Divide>();
+
+        thisptr->left = left->copy(input);
+        thisptr->right = right->copy(input);
+
+        return thisptr;
+    }
+
+    Divide* Divide::pcopy(StackAllocator& input){
+        Divide* thisptr = input.alloc<Divide>();
+
+        thisptr->left = left->copy(input);
+        thisptr->right = right->copy(input);
+
+        return thisptr;
+    }
+
 
 
 //Parentheses ()
+    Parentheses::Parentheses(){
+        //Do nothing
+    }
+
     Parentheses::Parentheses(Node* input){
         subexpression = input;
     }
@@ -592,9 +794,29 @@ bool typeCheck(FloridaType inType){
         subexpression->FLVMCodeGen(inInstructions);
     }
 
+    Node* Parentheses::copy(StackAllocator& input){
+        Parentheses* thisptr = input.alloc<Parentheses>();
+
+        thisptr->subexpression = subexpression->copy(input);
+
+        return thisptr;
+    }
+
+    Parentheses* Parentheses::pcopy(StackAllocator& input){
+        Parentheses* thisptr = input.alloc<Parentheses>();
+
+        thisptr->subexpression = subexpression->copy(input);
+
+        return thisptr;        
+    }
+
 
 
 //Negative -
+    Negative::Negative(){
+        //Do nothing;
+    }
+
     Negative::Negative(Node* input){
         right = input;
     }
@@ -612,9 +834,29 @@ bool typeCheck(FloridaType inType){
         inInstructions.push_back(Instruction(Operation::negate, -1));
     }
 
+    Node* Negative::copy(StackAllocator& input){
+        Negative* thisptr = input.alloc<Negative>();
+
+        thisptr->right = right->copy(input);
+
+        return thisptr;
+    }
+
+    Negative* Negative::pcopy(StackAllocator& input){
+        Negative* thisptr = input.alloc<Negative>();
+
+        thisptr->right = right->copy(input);
+
+        return thisptr;        
+    }
+
 
 
 //Equal ==
+    Equal::Equal(){
+        //Do nothing
+    }
+
     Equal::Equal(Node* inLeft, Node* inRight){
         left = inLeft;
         right = inRight;
@@ -635,9 +877,31 @@ bool typeCheck(FloridaType inType){
         inInstructions.push_back(Instruction(equals));
     }
 
+    Node* Equal::copy(StackAllocator& input){
+        Equal* thisptr = input.alloc<Equal>();
+
+        thisptr->left = left->copy(input);
+        thisptr->right = right->copy(input);
+
+        return thisptr;
+    }
+
+    Equal* Equal::pcopy(StackAllocator& input){
+        Equal* thisptr = input.alloc<Equal>();
+
+        thisptr->left = left->copy(input);
+        thisptr->right = right->copy(input);
+
+        return thisptr;
+    }
+
 
 
 //Not equal !=
+    NotEqual::NotEqual(){
+        //Do nothing
+    }
+
     NotEqual::NotEqual(Node* inLeft, Node* inRight){
         left = inLeft;
         right = inRight;
@@ -658,9 +922,31 @@ bool typeCheck(FloridaType inType){
         inInstructions.push_back(Instruction(nequals));
     }
 
+    Node* NotEqual::copy(StackAllocator& input){
+        NotEqual* thisptr = input.alloc<NotEqual>();
+
+        thisptr->left = left->copy(input);
+        thisptr->right = right->copy(input);
+
+        return thisptr;
+    }
+
+    NotEqual* NotEqual::pcopy(StackAllocator& input){
+        NotEqual* thisptr = input.alloc<NotEqual>();
+
+        thisptr->left = left->copy(input);
+        thisptr->right = right->copy(input);
+
+        return thisptr;        
+    }
+
 
 
 //Greater than >
+    GreaterThan::GreaterThan(){
+        //Do nothing
+    }
+
     GreaterThan::GreaterThan(Node* inLeft, Node* inRight){
         left = inLeft;
         right = inRight;
@@ -681,9 +967,31 @@ bool typeCheck(FloridaType inType){
         inInstructions.push_back(Instruction(greater));
     }
 
+    Node* GreaterThan::copy(StackAllocator& input){
+        GreaterThan* thisptr = input.alloc<GreaterThan>();
+
+        thisptr->left = left->copy(input);
+        thisptr->right = right->copy(input);
+
+        return thisptr;
+    }
+
+    GreaterThan* GreaterThan::pcopy(StackAllocator& input){
+        GreaterThan* thisptr = input.alloc<GreaterThan>();
+
+        thisptr->left = left->copy(input);
+        thisptr->right = right->copy(input);
+
+        return thisptr;
+    }
+
 
 
 //Greater than or equal to >=
+    GreaterThanOr::GreaterThanOr(){
+        //Do nothing
+    }
+
     GreaterThanOr::GreaterThanOr(Node* inLeft, Node* inRight){
         left = inLeft;
         right = inRight;
@@ -704,9 +1012,31 @@ bool typeCheck(FloridaType inType){
         inInstructions.push_back(Instruction(greateror));
     }
 
+    Node* GreaterThanOr::copy(StackAllocator& input){
+        GreaterThanOr* thisptr = input.alloc<GreaterThanOr>();
+
+        thisptr->left = left->copy(input);
+        thisptr->right = right->copy(input);
+
+        return thisptr;
+    }
+
+    GreaterThanOr* GreaterThanOr::pcopy(StackAllocator& input){
+        GreaterThanOr* thisptr = input.alloc<GreaterThanOr>();
+
+        thisptr->left = left->copy(input);
+        thisptr->right = right->copy(input);
+
+        return thisptr;
+    }
+
 
 
 //Less than <
+    LessThan::LessThan(){
+        //Do nothing
+    }
+
     LessThan::LessThan(Node* inLeft, Node* inRight){
         left = inLeft;
         right = inRight;
@@ -727,9 +1057,30 @@ bool typeCheck(FloridaType inType){
         inInstructions.push_back(Instruction(lesser));
     }
 
+    Node* LessThan::copy(StackAllocator& input){
+        LessThan* thisptr = input.alloc<LessThan>();
+
+        thisptr->left = left->copy(input);
+        thisptr->right = right->copy(input);
+
+        return thisptr;
+    }
+
+    LessThan* LessThan::pcopy(StackAllocator& input){
+        LessThan* thisptr = input.alloc<LessThan>();
+
+        thisptr->left = left->copy(input);
+        thisptr->right = right->copy(input);
+
+        return thisptr;
+    }
 
 
 //Less than or equal to <=
+    LessThanOr::LessThanOr(){
+        //Do nothing
+    }
+
     LessThanOr::LessThanOr(Node* inLeft, Node* inRight){
         left = inLeft;
         right = inRight;
@@ -750,9 +1101,31 @@ bool typeCheck(FloridaType inType){
         inInstructions.push_back(Instruction(lesseror));
     }
 
+    Node* LessThanOr::copy(StackAllocator& input){
+        LessThanOr* thisptr = input.alloc<LessThanOr>();
+
+        thisptr->left = left->copy(input);
+        thisptr->right = right->copy(input);
+
+        return thisptr;
+    }
+
+    LessThanOr* LessThanOr::pcopy(StackAllocator& input){
+        LessThanOr* thisptr = input.alloc<LessThanOr>();
+
+        thisptr->left = left->copy(input);
+        thisptr->right = right->copy(input);
+
+        return thisptr;        
+    }
+
 
 
 //Or OR
+    Or::Or(){
+        //Do nothing
+    };
+
     Or::Or(Node* inLeft, Node* inRight){
         left = inLeft;
         right = inRight;
@@ -773,9 +1146,31 @@ bool typeCheck(FloridaType inType){
         inInstructions.push_back(Instruction(ior));
     }
 
+    Node* Or::copy(StackAllocator& input){
+        Or* thisptr = input.alloc<Or>();
+
+        thisptr->left = left->copy(input);
+        thisptr->right = right->copy(input);
+
+        return thisptr;
+    }
+
+    Or* Or::pcopy(StackAllocator& input){
+        Or* thisptr = input.alloc<Or>();
+
+        thisptr->left = left->copy(input);
+        thisptr->right = right->copy(input);
+
+        return thisptr;
+    }
+
 
 
 //And AND
+    And::And(){
+        //Do nothing
+    }
+
     And::And(Node* inLeft, Node* inRight){
         left = inLeft;
         right = inRight;
@@ -796,9 +1191,31 @@ bool typeCheck(FloridaType inType){
         inInstructions.push_back(Instruction(iand));
     }
 
+    Node* And::copy(StackAllocator& input){
+        And* thisptr = input.alloc<And>();
+
+        thisptr->left = left->copy(input);
+        thisptr->right = right->copy(input);
+
+        return thisptr;
+    }
+
+    And* And::pcopy(StackAllocator& input){
+        And* thisptr = input.alloc<And>();
+
+        thisptr->left = left->copy(input);
+        thisptr->right = right->copy(input);
+
+        return thisptr;
+    }
+
 
 
 //Not !
+    Not::Not(){
+        //Do nothing
+    }
+
     Not::Not(Node* inRight){
         right = inRight; 
     }
@@ -816,9 +1233,29 @@ bool typeCheck(FloridaType inType){
         inInstructions.push_back(Instruction(inot));
     }
 
+    Node* Not::copy(StackAllocator& input){
+        Not* thisptr = input.alloc<Not>();
+
+        thisptr->right = right->copy(input);
+
+        return thisptr;
+    }
+
+    Not* Not::pcopy(StackAllocator& input){
+        Not* thisptr = input.alloc<Not>();
+
+        thisptr->right = right->copy(input);
+
+        return thisptr;        
+    }
+
 
 
 //if
+    IfClass::IfClass(){
+        //Do nothing
+    };
+
     IfClass::IfClass(Node* inCondition, Body* inIfBody, Body* inElseBody){
         condition = inCondition;
         ifBody = inIfBody;
@@ -911,9 +1348,51 @@ bool typeCheck(FloridaType inType){
 
     }
 
+    Node* IfClass::copy(StackAllocator& input){
+        IfClass* thisptr = input.alloc<IfClass>();
+
+        //Check for a condition.
+        if(condition != nullptr){
+            thisptr->condition = condition->copy(input);
+        }
+        //Check for an ifBody
+        if(ifBody != nullptr){
+            thisptr->ifBody = ifBody->pcopy(input);
+        }
+        //Check for an elseBody
+        if(elseBody != nullptr){
+            thisptr->elseBody = elseBody->pcopy(input);
+        }
+
+        return thisptr;
+    }
+
+    IfClass* IfClass::pcopy(StackAllocator& input){
+        IfClass* thisptr = input.alloc<IfClass>();
+
+        //Check for a condition.
+        if(condition != nullptr){
+            thisptr->condition = condition->copy(input);
+        }
+        //Check for an ifBody
+        if(ifBody != nullptr){
+            thisptr->ifBody = ifBody->pcopy(input);
+        }
+        //Check for an elseBody
+        if(elseBody != nullptr){
+            thisptr->elseBody = elseBody->pcopy(input);
+        }
+
+        return thisptr;
+    }
+
 
 
 //for
+    ForLoop::ForLoop(){
+        //Do nothing
+    };
+
     ForLoop::ForLoop(Node* inAssign, Node* inCondition, Node* inIncrementer, Body* inBody){
         assign = inAssign;
         condition = inCondition;
@@ -1001,9 +1480,51 @@ bool typeCheck(FloridaType inType){
         }
     }
 
+    Node* ForLoop::copy(StackAllocator& input){
+        ForLoop* thisptr = input.alloc<ForLoop>();
+
+        if(assign != nullptr){
+            thisptr->assign = assign->copy(input);
+        }
+        if(condition != nullptr){
+            thisptr->condition = condition->copy(input);
+        }
+        if(incrementer != nullptr){
+            thisptr->incrementer = incrementer->copy(input);
+        }
+        if(body != nullptr){
+            thisptr->body = body->pcopy(input);
+        }
+
+        return thisptr;
+    }
+
+    ForLoop* ForLoop::pcopy(StackAllocator& input){
+        ForLoop* thisptr = input.alloc<ForLoop>();
+
+        if(assign != nullptr){
+            thisptr->assign = assign->copy(input);
+        }
+        if(condition != nullptr){
+            thisptr->condition = condition->copy(input);
+        }
+        if(incrementer != nullptr){
+            thisptr->incrementer = incrementer->copy(input);
+        }
+        if(body != nullptr){
+            thisptr->body = body->pcopy(input);
+        }
+
+        return thisptr;
+    }
+
 
 
 //while
+    WhileLoop::WhileLoop(){
+        //Do nothing
+    };
+
     WhileLoop::WhileLoop(Node* inCondition, Body* inBody){
         condition = inCondition;
         body = inBody;
@@ -1045,9 +1566,39 @@ bool typeCheck(FloridaType inType){
         inInstructions[here].literal.fixed64 = inInstructions.size();
     }
 
+    Node* WhileLoop::copy(StackAllocator& input){
+        WhileLoop* thisptr = input.alloc<WhileLoop>();
+
+        if(condition != nullptr){
+            thisptr->condition = condition->copy(input);
+        }
+        if(body != nullptr){
+            thisptr->body = body->pcopy(input);
+        }
+
+        return thisptr;
+    }
+
+    WhileLoop* WhileLoop::pcopy(StackAllocator& input){
+        WhileLoop* thisptr = input.alloc<WhileLoop>();
+
+        if(condition != nullptr){
+            thisptr->condition = condition->copy(input);
+        }
+        if(body != nullptr){
+            thisptr->body = body->pcopy(input);
+        }
+
+        return thisptr;
+    }
+
 
 
 //Function
+    Function::Function(){
+        //Do nothing
+    };
+
     Function::Function(bool inReturnable, std::string_view inName, Scope* inCode){
         name = inName;
         returnable = inReturnable;
@@ -1117,9 +1668,33 @@ bool typeCheck(FloridaType inType){
         }
     }
 
+    Node* Function::copy(StackAllocator& input){
+        Function* thisptr = input.alloc<Function>();
+
+        thisptr->returnable = returnable;
+        thisptr->position = position;
+        thisptr->code = code->pcopy(input);
+
+        return thisptr;
+    }
+
+    Function* Function::pcopy(StackAllocator& input){
+        Function* thisptr = input.alloc<Function>();
+
+        thisptr->returnable = returnable;
+        thisptr->position = position;
+        thisptr->code = code->pcopy(input);
+
+        return thisptr;
+    }
+
 
 
 //Function calls
+    Call::Call(){
+        //Do nothing
+    }
+
     Call::Call(Function* inFunction){
         function = inFunction;
     }
@@ -1159,6 +1734,54 @@ bool typeCheck(FloridaType inType){
 
         //Make the function call after the function's arguments are created.
         inInstructions.push_back(Instruction(Operation::call, function->position));
+    }
+
+    Node* Call::copy(StackAllocator& input){
+        Call* thisptr = input.alloc<Call>();
+        //Get the list of currently existing functions in the scope
+        Scope* theScope = input.currScope;
+        Function* theFunction = input.currScope->functions;
+
+        //Traverse the linked lists to find the function.
+        //It is guaranteed to exist, but may not be in the current scope.
+        while(input.currScope != nullptr){
+            while(function->name != theFunction->name){
+                theFunction = theFunction->next;
+                if(theFunction == nullptr){
+                    break;
+                }
+            }
+            theScope = theScope->parent;
+        }
+
+        thisptr->function = theFunction;
+        thisptr->arguments = arguments->pcopy(input);
+
+        return thisptr;
+    }
+
+    Call* Call::pcopy(StackAllocator& input){
+        Call* thisptr = input.alloc<Call>();
+        //Get the list of currently existing functions in the scope
+        Scope* theScope = input.currScope;
+        Function* theFunction = input.currScope->functions;
+
+        //Traverse the linked lists to find the function.
+        //It is guaranteed to exist, but may not be in the current scope.
+        while(input.currScope != nullptr){
+            while(function->name != theFunction->name){
+                theFunction = theFunction->next;
+                if(theFunction == nullptr){
+                    break;
+                }
+            }
+            theScope = theScope->parent;
+        }
+
+        thisptr->function = theFunction;
+        thisptr->arguments = arguments->pcopy(input);
+
+        return thisptr;        
     }
 
 
@@ -1205,9 +1828,39 @@ bool typeCheck(FloridaType inType){
         }
     }
 
+    Node* Arguments::copy(StackAllocator& input){
+        Arguments* thisptr = input.alloc<Arguments>();
+
+        if(current != nullptr){
+            thisptr->current = current->copy(input);
+        }
+        if(next != nullptr){
+            thisptr->next = next->pcopy(input);
+        }
+
+        return thisptr;
+    }
+
+    Arguments* Arguments::pcopy(StackAllocator& input){
+        Arguments* thisptr = input.alloc<Arguments>();
+
+        if(current != nullptr){
+            thisptr->current = current->copy(input);
+        }
+        if(next != nullptr){
+            thisptr->next = next->pcopy(input);
+        }
+
+        return thisptr;        
+    }
+
 
 
 //Return statements
+    ReturnClass::ReturnClass(){
+        //Do nothing
+    }
+
     ReturnClass::ReturnClass(Node* input){
         statement = input;
     }
@@ -1223,6 +1876,26 @@ bool typeCheck(FloridaType inType){
     void ReturnClass::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         statement->FLVMCodeGen(inInstructions);
         inInstructions.push_back(Instruction(Operation::ireturn));
+    }
+
+    Node* ReturnClass::copy(StackAllocator& input){
+        ReturnClass* thisptr = input.alloc<ReturnClass>();
+
+        if(statement != nullptr){
+            thisptr->statement = statement->copy(input);
+        }
+
+        return thisptr;
+    }
+
+    ReturnClass* ReturnClass::pcopy(StackAllocator& input){
+        ReturnClass* thisptr = input.alloc<ReturnClass>();
+
+        if(statement != nullptr){
+            thisptr->statement = statement->copy(input);
+        }
+
+        return thisptr;        
     }
 
 

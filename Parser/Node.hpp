@@ -30,7 +30,10 @@ public:
     Node(const Node&&) = delete;
     Node& operator=(const Node&&) = delete;
 
+    //Prints the program back to the user in a proper format.
+
     virtual std::string ToString(std::string inLeft, std::string inRight) = 0;
+    //Prints out the program as its bytecode.
     virtual std::string printAll() = 0;
     virtual void FLVMCodeGen(std::vector<Instruction>& inInstructions) = 0;
     virtual Node* copy(StackAllocator& input) = 0;
@@ -120,6 +123,7 @@ class Initialize : public Node{
 public:
     Variable* thisVariable = nullptr;
 
+    Initialize();
     Initialize(Variable* inVariable);
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
@@ -134,12 +138,13 @@ public:
     Node* code = nullptr;
     FloridaType type;
 
+    InitializeAssign();
     InitializeAssign(Variable* inVariable, Node* inCode);
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     Node* copy(StackAllocator& input) override;
-    InitializeAssign pcopy(StackAllocator& input);
+    InitializeAssign* pcopy(StackAllocator& input);
 };
 
 class Assignment : public Node{
@@ -147,12 +152,13 @@ public:
     Variable* thisVariable = nullptr;
     Node* code = nullptr;
 
+    Assignment();
     Assignment(Variable* inVariable, Node* inCode);
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     Node* copy(StackAllocator& input) override;
-    Assignment pcopy(StackAllocator& input);
+    Assignment* pcopy(StackAllocator& input);
 };
 
 
@@ -162,6 +168,7 @@ public:
     Node* left = nullptr;
     Node* right = nullptr;
 
+    Add();
     Add(Node* LHE, Node* RHE);
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
@@ -175,6 +182,7 @@ public:
     Node* left = nullptr;
     Node* right = nullptr;
 
+    Subtract();
     Subtract(Node* LHE, Node* RHE);
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
@@ -190,6 +198,7 @@ public:
     Node* left = nullptr;
     Node* right = nullptr;
 
+    Multiply();
     Multiply(Node* LHE, Node* RHE);
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
@@ -203,6 +212,7 @@ public:
     Node* left = nullptr;
     Node* right = nullptr;
 
+    Divide();
     Divide(Node* LHE, Node* RHE);
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
@@ -217,6 +227,7 @@ class Parentheses : public Node{
 public:
     Node* subexpression = nullptr;
 
+    Parentheses();
     Parentheses(Node* input);
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
@@ -229,6 +240,7 @@ class Negative : public Node{
 public:
     Node* right = nullptr;
 
+    Negative();
     Negative(Node* input);
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
@@ -244,6 +256,7 @@ class Fixed8 : public Node{
 public:
     int64_t value;
 
+    Fixed8();
     Fixed8(std::string input);
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
@@ -256,6 +269,7 @@ class Boolean : public Node{
 public:
     bool value;
 
+    Boolean();
     Boolean(bool inBool);
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
@@ -272,6 +286,7 @@ public:
     Node* left = nullptr;
     Node* right = nullptr;
 
+    Equal();
     Equal(Node* inLeft, Node* inRight);
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
@@ -285,6 +300,7 @@ public:
     Node* left = nullptr;
     Node* right = nullptr;
 
+    NotEqual();
     NotEqual(Node* inLeft, Node* inRight);
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
@@ -298,6 +314,7 @@ public:
     Node* left = nullptr;
     Node* right = nullptr;
 
+    GreaterThan();
     GreaterThan(Node* inLeft, Node* inRight);
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
@@ -311,6 +328,7 @@ public:
     Node* left = nullptr;
     Node* right = nullptr;
 
+    GreaterThanOr();
     GreaterThanOr(Node* inLeft, Node* inRight);
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
@@ -324,6 +342,7 @@ public:
     Node* left = nullptr;
     Node* right = nullptr;
 
+    LessThan();
     LessThan(Node* inLeft, Node* inRight);
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
@@ -337,6 +356,7 @@ public:
     Node* left = nullptr;
     Node* right = nullptr;
 
+    LessThanOr();
     LessThanOr(Node* inLeft, Node* inRight);
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
@@ -353,6 +373,7 @@ public:
     Node* left = nullptr;
     Node* right = nullptr;
 
+    Or();
     Or(Node* inLeft, Node* inRight);
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
@@ -366,6 +387,7 @@ public:
     Node* left = nullptr;
     Node* right = nullptr;
 
+    And();
     And(Node* inLeft, Node* inRight);
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
@@ -378,6 +400,7 @@ class Not : public Node{
 public:
     Node* right = nullptr;
 
+    Not();
     Not(Node* inRight);
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
@@ -397,6 +420,7 @@ public:
     size_t ifVarCount = 0;
     size_t elseVarCount = 0;
 
+    IfClass();
     IfClass(Node* inCondition, Body* inIfScope, Body* inElseScope);
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
@@ -412,6 +436,7 @@ public:
     Node* incrementer = nullptr;
     Body* body = nullptr;
 
+    ForLoop();
     ForLoop(Node* inAssign, Node* inCondition, Node* inIncrementer, Body* inBody);
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
@@ -425,6 +450,7 @@ public:
     Node* condition = nullptr;
     Body* body = nullptr;
 
+    WhileLoop();
     WhileLoop(Node* inCondition, Body* inBody);
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
@@ -437,7 +463,7 @@ class Function : public Node{
 public:
     std::string_view name;
     bool returnable = false;
-    FloridaType type;
+    FloridaType type = FloridaType::BadToken;
     //This is where the instruction set begings.
     int64_t position = -1;
     //This is the full function
@@ -450,6 +476,7 @@ public:
     //This makes sure code isn't generated twice.
     bool alreadyGenerated = false;
 
+    Function();
     Function(bool inReturnable, std::string_view inName, Scope* inCode);
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
@@ -479,6 +506,7 @@ public:
     Function* function = nullptr;
     Arguments* arguments = nullptr;
 
+    Call();
     Call(Function* inFunction);
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
@@ -491,6 +519,7 @@ class ReturnClass : public Node{
 public:
     Node* statement = nullptr;
 
+    ReturnClass();
     ReturnClass(Node* input);
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;

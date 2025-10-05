@@ -10,6 +10,10 @@ inline std::string padding(std::string input){
 }
 
 //Fixed64
+    Fixed8::Fixed8(){
+        //Do nothing
+    };
+
     Fixed8::Fixed8(std::string input){
         value = std::stoll(input);
     }
@@ -26,9 +30,29 @@ inline std::string padding(std::string input){
         inInstructions.push_back(Instruction(Operation::push, value));
     }
 
+    Node* Fixed8::copy(StackAllocator& input){
+        Fixed8* thisptr = input.alloc<Fixed8>();
+
+        thisptr->value = value;
+
+        return thisptr;
+    }
+
+    Fixed8* Fixed8::pcopy(StackAllocator& input){
+        Fixed8* thisptr = input.alloc<Fixed8>();
+
+        thisptr->value = value;
+
+        return thisptr;        
+    }
+
 
 
 //Boolean
+    Boolean::Boolean(){
+        //Do nothing
+    };
+
     Boolean::Boolean(bool inBool){
         value = inBool;
     }
@@ -50,4 +74,20 @@ inline std::string padding(std::string input){
         thing.boolean = value;
 
         inInstructions.push_back(Instruction(FloridaType::Bool, Operation::push, thing));
+    }
+
+    Node* Boolean::copy(StackAllocator& input){
+        Boolean* thisptr = input.alloc<Boolean>();
+
+        thisptr->value = value;
+
+        return thisptr;
+    }
+
+    Boolean* Boolean::pcopy(StackAllocator& input){
+        Boolean* thisptr = input.alloc<Boolean>();
+
+        thisptr->value = value;
+
+        return thisptr;        
     }
