@@ -16,7 +16,7 @@ FloridaType typeReturn(std::string inString);
 
 bool typeCheck(FloridaType inType);
 
-
+class StackAllocator;
 
 //If you need to be told what a node is, God help you.
 class Node{
@@ -92,8 +92,6 @@ class Scope : public Node{
         Variable* variables = nullptr;
         //A "linked list" of functions for the current scope.
         Function* functions = nullptr;
-        //All the classes that exist in the scope.
-        //
 
         //Find where in some given Scope a particular variable lies.
         //If it does not exist in the scope, it returns -1.
@@ -415,13 +413,12 @@ public:
 class IfClass : public Node{
 public:
     Node* condition = nullptr;
-    Body* ifBody = nullptr;
-    Body* elseBody = nullptr;
+    Scope* ifBody = nullptr;
+    Scope* elseBody = nullptr;
     size_t ifVarCount = 0;
     size_t elseVarCount = 0;
 
     IfClass();
-    IfClass(Node* inCondition, Body* inIfScope, Body* inElseScope);
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
@@ -434,10 +431,9 @@ public:
     Node* assign = nullptr;
     Node* condition = nullptr;
     Node* incrementer = nullptr;
-    Body* body = nullptr;
+    Scope* body = nullptr;
 
     ForLoop();
-    ForLoop(Node* inAssign, Node* inCondition, Node* inIncrementer, Body* inBody);
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
@@ -448,10 +444,9 @@ public:
 class WhileLoop : public Node{
 public:
     Node* condition = nullptr;
-    Body* body = nullptr;
+    Scope* body = nullptr;
 
     WhileLoop();
-    WhileLoop(Node* inCondition, Body* inBody);
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
@@ -466,6 +461,8 @@ public:
     FloridaType type = FloridaType::BadToken;
     //This is where the instruction set begings.
     int64_t position = -1;
+    //This is how many arguments the function has.
+    int64_t argumentCount = 0;
     //This is the full function
     Scope* code = nullptr;
     //For use in the parser and VM.
@@ -477,7 +474,6 @@ public:
     bool alreadyGenerated = false;
 
     Function();
-    Function(bool inReturnable, std::string_view inName, Scope* inCode);
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
@@ -538,4 +534,14 @@ public:
     CallStack(Scope* inTheScope, uint64_t inReference, uint64_t inInstNumber);
     int64_t where(Variable* inVariable);
 };
+
+class SomeScope{
+public:
+    Scope* theScope = nullptr;
+    uint64_t basePointer = 0;
+    uint64_t previousBase = 0;
+
+    SomeScope();
+};
+
 #endif

@@ -102,7 +102,6 @@ bool typeCheck(FloridaType inType){
     }
 }
 
-
 //Scope
     Scope::Scope(){
         //Do nothing lol
@@ -220,13 +219,10 @@ bool typeCheck(FloridaType inType){
     }
 
     std::string Scope::ToString(std::string inLeft, std::string inRight){
-        if((functions == nullptr) && (body == nullptr)){
-            return "";
-        }
-        if(functions != nullptr){
-            return functions->ToString(inLeft, inRight) + body->ToString(inLeft, ";");
-        }
-        return body->ToString(inLeft, ";");
+        if(body != nullptr){
+            return body->ToString(inLeft, ";");
+        } 
+        return "";
     }
 
     std::string Scope::printAll(){
@@ -322,15 +318,25 @@ bool typeCheck(FloridaType inType){
 
     std::string Body::printAll(){
         if(next != nullptr){
-            return current->printAll() + next->printAll();
-        } else {
+            if(dynamic_cast<Function*>(current) == nullptr){
+                return current->printAll() + next->printAll();
+            } else {
+                return next->printAll();
+            }
+        }
+        if(dynamic_cast<Function*>(current) == nullptr){
             return current->printAll();
         }
+
+        return "";
+
     }
 
     void Body::FLVMCodeGen(std::vector<Instruction>& inInstructions){
-        //Add the current chunk of code.
-        current->FLVMCodeGen(inInstructions);
+        //Add the current chunk of code if it is not a function.
+        if(dynamic_cast<Function*>(current) == nullptr){
+            current->FLVMCodeGen(inInstructions);
+        }
         //If next isn't a nullptr, then generate code for it too.
         if(next != nullptr){
             next->FLVMCodeGen(inInstructions);
@@ -422,7 +428,6 @@ bool typeCheck(FloridaType inType){
         thisptr->isLocal = isLocal;
         thisptr->distance = distance;
         thisptr->value = value;
-        thisptr->next = next->pcopy(input);
         thisptr->type = type;
 
         return thisptr;
@@ -435,7 +440,6 @@ bool typeCheck(FloridaType inType){
         thisptr->isLocal = isLocal;
         thisptr->distance = distance;
         thisptr->value = value;
-        thisptr->next = next->pcopy(input);
         thisptr->type = type;
 
         return thisptr;
@@ -469,6 +473,7 @@ bool typeCheck(FloridaType inType){
         Initialize* thisptr = input.alloc<Initialize>();
 
         thisptr->thisVariable = thisVariable->pcopy(input);
+        input.currScope->push(thisptr->thisVariable);
 
         return thisptr;
     }
@@ -477,6 +482,7 @@ bool typeCheck(FloridaType inType){
         Initialize* thisptr = input.alloc<Initialize>();
 
         thisptr->thisVariable = thisVariable->pcopy(input);
+        input.currScope->push(thisptr->thisVariable);
 
         return thisptr;
     }
@@ -523,9 +529,12 @@ bool typeCheck(FloridaType inType){
     Node* InitializeAssign::copy(StackAllocator& input){
         InitializeAssign* thisptr = input.alloc<InitializeAssign>();
 
+        //Copy over the values
         thisptr->thisVariable = thisVariable->pcopy(input);
         thisptr->code = code->copy(input);
         thisptr->type = type;
+        //Add this variable to the scope.
+        input.currScope->push(thisptr->thisVariable);
 
         return thisptr;
     }
@@ -533,9 +542,12 @@ bool typeCheck(FloridaType inType){
     InitializeAssign* InitializeAssign::pcopy(StackAllocator& input){
         InitializeAssign* thisptr = input.alloc<InitializeAssign>();
 
+        //Copy over the values
         thisptr->thisVariable = thisVariable->pcopy(input);
         thisptr->code = code->copy(input);
         thisptr->type = type;
+        //Add this variable to the scope.
+        input.currScope->push(thisptr->thisVariable);
 
         return thisptr;
     }
@@ -1256,12 +1268,6 @@ bool typeCheck(FloridaType inType){
         //Do nothing
     };
 
-    IfClass::IfClass(Node* inCondition, Body* inIfBody, Body* inElseBody){
-        condition = inCondition;
-        ifBody = inIfBody;
-        elseBody = inElseBody;
-    }
-
     std::string IfClass::ToString(std::string inLeft, std::string inRight){
         if(elseBody == nullptr){
             return inLeft + "if(" + condition->ToString(inLeft, inRight) + "){\n" + 
@@ -1269,8 +1275,8 @@ bool typeCheck(FloridaType inType){
             inLeft + "}";
         } else {
             return inLeft + "if(" + condition->ToString(inLeft, ";") + "){\n" + 
-            ifBody->ToString("  ", inRight) +
-            inLeft + "} else {\n" + elseBody->ToString("  " + inLeft, ";") + inLeft + "}";
+            ifBody->ToString("  " + inLeft, inRight) + "\n" +
+            inLeft + "} else {\n" + elseBody->ToString("  " + inLeft, ";") + "\n" + inLeft + "}";
         }
     }
 
@@ -1351,6 +1357,8 @@ bool typeCheck(FloridaType inType){
     Node* IfClass::copy(StackAllocator& input){
         IfClass* thisptr = input.alloc<IfClass>();
 
+        uint64_t startCount = input.currScope->varCount();
+
         //Check for a condition.
         if(condition != nullptr){
             thisptr->condition = condition->copy(input);
@@ -1358,10 +1366,18 @@ bool typeCheck(FloridaType inType){
         //Check for an ifBody
         if(ifBody != nullptr){
             thisptr->ifBody = ifBody->pcopy(input);
+            //Pop any variables added in the ifBody.
+            for(uint64_t i = 0; i < input.currScope->varCount() - startCount; i++){
+            input.currScope->varPop();
+            }
         }
         //Check for an elseBody
         if(elseBody != nullptr){
             thisptr->elseBody = elseBody->pcopy(input);
+            //Pop any variables added in the elseBody.
+            for(uint64_t i = 0; i < input.currScope->varCount() - startCount; i++){
+            input.currScope->varPop();
+            }
         }
 
         return thisptr;
@@ -1370,6 +1386,8 @@ bool typeCheck(FloridaType inType){
     IfClass* IfClass::pcopy(StackAllocator& input){
         IfClass* thisptr = input.alloc<IfClass>();
 
+        uint64_t startCount = input.currScope->varCount();
+
         //Check for a condition.
         if(condition != nullptr){
             thisptr->condition = condition->copy(input);
@@ -1377,10 +1395,18 @@ bool typeCheck(FloridaType inType){
         //Check for an ifBody
         if(ifBody != nullptr){
             thisptr->ifBody = ifBody->pcopy(input);
+            //Pop any variables added in the ifBody.
+            for(uint64_t i = 0; i < input.currScope->varCount() - startCount; i++){
+            input.currScope->varPop();
+            }
         }
         //Check for an elseBody
         if(elseBody != nullptr){
             thisptr->elseBody = elseBody->pcopy(input);
+            //Pop any variables added in the elseBody.
+            for(uint64_t i = 0; i < input.currScope->varCount() - startCount; i++){
+            input.currScope->varPop();
+            }
         }
 
         return thisptr;
@@ -1392,13 +1418,6 @@ bool typeCheck(FloridaType inType){
     ForLoop::ForLoop(){
         //Do nothing
     };
-
-    ForLoop::ForLoop(Node* inAssign, Node* inCondition, Node* inIncrementer, Body* inBody){
-        assign = inAssign;
-        condition = inCondition;
-        incrementer = inIncrementer;
-        body = inBody;
-    }
 
     std::string ForLoop::ToString(std::string inLeft, std::string inRight){
         std::string finalString = inLeft + "\x1b[34mfor\x1b[0m(";
@@ -1418,7 +1437,7 @@ bool typeCheck(FloridaType inType){
         }
         finalString += "){\n";
 
-        return finalString + inLeft + body->ToString(inLeft, inRight) + inLeft + "\n" + inLeft + "}";
+        return finalString + inLeft + body->ToString(inLeft, inRight) + inLeft + "\n" + inLeft + "}\n";
     }
 
     std::string ForLoop::printAll(){
@@ -1482,6 +1501,7 @@ bool typeCheck(FloridaType inType){
 
     Node* ForLoop::copy(StackAllocator& input){
         ForLoop* thisptr = input.alloc<ForLoop>();
+        int64_t startCount = input.currScope->varCount();
 
         if(assign != nullptr){
             thisptr->assign = assign->copy(input);
@@ -1494,6 +1514,10 @@ bool typeCheck(FloridaType inType){
         }
         if(body != nullptr){
             thisptr->body = body->pcopy(input);
+            //Pop all the local variables in the body after generating its code.
+            for(uint64_t i = startCount; i < input.currScope->varCount(); i++){
+                input.currScope->varPop();
+            }
         }
 
         return thisptr;
@@ -1524,11 +1548,6 @@ bool typeCheck(FloridaType inType){
     WhileLoop::WhileLoop(){
         //Do nothing
     };
-
-    WhileLoop::WhileLoop(Node* inCondition, Body* inBody){
-        condition = inCondition;
-        body = inBody;
-    }
 
     std::string WhileLoop::ToString(std::string inLeft, std::string inRight){
         return inLeft + "while(" + condition->ToString(inLeft, inRight) + "){\n" + body->ToString("  " + inLeft, inRight) + inLeft + "}";
@@ -1599,12 +1618,6 @@ bool typeCheck(FloridaType inType){
         //Do nothing
     };
 
-    Function::Function(bool inReturnable, std::string_view inName, Scope* inCode){
-        name = inName;
-        returnable = inReturnable;
-        code = inCode;
-    }
-
     std::string Function::ToString(std::string inLeft, std::string inRight){
         std::string varString = "";
         Variable* currVar = code->variables;
@@ -1612,7 +1625,7 @@ bool typeCheck(FloridaType inType){
         //Combine all the variables, if any.
         if(code->variables != nullptr){
             //Stop right before the last variable to not append an extra comma.
-            while(currVar->next != nullptr){
+            for(int i = 1; i < argumentCount; i++){
                 varString += "\x1b[36m" + typeString(currVar->thisToken.type) + "\x1b[0m " + currVar->thisToken.getName() + ", ";
                 currVar = currVar->next;
             }
@@ -1670,11 +1683,60 @@ bool typeCheck(FloridaType inType){
 
     Node* Function::copy(StackAllocator& input){
         Function* thisptr = input.alloc<Function>();
+        Scope* theScope = input.currScope;
+        Function* theFunction = nullptr;
 
+        //Copy the function over.
+        thisptr->name = name;
         thisptr->returnable = returnable;
+        thisptr->type = type;
         thisptr->position = position;
-        thisptr->code = code->pcopy(input);
+        thisptr->argumentCount = argumentCount;
 
+        //We have to uniquely copy the scope for the function.
+        //This is because function arguments do not have initializations.
+        Scope* newScope = input.alloc<Scope>();
+        //Assign the newly generated scope to the function.
+        thisptr->code = newScope;
+        //Adjust the current scope member to the newly made scope.
+        newScope->parent = input.currScope;
+        input.currScope = newScope;
+        //Directly copy the arguments over to the new scope.
+        //Otherwise, they are never found and added in the correct order.
+        Variable* theirVariable = code->variables;
+        Variable* newVariable = nullptr;
+        for(int64_t i = 0; i < argumentCount; i++){
+            newVariable = theirVariable->pcopy(input);
+            newScope->push(newVariable);
+            theirVariable = theirVariable->next;
+        }
+        //Copy the body of the function over.
+        newScope->body = code->body->pcopy(input);
+
+        //Put the function into the current scope.
+        if(theScope->functions == nullptr){
+            theScope->functions = thisptr;
+        } else {
+            theFunction = theScope->functions;
+            while(theFunction->next != nullptr){
+                theFunction = theFunction->next;
+            }
+            theFunction->next = thisptr;
+        }
+
+        //Add the function to the chain.
+        if(input.allFunctions == nullptr){
+            input.allFunctions = thisptr;
+        } else {
+            theFunction = input.allFunctions;
+            while(theFunction->allFunctions != nullptr){
+                theFunction = theFunction->allFunctions;
+            }
+            theFunction->allFunctions = thisptr;
+        }
+
+        //Move back to the previous scope.
+        input.currScope = input.currScope->parent;
         return thisptr;
     }
 
@@ -1744,20 +1806,24 @@ bool typeCheck(FloridaType inType){
 
         //Traverse the linked lists to find the function.
         //It is guaranteed to exist, but may not be in the current scope.
-        while(input.currScope != nullptr){
-            while(function->name != theFunction->name){
-                theFunction = theFunction->next;
-                if(theFunction == nullptr){
-                    break;
+        while(theScope != nullptr){
+            theFunction = theScope->functions;
+            while(theFunction != nullptr){
+                if(theFunction->name == function->name){
+                    thisptr->function = theFunction;
+
+                    thisptr->function = theFunction;
+                    thisptr->arguments = arguments->pcopy(input);
+
+                    return thisptr;
                 }
+                theFunction = theFunction->next;
             }
             theScope = theScope->parent;
         }
 
-        thisptr->function = theFunction;
-        thisptr->arguments = arguments->pcopy(input);
-
-        return thisptr;
+        //Technically unreachable
+        return nullptr; 
     }
 
     Call* Call::pcopy(StackAllocator& input){
@@ -1768,20 +1834,24 @@ bool typeCheck(FloridaType inType){
 
         //Traverse the linked lists to find the function.
         //It is guaranteed to exist, but may not be in the current scope.
-        while(input.currScope != nullptr){
-            while(function->name != theFunction->name){
-                theFunction = theFunction->next;
-                if(theFunction == nullptr){
-                    break;
+        while(theScope != nullptr){
+            theFunction = theScope->functions;
+            while(theFunction != nullptr){
+                if(theFunction->name == function->name){
+                    thisptr->function = theFunction;
+
+                    thisptr->function = theFunction;
+                    thisptr->arguments = arguments->pcopy(input);
+
+                    return thisptr;
                 }
+                theFunction = theFunction->next;
             }
             theScope = theScope->parent;
         }
 
-        thisptr->function = theFunction;
-        thisptr->arguments = arguments->pcopy(input);
-
-        return thisptr;        
+        //Technically unreachable
+        return nullptr; 
     }
 
 

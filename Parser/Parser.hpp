@@ -48,9 +48,6 @@ public:
     //The StackAllocator keeps my program slightly tidier.
     StackAllocator* stack = nullptr;
 
-//Comments on the rightmost parts of the functions
-//are solely so I can build the parser properly.
-
     bool check(std::string inString);
 
 //Program related functions.
@@ -157,10 +154,10 @@ public:
     }
 
     Parser(std::vector<Token> inTokens, long size){
+        stack = new StackAllocator(size);
         //This is the Global scope.
         stack->currScope = nullptr;
         given = inTokens;
-        stack = new StackAllocator(size);
         errorStack = std::vector<std::string>();
     }
 

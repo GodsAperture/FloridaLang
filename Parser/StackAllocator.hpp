@@ -1,10 +1,15 @@
 #ifndef StackAllocator_h__
 #define StackAllocator_h__
+
 #include <stdlib.h>
 #include <utility>
 #include <new>
 #include <iostream>
 #include "Node.hpp"
+
+class Node;
+class Scope;
+class Function;
 
 class StackAllocator{
 public:
@@ -25,16 +30,12 @@ public:
     //A linked list of all the functions in the program.
     Function* allFunctions = nullptr;
 
-    StackAllocator(long input){
-        head = std::malloc(input);
-        ZEROPTR = (Node*) give();
-        ONEPTR = (Node*) give();
-        current = head;
-        end = (void*) ((size_t) input + (size_t) head);
-    }
+    StackAllocator();
+
+    StackAllocator(long input);
 
     ~StackAllocator(){
-        delete head;
+        free(head);
         head = nullptr;
         ZEROPTR = nullptr;
         ONEPTR = nullptr;
@@ -42,22 +43,23 @@ public:
 
     // Allocates one object at the top of the stack, and allows you to pass parameters to that object's constructor through it's parameters
     template<typename T, typename... Args>
-    T* alloc(Args&&... args) {
+    T* alloc(Args&&... args){
+    
         std::size_t bytes_needed = sizeof(T);
-        bytes_needed += (8 - (bytes_needed % 8)) % 8;
-        if ((std::size_t) current + bytes_needed >= (std::size_t) end) {
+        bytes_needed += 8 - (bytes_needed % 8);
+        if ((char*) current + bytes_needed > (char*) end) {
             throw std::bad_alloc(); // Not enough memory
         }
         T* result = new (current) T(std::forward<Args>(args)...); // Placement new with arguments
-        current = (void*)((std::size_t) current + bytes_needed);
+        current = (void*)((char*) current + bytes_needed);
         return result;
     }
 
     // Deallocate memory, you need to make sure what you are freeing is the last thing allocated
     // Deallocates one object that is assumed to be at the top of the stack
     template<typename T>
-    void dealloc(T* ptr) {
-        if (ptr != head){
+    void dealloc(T* ptr){
+        if(ptr != head){
             std::size_t bytes_needed = sizeof(T);
             bytes_needed += (8 - (bytes_needed % 8)) % 8;
             current = (void*) ((std::size_t) current - bytes_needed);
@@ -66,11 +68,7 @@ public:
     }
 
     //This only exists to create the ZEROPTR, ONEPTR, and FUNPTR.
-    void* give(){
-        void* result = current;
-        current = (void*) ((std::size_t) current + 8);
-        return result;
-    }
+    void* give();
 
     template<typename T>
     void mdealloc(T* ptr){
@@ -83,19 +81,6 @@ public:
     }
 
     //For the statement `StackAllocator.copy(input)`, `input` is made a copy of `StackAllocator`.
-    void copy(StackAllocator& input){
-        //Find out how large the AST is within the original allocation.
-        long long diff = ((long long) current - (long long) head);
-        //Create an allocation of that size.
-        input.head = malloc(diff);
-        //Adjust current to be at `input.head`.
-        input.current = input.head;
-        //Set `input.end`
-        input.end = (void*) ((long long) head + diff);
-        input.ZEROPTR = (Node*) input.give();
-        input.ONEPTR = (Node*) input.give();
-        //Copy the AST from the original to the new StackAllocator. 
-        AST->copy(input);
-    }
+    void copy(StackAllocator& input);
 };
 #endif

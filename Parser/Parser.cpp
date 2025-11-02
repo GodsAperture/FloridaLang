@@ -492,7 +492,9 @@ Node* Parser::AND(){
 //Scopes
 Scope* Parser::scope(){
     //Create a new scope for the object.
-    Scope* newScope = stack->alloc<Scope>(nullptr, nullptr, stack->currScope);
+    Scope* newScope = stack->alloc<Scope>();
+    //Assign the current scope as the parent of the new scope.
+    newScope->parent = stack->currScope;
     //Assign the newest scope to be the current scope.
     stack->currScope = newScope;
     //If there is no other scope, then make it the global scope.
@@ -634,25 +636,16 @@ Node* Parser::commonStatements(){
 //if statement
 Node* Parser::IF(){
     Node* condition = nullptr;
-    size_t variableCount = stack->currScope->varCount();
-    size_t ifVariables = 0;
-    size_t elseVariables = 0;
     IfClass* result = nullptr;
 
     //Check to see if the syntax matches properly.
     if(check("if") & check("(")){
-        Body* ifBody = nullptr;
+        Scope* ifScope = nullptr;
 
         condition = OR();
         //Check for the end of the condition and the start of the body.
         if((condition != nullptr) & check(")") & check("{")){
-            ifBody = body();
-            //Get the proper number of variables in this pseudoscope.
-            ifVariables = stack->currScope->varCount() - variableCount;
-            //Remove the variables in the pseudoscope.
-            for(size_t i = 0; i < ifVariables; i++){
-                stack->currScope->varPop();
-            }
+            ifScope = scope();
         } else {
             error = true;
             //Error here
@@ -665,19 +658,14 @@ Node* Parser::IF(){
         }
 
         //Check for an else statement.
-        Body* elseBody = nullptr; 
+        Scope* elseScope = nullptr; 
         if(check("else") & check("{")){
-            elseBody = body();
-            //the count() method will include the number of variables in the if body.
-            elseVariables = stack->currScope->varCount() - variableCount;
-            for(size_t i = 0; i < elseVariables; i++){
-                stack->currScope->varPop();
-            }
+            elseScope = scope();
         } else {
-            result = stack->alloc<IfClass>(condition, ifBody, elseBody);
-            //Get the number of variables to be popped.
-            result->ifVarCount = ifVariables;
-            result->elseVarCount = elseVariables;
+            result = stack->alloc<IfClass>();
+            result->condition = condition;
+            result->ifBody = ifScope;
+            result->elseBody = elseScope;
             return result;
         }
 
@@ -686,10 +674,10 @@ Node* Parser::IF(){
             error = true;
         }
 
-        //Get the number of variables to be popped.
-        result = stack->alloc<IfClass>(condition, ifBody, elseBody);
-        result->ifVarCount = ifVariables;
-        result->elseVarCount = elseVariables;
+        result = stack->alloc<IfClass>();
+        result->condition = condition;
+        result->ifBody = ifScope;
+        result->elseBody = elseScope;
         return result;
 
     }
@@ -701,19 +689,25 @@ Node* Parser::IF(){
 //for loop
 Node* Parser::FOR(){
     //These first three can remain nullptrs.
-    Node* assign = nullptr;
+    Initialize* initializeVar = nullptr;
+    InitializeAssign* initializeAssignVar = nullptr;
     Node* condition = nullptr;
     Node* incrementer = nullptr;
-    //If the body is a nullptr, then the user provided no code.
-    Body* thisBody = nullptr;
 
     if(check("for") & check("(")){
+        //If the body is a nullptr, then the user provided no code.
+        Scope* thisScope = stack->alloc<Scope>();
+
+        //Make the current scope the new one.
+        thisScope->parent = stack->currScope;
+        stack->currScope = thisScope;
+
         //Get an assignment, if any.
         if(!check(";")){
-            assign = initializeAssign();
+            initializeAssignVar = initializeAssign();
             //Edge case. A new variable could be made.
-            if(assign == nullptr){
-                assign = initialize();
+            if(initializeAssignVar == nullptr){
+                initializeVar = initialize();
             }
             if(!check(";")){
                 error = true;
@@ -740,7 +734,8 @@ Node* Parser::FOR(){
 
         //Build the body of code for the loop.
         if(check("{")){
-            thisBody = body();
+            //Add the body of code to the scope.
+            thisScope->body = body();
         } else {
             error = true;
             std::cout << "Missing { expected on line: " << given[iter].row << "\n";
@@ -753,11 +748,20 @@ Node* Parser::FOR(){
             error = true;
         }
 
-        ForLoop* result = stack->alloc<ForLoop>(assign, condition, incrementer, thisBody);
-        //If there was an initialization, then a variable was generated.
-        if(assign != nullptr){
-            stack->currScope->varPop();
+        ForLoop* result = stack->alloc<ForLoop>();
+        if(initializeVar != nullptr){
+            result->assign = initializeVar;
         }
+        if(initializeAssignVar != nullptr){
+            result->assign = initializeAssignVar;
+        }
+        result->condition = condition;
+        result->incrementer = incrementer;
+        result->body = thisScope;
+
+        //Return to the outer scope.
+        stack->currScope = stack->currScope->parent;
+
         return result;
 
     }
@@ -770,7 +774,7 @@ Node* Parser::FOR(){
 Node* Parser::WHILE(){
     if(check("while") & check("(")){
         Node* condition = nullptr;
-        Body* thisBody = nullptr;
+        Scope* theScope = nullptr;
         WhileLoop* result = nullptr;
 
         //If this is a nullptr, then it will run perpetually.
@@ -785,8 +789,8 @@ Node* Parser::WHILE(){
             return nullptr;
         }
 
-        thisBody = body();
-        if(thisBody == nullptr){
+        theScope = scope();
+        if(theScope == nullptr){
             error = true;
             return nullptr;
         }
@@ -796,7 +800,10 @@ Node* Parser::WHILE(){
             return nullptr;
         }
 
-        result = stack->alloc<WhileLoop>(condition, thisBody);
+        result = stack->alloc<WhileLoop>();
+        result->condition = condition;
+        result->body = theScope;
+
         return result;
 
     }
@@ -949,9 +956,15 @@ Node* Parser::function(){
     bool bool3 = given[iter + 2].getName() == "(";
 
     if(bool1 & bool2 & bool3){
-        Function* result = stack->alloc<Function>(returnable, name, nullptr);
+        Function* result = stack->alloc<Function>();
+        result->returnable = returnable;
+        result->name = name;
+
+
         result->type = returnType;
-        Scope* newScope = stack->alloc<Scope>(nullptr, nullptr, stack->currScope);
+        int64_t variableCount = 0;
+        Scope* newScope = stack->alloc<Scope>();
+        newScope->parent = stack->currScope;
         result->code = newScope;
         stack->currScope = newScope;
         iter++;
@@ -960,9 +973,11 @@ Node* Parser::function(){
 
         Initialize* hasInitialization = initialize();
         if(hasInitialization != nullptr){
+            variableCount++;
             //Check for more initializations.
             while(check(",")){
                 hasInitialization = initialize();
+                variableCount++;
             }
         }
 
@@ -973,7 +988,8 @@ Node* Parser::function(){
 
         //It doesn't matter if this is a nullptr or not.
         result->code->body = body();
-        //std::cout << result->code->ToString(">>", ";");
+        //How many arguments are expected in the function.
+        result->argumentCount = variableCount;
 
         if(!check("}")){
             error = true;

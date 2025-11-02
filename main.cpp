@@ -15,7 +15,7 @@
 
 	// //A simple conditionally recursive integration method.
 	// double recint(double (fun)(double), double x0, double x2){
-	// 	return simp(fun, x0, x2, fun	(x0), fun(x2));
+	// 	return simp(fun, x0, x2, fun(x0), fun(x2));
 	// }
 
 	// double simp(double (fun)(double), double x0, double x2, double y0, double y2){
@@ -76,11 +76,8 @@ int main(){
 	//Parse over the list and make sure that the expression is acceptable.
 	Parser FloridaParser = Parser(theList, 10000);
 	FloridaParser.parse();
-	std::cout << "\n\n\nHello world!\n\x1b[1A";
-	std::cout << "Bye bye!\n\n\n";
-	printf("\x1b[1;1H");
-	printf("Hello again!\n");
-	std::cout << FloridaParser.result->ToString("", ";") << "\n";
+
+	std::cout << FloridaParser.stack->AST->ToString("", "") << "\n";
 
 	//If the error flag has been raised, then
 	//terminate the program and print out the errors.
@@ -91,8 +88,8 @@ int main(){
 
 	//Make the virtual machine.
 	FloridaVM Florida = FloridaVM(FloridaParser);
-	//Debug the bytecode.
 	Florida.printAll();
+	//Debug the bytecode.
 
 	//Execute the instructions
 	bool successful = true;

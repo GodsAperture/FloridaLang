@@ -46,7 +46,7 @@ public:
     std::vector<Instruction> programInstructions = std::vector<Instruction>();
     //The pseudo-stack of the language.
     std::vector<types> computationVector = std::vector<types>();
-    //The call stack. The stack that manages the functions.
+    //The call stack. The stack that manages the function calls.
     callAllocator* allCalls = nullptr;
 
     //The abstract syntax tree of the program.
@@ -82,7 +82,7 @@ public:
 
     FloridaVM(Parser input){
         //Generate the function bytecode.
-        input.allFunctions->FLVMCodeGen(programInstructions);
+        input.stack->allFunctions->FLVMCodeGen(programInstructions);
         //The function stack. The stack for the functions.
         allCalls = new callAllocator(100 * sizeof(CallStack));
         //Create the first call, which is the main program.
@@ -93,11 +93,11 @@ public:
         //Adjust the start of the program.
         instructionNumber = programInstructions.size();
         //Generate the rest of the instructions.
-        input.result->FLVMCodeGen(programInstructions);
+        input.stack->AST->FLVMCodeGen(programInstructions);
         //Obtain the abstract syntax tree.
-        AST = input.result;
+        AST = input.stack->AST;
         //Obtain all function definitions
-        allFunctions = input.allFunctions;
+        allFunctions = input.stack->allFunctions;
     }
 
     ~FloridaVM(){
