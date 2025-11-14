@@ -36,27 +36,31 @@ inline void padRight(std::string input, std::string number){
 
 
 
-void FloridaVM::callNew(){
+ExistingScope* FloridaVM::callNew(){
     if(allCalls->head < allCalls->end){
-        allCalls->head = new(allCalls->current) CallStack();
+        allCalls->head = new(allCalls->current) ExistingScope();
         allCalls->top = allCalls->current;
-        allCalls->current = (CallStack*) (sizeof(CallStack) + (size_t) allCalls->current);
+        allCalls->current = (ExistingScope*) (sizeof(ExistingScope) + (size_t) allCalls->current);
+        return allCalls->current;
     } else {
-        std::cout << "The callAllocator does not have enough memory.\nThe limit of " + std::to_string(((size_t)(allCalls->end) - (size_t)(allCalls->head)) / sizeof(CallStack)) + " was exceeded.";
+        std::cout << "The callAllocator does not have enough memory.\nThe limit of " + std::to_string(((size_t)(allCalls->end) - (size_t)(allCalls->head)) / sizeof(ExistingScope)) + " was exceeded.";
         std::bad_alloc();
     }
+
+    //Unreachable
+    return nullptr;
 }
 
 void FloridaVM::callPop(){
     if(allCalls->current != allCalls->head){
         allCalls->current = allCalls->head;
-        allCalls->head = (CallStack*) ((size_t) (allCalls->head) - sizeof(CallStack));
+        allCalls->head = (ExistingScope*) ((size_t) (allCalls->head) - sizeof(ExistingScope));
     } else {
         std::cout << "The virtual machine has attempted to release a scope it does not have.";
     }
 }
 
-CallStack* FloridaVM::callTop(){
+ExistingScope* FloridaVM::callTop(){
     return allCalls->top;
 }
 
@@ -74,100 +78,12 @@ void FloridaVM::printAll(){
     std::cout << result + AST->printAll();
 }
 
-void FloridaVM::printInstructions(){
-    Operation oper;
-    int64_t literal;
-    for(size_t i = 0; i < programInstructions.size(); i++){
-        oper  = programInstructions[i].oper;
-        literal = programInstructions[i].literal.fixed64;
-        switch(oper){
-            case Operation::scope:
-                padRight("scope");
-                continue;
-            case Operation::call:
-                padRight("call", std::to_string(literal));
-                continue;
-            case Operation::ireturn:
-                padRight("ireturn");
-                continue;
-            case Operation::gfetch:
-                padRight("gfetch", std::to_string(literal));
-                continue;
-            case Operation::lfetch:
-                padRight("lfetch", std::to_string(literal));
-                continue;
-            case Operation::cjump:
-                padRight("cjump", std::to_string(literal));
-                continue;
-            case Operation::jump:
-                padRight("jump", std::to_string(literal));
-                continue;
-            case Operation::initialize:
-                padRight("initialize");
-                continue;
-            case Operation::gassign:
-                padRight("gassign", std::to_string(literal));
-                continue;
-            case Operation::lassign:
-                padRight("lassign", std::to_string(literal));
-                continue;
-            case Operation::push:
-                padRight("push", std::to_string(literal));
-                continue;
-            case Operation::pop:
-                padRight("pop");
-                continue;
-            case Operation::multiply:
-                padRight("multiply");
-                continue;
-            case Operation::divide:
-                padRight("divide");
-                continue;
-            case Operation::add:
-                padRight("add");
-                continue;
-            case Operation::negate:
-                padRight("negate");
-                continue;
-            case Operation::equals:
-                padRight("equals");
-                continue;
-            case Operation::nequals:
-                padRight("nequals");
-                continue;
-            case Operation::greater:
-                padRight("greater");
-                continue;
-            case Operation::greateror:
-                padRight("greaterOr");
-                continue;
-            case Operation::lesser:
-                padRight("lesser");
-                continue;
-            case Operation::lesseror:
-                padRight("lesseror");
-                continue;
-            case Operation::ior:
-                padRight("ior");
-                continue;
-            case Operation::iand:
-                padRight("iand");
-                continue;
-            case Operation::inot:
-                padRight("inot");
-                continue;
-            default:
-                padRight("UNKOWN");
-                return;
-        }
-    }
-}
-
 bool FloridaVM::next(){
     //left and right hand members for operations.
     types left;
     types right;
     types result;
+    ExistingScope* newScope = nullptr;
 
     //Check to see if all of instructions have been executed.
     if(instructionNumber >= programInstructions.size()){
@@ -178,19 +94,29 @@ bool FloridaVM::next(){
         case Operation::call:
             //Move the instruction to the start of its instruction set.
             instructionNumber = programInstructions[instructionNumber].literal.fixed64;
-            callTop()->instNumber = instructionNumber;
+            //Adjust the instruction number of the Existing Scope.
+            callTop()->instructionNumber = instructionNumber;
             return true;
-        case Operation::scope:
-            //The new reference frame is the size of the vector.
+        case Operation::newScope:
+            //Create a new scope in the call stack.
             callNew();
+            //Define the base pointer for the new ExistingScope.
             callTop()->reference = reference;
+            //Adjust the VM's current reference to be the new size of the vector.
             reference = computationVector.size();
+            break;
+        case Operation::deleteScope:
+            //Readjust the reference to be the prior reference.
+            reference = callTop()->reference;
+            //Pop the Existing Scope from the scope stack.
+            callPop();
             break;
         case Operation::ireturn:
             //Adjust these to pre-scope values.
             reference = callTop()->reference;
-            instructionNumber = callTop()->instNumber;
-            //Remove the scope
+            //Adjust the instruction number to be whatever it was before the call.
+            instructionNumber = callTop()->instructionNumber;
+            //Remove the scope from the call stack.
             callPop();
             //Move the result to the top of the old stack.
             computationVector[reference] = top();
@@ -220,6 +146,8 @@ bool FloridaVM::next(){
             //Push the global value onto the stack.
             computationVector.push_back(computationVector[programInstructions[instructionNumber].literal.fixed64]);
             break;
+/*This*/case Operation::mfetch:
+            break;
         case Operation::lfetch:
             //Push the local value onto the stack.
             computationVector.push_back(computationVector[reference + programInstructions[instructionNumber].literal.fixed64]);
@@ -230,6 +158,9 @@ bool FloridaVM::next(){
             break;
         case Operation::gassign:
             computationVector[programInstructions[instructionNumber].literal.fixed64] = top();
+            pop();
+            break;
+/*This*/case Operation::massign:
             pop();
             break;
         case Operation::lassign:

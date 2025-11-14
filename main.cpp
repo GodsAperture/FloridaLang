@@ -91,7 +91,7 @@ int main(){
 	Florida.printAll();
 	//Debug the bytecode.
 
-	//Execute the instructions
+	//Execute the instructions.
 	bool successful = true;
 	while(successful){
 		successful = Florida.next();

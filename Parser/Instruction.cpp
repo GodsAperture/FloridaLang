@@ -5,17 +5,23 @@
 #include "../Lexer/Types.hpp"
 #include "../Lexer/Token.hpp"
 
+class Scope;
+
 enum Operation{
-    scope,
+    newScope,
+    deleteScope,
     call,
     ireturn,
     gfetch,
+    mfetch,
     lfetch,
     cjump,
     jump,
 
+    //Variable related operations
     initialize,
     gassign,
+    massign,
     lassign,
     push,
     pop,
@@ -61,6 +67,8 @@ union types{
     uint32_t ufixed32;
     uint16_t ufixed16;
     uint8_t ufixed8;
+
+    Scope* scope;
 };
 
 class Instruction{

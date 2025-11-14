@@ -143,12 +143,6 @@ bool typeCheck(FloridaType inType){
         return nullptr;
     }
 
-    Scope::Scope(Body* inBody, Variable* inVariables, Scope* inParent){
-        body = inBody;
-        variables = inVariables;
-        parent = inParent;
-    }
-
     void Scope::push(Variable* input){
         //If there are no variables, then just slap the variable onto the list.
         if(variables == nullptr){
@@ -230,9 +224,11 @@ bool typeCheck(FloridaType inType){
     }
 
     void Scope::FLVMCodeGen(std::vector<Instruction>& inInstructions){
+        inInstructions.push_back(Instruction(newScope));
         if(body != nullptr){
             body->FLVMCodeGen(inInstructions);
         }
+        inInstructions.push_back(Instruction(deleteScope));
     }
 
     Node* Scope::copy(StackAllocator& input){
@@ -373,20 +369,6 @@ bool typeCheck(FloridaType inType){
         //Do nothing. It's not a problem.
     }
 
-    Variable::Variable(Token inToken, int64_t inDistance, bool inIsLocal){
-        thisToken = inToken;
-        distance = inDistance;
-        isLocal = inIsLocal;
-        next = nullptr;
-    }
-
-    Variable::Variable(Variable* inVariable){
-        thisToken = inVariable->thisToken;
-        distance = inVariable->distance;
-        isLocal = inVariable->isLocal;
-        next = inVariable->next;
-    }
-
     void Variable::append(Variable* input){
         Variable* currVar = this;
         if(currVar->next != nullptr){
@@ -404,20 +386,42 @@ bool typeCheck(FloridaType inType){
     }
 
     std::string Variable::printAll(){
-        if(isLocal){
+        if(where == 0){
             return padding2(padding("lfetch") + std::to_string(distance)) + "(*Variable " + thisToken.getName() + "*)\n";
-        } else {
+        }
+        if(where == 1){
+            return padding2(padding("push") + std::to_string(reinterpret_cast<uintptr_t>(owner))) + "\n" + padding2(padding("mfetch") + std::to_string(distance)) + "(*Variable " + thisToken.getName() + "*)\n";            
+        }
+        if(where == 2){
             return padding2(padding("gfetch") + std::to_string(distance)) + "(*Variable " + thisToken.getName() + "*)\n";
         }
+        //Unreachable.
+        return "";
     }
 
     void Variable::FLVMCodeGen(std::vector<Instruction>& inInstructions){
-        if(isLocal){
+        Instruction inst;
+        if(where == 0){
+            inst.oper = lfetch;
+            inst.literal.fixed64 = distance;
             //Push back the instruction for local variable.
-            inInstructions.push_back(Instruction(lfetch, distance));
-        } else {
+            inInstructions.push_back(inst);
+        } 
+        if(where == 1){
+            inst.oper = push;
+            inst.literal.scope = owner;
+            //Push the push instruction onto the stack.
+            inInstructions.push_back(inst);
+            inst.oper = mfetch;
+            inst.literal.fixed64 = distance;
+            //Push the mfetch instruction onto the stack.
+            inInstructions.push_back(inst);
+        }
+        if(where == 2){
+            inst.oper = gfetch;
+            inst.literal.fixed64 = distance;
             //Push back the instruction for the global variable.
-            inInstructions.push_back(Instruction(gfetch, distance));
+            inInstructions.push_back(inst);
         }
     }
 
@@ -425,7 +429,7 @@ bool typeCheck(FloridaType inType){
         Variable* thisptr = input.alloc<Variable>();
 
         thisptr->thisToken = thisToken;
-        thisptr->isLocal = isLocal;
+        thisptr->where = where;
         thisptr->distance = distance;
         thisptr->value = value;
         thisptr->type = type;
@@ -437,7 +441,7 @@ bool typeCheck(FloridaType inType){
         Variable* thisptr = input.alloc<Variable>();
 
         thisptr->thisToken = thisToken;
-        thisptr->isLocal = isLocal;
+        thisptr->where = where;
         thisptr->distance = distance;
         thisptr->value = value;
         thisptr->type = type;
@@ -504,26 +508,29 @@ bool typeCheck(FloridaType inType){
     }
 
     std::string InitializeAssign::printAll(){
-        std::string thing = "gassign";
-        if(thisVariable->isLocal){
+        std::string thing = "";
+        if(thisVariable->where == 0){
             thing = "lassign";
+        }
+        if(thisVariable->where == 1){
+            thing = "massign";
+        }
+        if(thisVariable->where == 2){
+            thing = "gassign";
         }
         return padding2("initialize") + "(*Variable " + thisVariable->thisToken.getName() + "*)\n" + code->printAll() + padding2(padding(thing) + std::to_string(thisVariable->distance)) + "(*Variable " + thisVariable->thisToken.getName() + "*)\n";
     }
 
     void InitializeAssign::FLVMCodeGen(std::vector<Instruction>& inInstructions){
+        Instruction inst;
         //Push back a placeholder.
         inInstructions.push_back(Instruction(Operation::initialize, 0));
-
         //Generate the code for the right hand side.
         code->FLVMCodeGen(inInstructions);
-
-        //Generate the assignment using the variable.
-        if(thisVariable->isLocal){
-            inInstructions.push_back(Instruction(lassign, thisVariable->distance));
-        } else {
-            inInstructions.push_back(Instruction(gassign, thisVariable->distance));
-        }
+        inst.oper = lassign;
+        inst.literal.fixed64 = thisVariable->distance;
+        //Assign it to the local variable.
+        inInstructions.push_back(inst);
     }
 
     Node* InitializeAssign::copy(StackAllocator& input){
@@ -569,21 +576,45 @@ bool typeCheck(FloridaType inType){
     }
 
     std::string Assignment::printAll(){
-        if(thisVariable->isLocal){
+        if(thisVariable->where == 0){
             return code->printAll() + padding2(padding("lassign") + std::to_string(thisVariable->distance)) + "(*Variable " + thisVariable->thisToken.getName() + "*)\n";
-        } else {
+        }
+        if(thisVariable->where == 1){
+            return padding2(padding("push") + std::to_string(reinterpret_cast<uintptr_t>(thisVariable->owner))) + "\n" + padding2(padding("massign") + std::to_string(thisVariable->distance)) + "(*Variable " + thisVariable->thisToken.getName() + "*)\n";            
+        }
+        if(thisVariable->where == 2){
             return code->printAll() + padding2(padding("gassign") + std::to_string(thisVariable->distance)) + "(*Variable " + thisVariable->thisToken.getName() + "*)\n";
         }
+        //Unreachable
+        return "";
     }
 
     void Assignment::FLVMCodeGen(std::vector<Instruction>& inInstructions){
+        Instruction inst;
         //Generate code for the assignment.
         code->FLVMCodeGen(inInstructions);
         //Push back the instruction for assignment.
-        if(thisVariable->isLocal){
-            inInstructions.push_back(Instruction(lassign, thisVariable->distance));
-        } else {
-            inInstructions.push_back(Instruction(gassign, thisVariable->distance));
+        if(thisVariable->where == 0){
+            inst.oper = lassign;
+            inst.literal.fixed64 = thisVariable->distance;
+            inInstructions.push_back(inst);
+            return;
+        }
+        if(thisVariable->where == 1){
+            inst.oper = push;
+            inst.literal.scope = thisVariable->owner;
+            //Add the location of the scope in the instruction set.
+            inInstructions.push_back(inst);
+            inst.oper = massign;
+            inst.literal.fixed64 = thisVariable->distance;
+            //Push back the assignment instruction.
+            inInstructions.push_back(inst);
+        }
+        if(thisVariable->where == 2){
+            inst.oper = gassign;
+            inst.literal.fixed64 = thisVariable->distance;
+            inInstructions.push_back(inst);
+            return;
         }
     }
 
@@ -1270,13 +1301,14 @@ bool typeCheck(FloridaType inType){
 
     std::string IfClass::ToString(std::string inLeft, std::string inRight){
         if(elseBody == nullptr){
-            return inLeft + "if(" + condition->ToString(inLeft, inRight) + "){\n" + 
-            ifBody->ToString("  " + inLeft, ";") +
+            return inLeft + "\x1b[36mif\x1b[0m(" + condition->ToString(inLeft, inRight) + "){\n" + 
+            ifBody->ToString("  " + inLeft, ";") + "\n" +
             inLeft + "}";
         } else {
-            return inLeft + "if(" + condition->ToString(inLeft, ";") + "){\n" + 
+            return inLeft + "\x1b[36mif\x1b[0m(" + condition->ToString(inLeft, ";") + "){\n" + 
             ifBody->ToString("  " + inLeft, inRight) + "\n" +
-            inLeft + "} else {\n" + elseBody->ToString("  " + inLeft, ";") + "\n" + inLeft + "}";
+            inLeft + "} else {\n" + elseBody->ToString("  " + inLeft, ";") + "\n" +
+            inLeft + "}";
         }
     }
 
@@ -1306,11 +1338,6 @@ bool typeCheck(FloridaType inType){
             inInstructions.push_back(Instruction(Operation::cjump));
             ifBody->FLVMCodeGen(inInstructions);
 
-            //Place a pop instruction for each local variable.
-            for(size_t i = 0; i < ifVarCount; i++){
-                inInstructions.push_back(Instruction(Operation::pop));
-            }
-
             //Adjust the conditional jump destination.
             inInstructions[cjumpPosition].literal.fixed64 = inInstructions.size();
         } else {
@@ -1325,11 +1352,6 @@ bool typeCheck(FloridaType inType){
             inInstructions.push_back(Instruction(Operation::cjump));
             ifBody->FLVMCodeGen(inInstructions);
 
-            //Place a pop instruction for each local variable.
-            for(size_t i = 0; i < ifVarCount; i++){
-                inInstructions.push_back(Instruction(Operation::pop));
-            }
-
             //Push an unconditional jump to skip over the else statement.
             //This will only be reached if the first branch is taken.
             inInstructions.push_back(Instruction(Operation::jump));
@@ -1342,11 +1364,6 @@ bool typeCheck(FloridaType inType){
             
             //Generate the bytecode for the else statement.
             elseBody->FLVMCodeGen(inInstructions);
-
-            //Place a pop instruction for each variable in the elseBody.
-            for(size_t i = 0; i < elseVarCount; i++){
-                inInstructions.push_back(Instruction(Operation::pop));
-            }
 
             //Adjust the unconditional jump destination.
             inInstructions[endIfSize - 1].literal.fixed64 = inInstructions.size();
@@ -1466,6 +1483,9 @@ bool typeCheck(FloridaType inType){
             assign->FLVMCodeGen(inInstructions);
         }
 
+        //Start the scope, because we don't want to continually assign/initialize.
+        inInstructions.push_back(Instruction(Operation::newScope));
+
         //This will be where the end of the loop will unconditionally jump to.
         int64_t jumpTo = inInstructions.size();
 
@@ -1482,7 +1502,7 @@ bool typeCheck(FloridaType inType){
         inInstructions.push_back(Instruction(Operation::cjump));
 
         //Add the body of instructions.
-        body->FLVMCodeGen(inInstructions);
+        body->body->FLVMCodeGen(inInstructions);
 
         //Add another line of code for changes at the end of the loop.
         if(incrementer != nullptr){
@@ -1491,12 +1511,12 @@ bool typeCheck(FloridaType inType){
 
         //Place the unconditional jump instruction at the end.
         inInstructions.push_back(Instruction(jump, jumpTo));
+
+        //Adjust the position of the conditional jump to be outside of the loop
         inInstructions[cjumpPosition].literal.fixed64 = inInstructions.size();
 
-        //Place a pop instruction if there was an initialization.
-        if(assign != nullptr){
-            inInstructions.push_back(Instruction(Operation::pop));
-        }
+        //End the existing scope.
+        inInstructions.push_back(Instruction(Operation::deleteScope));
     }
 
     Node* ForLoop::copy(StackAllocator& input){
@@ -1569,6 +1589,8 @@ bool typeCheck(FloridaType inType){
     }
 
     void WhileLoop::FLVMCodeGen(std::vector<Instruction>& inInstructions){
+        //Start of the scope, granted while loops don't really need scope. It just make work easier for me.
+        inInstructions.push_back(Instruction(Operation::newScope));
         //Where the unconditional jump will always land.
         size_t start = inInstructions.size();
         //Generate the code for the condition.
@@ -1578,11 +1600,13 @@ bool typeCheck(FloridaType inType){
         //Lay down the conditional jump.
         inInstructions.push_back(Instruction(Operation::cjump));
         //Generate the code for the body.
-        body->FLVMCodeGen(inInstructions);
+        body->body->FLVMCodeGen(inInstructions);
         //Place an unconditional jump to restart the loop.
         inInstructions.push_back(Instruction(Operation::jump, start));
         //Adjust where the unconditional jump will land.
         inInstructions[here].literal.fixed64 = inInstructions.size();
+        //End the scope.
+        inInstructions.push_back(Instruction(Operation::deleteScope));
     }
 
     Node* WhileLoop::copy(StackAllocator& input){
@@ -1635,7 +1659,7 @@ bool typeCheck(FloridaType inType){
         //Return the function printed in the only correct format.
         std::string result = inLeft + "\x1b[36m" + typeString(type) + "\x1b[35m " + std::string(name) + "\x1b[0m(" + varString + "){\n" + 
             code->ToString("  " + inLeft, ";") +
-        "\n" + inLeft + "}\n\n";
+        "\n" + inLeft + "}\n";
 
         if(next != nullptr){
             return result + next->ToString(inLeft, inRight);
@@ -1774,24 +1798,11 @@ bool typeCheck(FloridaType inType){
     }
 
     void Call::FLVMCodeGen(std::vector<Instruction>& inInstructions){
-        //Where the scope instruction sits.
-        //size_t where = inInstructions.size();
-        //Make the function call after the function's arguments are created.
-        inInstructions.push_back(Instruction(Operation::scope, 0));
+        //Start the scope here.
+        inInstructions.push_back(Instruction(Operation::newScope));
+        //Generate the arguments, if any.
         if(arguments != nullptr){
-            Arguments* currBody = arguments;
-            int64_t count = 0;
-            while(currBody != nullptr){
-                //Initialize for the argument
-                inInstructions.push_back(Instruction(Operation::initialize, 0));
-                //Generate code for the argument.
-                currBody->current->FLVMCodeGen(inInstructions);
-                //Move to the next node in the linked list.
-                currBody = currBody->next;
-                //Assign it to the initialization made before.
-                inInstructions.push_back(Instruction(Operation::lassign, count));
-                count++;
-            }
+            arguments->FLVMCodeGen(inInstructions);
         }
 
         //Make the function call after the function's arguments are created.
@@ -1892,7 +1903,7 @@ bool typeCheck(FloridaType inType){
 
     void Arguments::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         Arguments* currArgs = this;
-        while(currArgs != nullptr){
+        while(currArgs->current != nullptr){
             currArgs->current->FLVMCodeGen(inInstructions);
             currArgs = currArgs->next;
         }
@@ -1971,32 +1982,6 @@ bool typeCheck(FloridaType inType){
 
 
 //CallStack
-    CallStack::CallStack(){
-        thisScope = nullptr;
-        reference = 0;
-        instNumber = 0;
-    }
-
-    CallStack::CallStack(Scope* inTheScope, uint64_t inReference, uint64_t inInstNumber){
-        thisScope = inTheScope;
-        reference = inReference;
-        instNumber = inInstNumber;
-    }
-
-    int64_t CallStack::where(Variable* inVariable){
-        if(thisScope->variables == nullptr){
-            return -1;
-        }
-
-        Variable* currVar = thisScope->variables;
-        int64_t count = 0;
-        while(currVar != nullptr){
-            if(currVar->thisToken.getName() == inVariable->thisToken.getName()){
-                return count;
-            }
-            currVar = currVar->next;
-            count++;
-        }
-
-        return -1;
+    ExistingScope::ExistingScope(){
+        //Do nothing lmao.
     }

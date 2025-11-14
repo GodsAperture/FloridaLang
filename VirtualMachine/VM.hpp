@@ -13,23 +13,24 @@
 class FloridaVM{
 public:
 
-    class callAllocator{
+    //This will emulate function calls.
+    class CallAllocator{
     public:
-        CallStack* head = nullptr;
-        CallStack* top = nullptr;
-        CallStack* current = nullptr;
-        CallStack* end = nullptr;
+        ExistingScope* head = nullptr;
+        ExistingScope* top = nullptr;
+        ExistingScope* current = nullptr;
+        ExistingScope* end = nullptr;
 
-        callAllocator(uint64_t input){
+        CallAllocator(uint64_t input){
             //Generate the calls allocator.
-            head = (CallStack*) malloc(input * sizeof(CallStack));
+            head = (ExistingScope*) malloc(input * sizeof(ExistingScope));
             //The current pointer will be the start.
             current = head;
-            //The
-            end = (CallStack*) (input * sizeof(CallStack) + (size_t) head);
+            //The end of the memory region.
+            end = (ExistingScope*) (input * sizeof(ExistingScope) + (size_t) head);
         }
 
-        ~callAllocator(){
+        ~CallAllocator(){
             delete head;
             head = nullptr;
             current = nullptr;
@@ -47,7 +48,7 @@ public:
     //The pseudo-stack of the language.
     std::vector<types> computationVector = std::vector<types>();
     //The call stack. The stack that manages the function calls.
-    callAllocator* allCalls = nullptr;
+    CallAllocator* allCalls = nullptr;
 
     //The abstract syntax tree of the program.
     Node* AST = nullptr;
@@ -59,8 +60,6 @@ public:
     //Prints the current instruction, the next instruction, and the instruction number.
     //Returns `true` if an instruction was successfully executed.
     bool debuggerNext();
-    //Prints all of the instructions and any relevant values.
-    void printInstructions();
     //Prints the stack from the bottom to the end of the vector.
     void printStack();
     //Prints the stack with some prettier debugging.
@@ -74,21 +73,19 @@ public:
 
     //Call stack related methods.
     //Generate a new callStack object in the Stack Allocator.
-    void callNew();
+    ExistingScope* callNew();
     //Pop the top-most callStack from the Stack Allocator.
     void callPop();
     //Get the topmost element from the Stack Allocator.
-    CallStack* callTop();
+    ExistingScope* callTop();
 
     FloridaVM(Parser input){
         //Generate the function bytecode.
         input.stack->allFunctions->FLVMCodeGen(programInstructions);
         //The function stack. The stack for the functions.
-        allCalls = new callAllocator(100 * sizeof(CallStack));
+        allCalls = new CallAllocator(100 * sizeof(ExistingScope));
         //Create the first call, which is the main program.
         callNew();
-        //Make it so that the first call will end the program upon returning.
-        callTop()->instNumber = programInstructions.size();
         callTop()->reference = 0;
         //Adjust the start of the program.
         instructionNumber = programInstructions.size();

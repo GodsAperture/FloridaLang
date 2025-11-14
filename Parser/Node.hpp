@@ -17,6 +17,7 @@ FloridaType typeReturn(std::string inString);
 bool typeCheck(FloridaType inType);
 
 class StackAllocator;
+class Scope;
 
 //If you need to be told what a node is, God help you.
 class Node{
@@ -59,18 +60,19 @@ public:
 class Variable : public Node{
 public:
     Token thisToken;//There exists a default Token() constructor.
-    bool isLocal = false;
+    //0 = local, 1 = middle, 2 = global, 3 = error. 
+    char where = 3;
+    Scope* owner = nullptr;
     int64_t distance = -1;
     types value;
     Variable* next = nullptr;
     FloridaType type = FloridaType::BadToken;
 
     Variable();
-    Variable(Token thisToken, int64_t inDistance, bool inIsLocal);
-    Variable(Variable* inVariable);
     void operator=(Variable* input){
         this->thisToken = input->thisToken;
-        this->isLocal = input->isLocal;
+        this->owner = input->owner;
+        this->where = input->where;
         this->distance = input->distance;
         this->next = input->next;
     };
@@ -86,12 +88,18 @@ class Scope : public Node{
     public:
         //This points to the outerscope.
         Scope* parent = nullptr;
+        //The unique Existing Scope for this Scope.
+        ExistingScope* stackScope;
         //This is the body of code within the scope.
         Body* body = nullptr;
         //This will be the variables of the current scope.
         Variable* variables = nullptr;
         //A "linked list" of functions for the current scope.
         Function* functions = nullptr;
+        //The counter will determine which index to use in the BasePointerArray in the VM.
+        uint64_t whichScope = 0;
+        //0 = function, 1 = method, 2 = if, 3 = while, 4 = for, 5 = do-while, 6 = error.
+        char scopeType = 6;
 
         //Find where in some given Scope a particular variable lies.
         //If it does not exist in the scope, it returns -1.
@@ -109,7 +117,6 @@ class Scope : public Node{
 
         //Standard methods.
         Scope();
-        Scope(Body* inBody, Variable* inScope, Scope* inParent);
         std::string ToString(std::string inLeft, std::string inRight) override;
         std::string printAll() override;
         void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
@@ -524,24 +531,22 @@ public:
     ReturnClass* pcopy(StackAllocator& input);
 };
 
-class CallStack{
+//This will be placed on a separate stack to track which scope is current.
+class ExistingScope{
 public:
-    Scope* thisScope;
-    uint64_t reference;
-    uint64_t instNumber;
+    //The counter will determine which index to use in the BasePointerArray in the VM.
+    uint64_t whichScope = 0;
+    //This is the base pointer when the scope is created.
+    uint64_t reference = 0;
+    //This is the instruction number when the scope is created.
+    uint64_t instructionNumber = 0;
 
-    CallStack();
-    CallStack(Scope* inTheScope, uint64_t inReference, uint64_t inInstNumber);
-    int64_t where(Variable* inVariable);
-};
-
-class SomeScope{
-public:
-    Scope* theScope = nullptr;
-    uint64_t basePointer = 0;
-    uint64_t previousBase = 0;
-
-    SomeScope();
+    ExistingScope();
+    void operator=(ExistingScope right){
+        whichScope = right.whichScope;
+        reference = right.reference;
+        instructionNumber = right.instructionNumber;
+    }
 };
 
 #endif

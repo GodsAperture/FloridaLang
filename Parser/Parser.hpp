@@ -39,6 +39,10 @@ public:
 
     //The iterator points to the current token.
     uint64_t iter = 0;
+    //This keep track of how many scopes have been found.
+    uint64_t scopeCount = 0;
+    //Retain a vector for all of the existing scopes.
+    std::vector<ExistingScope*> allScopes = std::vector<ExistingScope*>();
     //Error flag for errors.
     bool error = false;
     //All the errors logged.

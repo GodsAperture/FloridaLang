@@ -493,6 +493,17 @@ Node* Parser::AND(){
 Scope* Parser::scope(){
     //Create a new scope for the object.
     Scope* newScope = stack->alloc<Scope>();
+
+    //Set the scope value for use later in the VM.
+    newScope->whichScope = scopeCount;
+    //Increment the scope counter in the parser.
+    scopeCount++;
+
+    //Push back an empty existing scope. Don't worry about its contents.
+    ExistingScope* someScopePtr = new ExistingScope();
+    allScopes.push_back(someScopePtr);
+    newScope->stackScope = someScopePtr;
+
     //Assign the current scope as the parent of the new scope.
     newScope->parent = stack->currScope;
     //Assign the newest scope to be the current scope.
@@ -698,6 +709,16 @@ Node* Parser::FOR(){
         //If the body is a nullptr, then the user provided no code.
         Scope* thisScope = stack->alloc<Scope>();
 
+        //Assign the scopes its unique scope value.
+        thisScope->whichScope = scopeCount;
+        //Increment the scope counter.
+        scopeCount++;
+
+        //Push back an empty existing scope. Don't worry about its contents.
+        ExistingScope* existingScopePtr = new ExistingScope();
+        allScopes.push_back(existingScopePtr);
+        thisScope->stackScope = existingScopePtr;
+
         //Make the current scope the new one.
         thisScope->parent = stack->currScope;
         stack->currScope = thisScope;
@@ -818,33 +839,47 @@ Variable* Parser::variable(){
     }
     //Check to see if the variable is a valid token.
     if((given[iter].getType() == FloridaType::Identifier) & (given[iter + 1].getName() != "(")){
-        bool isLocal = false;
+        char where = 3;
         Scope* thisScope = stack->currScope;
-        //Find the variable in any of the prior connected scopes.
-        while(thisScope->parent != nullptr){
-            if(thisScope->varWhere(given[iter].getName()) != -1){
-                isLocal = true;
-                break;
+        int64_t position = -1;
+        //Find what scope the variable resides in.
+        while(position == -1){
+            //If we have gone through all scopes, the variable doesn't exist.
+            if(thisScope == nullptr){
+                std::cout << "Unknown variable '" << given[iter].getName() << "' was not found in any reachable scope.\n";
+                return nullptr;
             } else {
-                thisScope = thisScope->parent;
+                //If a value other than -1 is returned, then we break from the loop.
+                position = thisScope->varWhere(given[iter].getName());
+                if(position == -1){
+                    thisScope = thisScope->parent;
+                } else {
+                    break;
+                }
             }
         }
 
-        //The given variable does not exist if where(given[iter].getName()) returns -1.
-        if(thisScope->varWhere(given[iter].getName()) == -1){
-            std::cout << "Unknown variable: " << given[iter].getName() << "\n";
-            return nullptr;
+        //Determine if lfetch, mfetch, or gfetch is needed.
+        //This is for lfetch
+        if(thisScope == stack->currScope){
+            where = 0;
+        }
+        //This is for mfetch
+        if((thisScope != stack->currScope) && (thisScope->parent != nullptr)){
+            where = 1;
+        }
+        //This is for gfetch
+        if(thisScope->parent == nullptr){
+            where = 2;
         }
 
         //Assign the location of the variable in the scope.
-        Variable* newVariable = nullptr;
-        if(!isLocal){
-            newVariable = stack->alloc<Variable>(given[iter], thisScope->varWhere(given[iter].getName()), false);
-        } else {
-            //The count - 1 is because count keeps track of the stack size.
-            //If I have a stack of size 1 and an element at 0, then I need to move back none.
-            newVariable = stack->alloc<Variable>(given[iter], thisScope->varWhere(given[iter].getName()), true);
-        }
+        Variable* newVariable = stack->alloc<Variable>();
+        newVariable->thisToken = given[iter];
+        newVariable->distance = position;
+        newVariable->where = where;
+        newVariable->owner = thisScope;
+
         iter++;
         return newVariable;
     }
@@ -867,8 +902,12 @@ Initialize* Parser::initialize(){
         iter++;
         iter++;
         //This will be stack allocated in scope().
-        Variable* newVariable = stack->alloc<Variable>(theToken, stack->currScope->varCount(), stack->currScope->parent != nullptr);
+        Variable* newVariable = stack->alloc<Variable>();
+        newVariable->thisToken = theToken;
+        newVariable->distance = stack->currScope->varCount();
+        newVariable->owner = stack->currScope;
         newVariable->type = theToken.type;
+        
         //The expected stack size will be larger because of the new variable.
         Initialize* newInitialize = stack->alloc<Initialize>(newVariable);
         //Add the variable to the current scope.
@@ -902,7 +941,12 @@ InitializeAssign* Parser::initializeAssign(){
         result->type = type;
 
         //This will be stack allocated in the scope `currScope`.
-        Variable* newVariable = stack->alloc<Variable>(theToken, stack->currScope->varCount(), stack->currScope->parent != nullptr);
+        Variable* newVariable = stack->alloc<Variable>();
+        newVariable->thisToken = theToken;
+        newVariable->distance = stack->currScope->varCount();
+        newVariable->where = 0;
+        newVariable->owner = stack->currScope;
+
         result->thisVariable = newVariable;
         //Add the variable to the current scope.
         stack->currScope->push(newVariable);
@@ -960,10 +1004,21 @@ Node* Parser::function(){
         result->returnable = returnable;
         result->name = name;
 
-
         result->type = returnType;
         int64_t variableCount = 0;
         Scope* newScope = stack->alloc<Scope>();
+        
+        //Assign the scope its own unqiue value.
+        newScope->whichScope = scopeCount;
+        //Increment the scope counter.
+        scopeCount++;
+
+        //Push back an empty existing scope. Don't worry about its contents.
+        ExistingScope* existingScopePtr = new ExistingScope();
+        allScopes.push_back(existingScopePtr);
+        newScope->stackScope = existingScopePtr;
+
+        //Adjust the current scope to be that of the function.
         newScope->parent = stack->currScope;
         result->code = newScope;
         stack->currScope = newScope;
@@ -1017,15 +1072,17 @@ Call* Parser::call(){
     bool bool2 = given[iter + 1].getName() == "(";
 
     if(bool1 & bool2){
-        if(stack->currScope->funGet(given[iter].getName()) == nullptr){
-            error = true;
-            std::cout << "Unknown function: " + name + "\n";
-            return nullptr;
+        Scope* tempScope = stack->currScope;
+        while(tempScope->funGet(given[iter].getName()) == nullptr){
+            tempScope = tempScope->parent;
+            if(tempScope == nullptr){
+                std::cout << "Function '" << name << "' was not found in any reachable scope.\n";
+            }
         }
         iter++;
         iter++;
-        Call* result = stack->alloc<Call>(nullptr);
-        result->function = stack->currScope->funGet(name);
+        Call* result = stack->alloc<Call>();
+        result->function = tempScope->funGet(name);
         Arguments* arguments = stack->alloc<Arguments>();
         result->arguments = arguments;
         arguments->current = commonStatements();
