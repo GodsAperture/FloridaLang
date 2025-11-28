@@ -67,8 +67,6 @@ union types{
     uint32_t ufixed32;
     uint16_t ufixed16;
     uint8_t ufixed8;
-
-    Scope* scope;
 };
 
 class Instruction{

@@ -220,7 +220,8 @@ bool typeCheck(FloridaType inType){
     }
 
     std::string Scope::printAll(){
-        return body->printAll();
+
+        return "newScope\n" + body->printAll() + "deleteScope\n";
     }
 
     void Scope::FLVMCodeGen(std::vector<Instruction>& inInstructions){
@@ -390,7 +391,7 @@ bool typeCheck(FloridaType inType){
             return padding2(padding("lfetch") + std::to_string(distance)) + "(*Variable " + thisToken.getName() + "*)\n";
         }
         if(where == 1){
-            return padding2(padding("push") + std::to_string(reinterpret_cast<uintptr_t>(owner))) + "\n" + padding2(padding("mfetch") + std::to_string(distance)) + "(*Variable " + thisToken.getName() + "*)\n";            
+            return padding2(padding("push") + std::to_string(owner->whichScope)) + "(*scope: " + std::string(owner->name) + "*)" + "\n" + padding2(padding("mfetch") + std::to_string(distance)) + "(*Variable " + thisToken.getName() + "*)\n";            
         }
         if(where == 2){
             return padding2(padding("gfetch") + std::to_string(distance)) + "(*Variable " + thisToken.getName() + "*)\n";
@@ -409,7 +410,7 @@ bool typeCheck(FloridaType inType){
         } 
         if(where == 1){
             inst.oper = push;
-            inst.literal.scope = owner;
+            inst.literal.fixed64 = owner->whichScope;
             //Push the push instruction onto the stack.
             inInstructions.push_back(inst);
             inst.oper = mfetch;
@@ -602,7 +603,7 @@ bool typeCheck(FloridaType inType){
         }
         if(thisVariable->where == 1){
             inst.oper = push;
-            inst.literal.scope = thisVariable->owner;
+            inst.literal.fixed64 = thisVariable->owner->whichScope;
             //Add the location of the scope in the instruction set.
             inInstructions.push_back(inst);
             inst.oper = massign;
@@ -1313,12 +1314,14 @@ bool typeCheck(FloridaType inType){
     }
 
     std::string IfClass::printAll(){
-        std::string result = "(*condition*)\n" + condition->printAll();
+        std::string result = "\t(*condition*)\n" + condition->printAll();
         if(ifBody != nullptr){
-            result += "(*if body*)\n" + ifBody->printAll();
+            result += "\t(*if body*)\n" + ifBody->printAll();
         }
         if(elseBody != nullptr){
-            result += "(*else body*)\n" + elseBody->printAll();
+            result += "\t(*else body*)\n" + elseBody->printAll() + "\t(*end else*)";
+        } else {
+            result += "\t(*end if*)\n";
         }
 
         return result;
@@ -1460,19 +1463,19 @@ bool typeCheck(FloridaType inType){
     std::string ForLoop::printAll(){
         std::string result = "  (*Start of for loop*)\n";
         if(assign != nullptr){
-            result += "  (*assignment*)\n" + assign->printAll();
+            result += "\t(*assignment*)\n" + assign->printAll();
         }
         if(condition != nullptr){
-            result += "  (*condition*)\n" + condition->printAll() + 
+            result += "\t(*condition*)\n" + condition->printAll() + 
                 padding2("cjump") + "(*cjump out of the loop*)\n";
         }
         if(body != nullptr){
-            result += "  (*body*)\n" + body->printAll();
+            result += "\t(*body*)\n" + body->printAll();
         }
         if(incrementer != nullptr){
-            result += "  (*incrementer*)\n" + incrementer->printAll();
+            result += "\t(*incrementer*)\n" + incrementer->printAll();
         }
-        result += padding2("cjump") + "(*cjump to the condition start*)\n  (*End of for loop*)\n";
+        result += padding2("cjump") + "(*cjump to the condition start*)\n\t(*End of for loop*)\n";
 
         return result;
     }
@@ -1576,13 +1579,13 @@ bool typeCheck(FloridaType inType){
     std::string WhileLoop::printAll(){
         std::string result = "";
         if(condition != nullptr){
-            result += "(*condition*)\n" + condition->printAll() + 
+            result += "\t(*condition*)\n" + condition->printAll() + 
                 "negate\n" +
-                padding2("cjump") + "(*cjump to escape the loop*)\n";
+                padding2("cjump") + "\t(*cjump to escape the loop*)\n";
         }
         if(body != nullptr){
-            result += "(*body*)\n" + body->printAll() + 
-                padding2("cjump") + "(*cjump to the condition*)";
+            result += "\t(*body*)\n" + body->printAll() + 
+                padding2("cjump") + "\t(*cjump to the condition*)\n\t(*End of while loop*)";
         }
 
         return result;
@@ -1670,7 +1673,19 @@ bool typeCheck(FloridaType inType){
     }
 
     std::string Function::printAll(){
-        std::string result = "(*Function " + std::string(name) + "*)\n";
+        std::string result = "\t(*Function " + std::string(name) + "(";
+        Variable* thisVariable = code->variables;
+
+        for(int64_t i = 0; i < argumentCount - 1; i++){
+            result += std::string(thisVariable->thisToken.name) + ", ";
+            thisVariable = thisVariable->next;
+        }
+        if(thisVariable != nullptr){
+            result += std::string(thisVariable->thisToken.name);
+        }
+
+        result += ")*)\n";
+
         if(code->body != nullptr){
             result += code->body->printAll() + "\n";
         }
@@ -1697,7 +1712,7 @@ bool typeCheck(FloridaType inType){
         if(!alreadyGenerated){
             position = inInstructions.size();
             if(code != nullptr){
-                code->FLVMCodeGen(inInstructions);
+                code->body->FLVMCodeGen(inInstructions);
             }
             if(allFunctions != nullptr){
                 allFunctions->FLVMCodeGen(inInstructions);
@@ -1794,7 +1809,7 @@ bool typeCheck(FloridaType inType){
     std::string Call::printAll(){
         std::string result = "";
 
-        return arguments->printAll() + padding2("call") + "(*Function " + std::string(function->name) + "*)\n";
+        return "newScope\n" + arguments->printAll() + padding2("call") + "(*Function " + std::string(function->name) + "*)\n";
     }
 
     void Call::FLVMCodeGen(std::vector<Instruction>& inInstructions){
@@ -1903,10 +1918,11 @@ bool typeCheck(FloridaType inType){
 
     void Arguments::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         Arguments* currArgs = this;
-        while(currArgs->current != nullptr){
+        while(currArgs->next != nullptr){
             currArgs->current->FLVMCodeGen(inInstructions);
             currArgs = currArgs->next;
         }
+        currArgs->current->FLVMCodeGen(inInstructions);
     }
 
     Node* Arguments::copy(StackAllocator& input){
@@ -1942,21 +1958,22 @@ bool typeCheck(FloridaType inType){
         //Do nothing
     }
 
-    ReturnClass::ReturnClass(Node* input){
-        statement = input;
-    }
-
     std::string ReturnClass::ToString(std::string inLeft, std::string inRight){
         return inLeft + "\x1b[34mreturn\x1b[0m " + statement->ToString(inLeft, inRight) + inRight;
     }
 
     std::string ReturnClass::printAll(){
-        return statement->printAll() + "return\n";
+        return statement->printAll() + padding("return") + std::to_string(returnCount) + "\n";
     }
 
     void ReturnClass::FLVMCodeGen(std::vector<Instruction>& inInstructions){
+        //There will be code with the return statement.
         statement->FLVMCodeGen(inInstructions);
-        inInstructions.push_back(Instruction(Operation::ireturn));
+        Instruction result = Instruction();
+        result.oper = Operation::ireturn;
+        //This determines how many scopes to exit.
+        result.literal.fixed64 = returnCount;
+        inInstructions.push_back(result);
     }
 
     Node* ReturnClass::copy(StackAllocator& input){

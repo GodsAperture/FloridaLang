@@ -12,34 +12,6 @@ void Parser::parse(){
     }
 };
 
-void Parser::functionAppend(Function* input){
-    //Add the function to the current scope.
-    if(stack->currScope->functions != nullptr){
-        Function* currFun = stack->currScope->functions;
-        while(currFun->next != nullptr){
-            currFun = currFun->next;
-        }
-
-        //Add the given function to the end of the "linked list."
-        currFun->next = input;
-    } else {
-        stack->currScope->functions = input;
-    }
-
-    //Add the function to the list of all functions.
-    if(stack->allFunctions != nullptr){
-        Function* currFun = stack->allFunctions;
-        while(currFun->allFunctions != nullptr){
-            currFun = currFun->allFunctions;
-        }
-
-        currFun->allFunctions = input;
-    } else {
-        //If there are no functions, append this one first.
-        stack->allFunctions = input;
-    }
-}
-
 bool Parser::hasTokens(){
     return iter < given.size();
 }
@@ -645,18 +617,20 @@ Node* Parser::commonStatements(){
 }
 
 //if statement
-Node* Parser::IF(){
+Node* Parser::IF(){ 
     Node* condition = nullptr;
     IfClass* result = nullptr;
 
     //Check to see if the syntax matches properly.
     if(check("if") & check("(")){
+        uint64_t ifPosition = iter - 2;
         Scope* ifScope = nullptr;
 
         condition = OR();
         //Check for the end of the condition and the start of the body.
         if((condition != nullptr) & check(")") & check("{")){
             ifScope = scope();
+            ifScope->name = given[ifPosition].name;
         } else {
             error = true;
             //Error here
@@ -669,9 +643,11 @@ Node* Parser::IF(){
         }
 
         //Check for an else statement.
-        Scope* elseScope = nullptr; 
+        Scope* elseScope = nullptr;
         if(check("else") & check("{")){
+            uint64_t elsePosition = iter - 2;
             elseScope = scope();
+            elseScope->name = given[elsePosition].name;
         } else {
             result = stack->alloc<IfClass>();
             result->condition = condition;
@@ -708,6 +684,7 @@ Node* Parser::FOR(){
     if(check("for") & check("(")){
         //If the body is a nullptr, then the user provided no code.
         Scope* thisScope = stack->alloc<Scope>();
+        thisScope->name = given[iter - 2].name;
 
         //Assign the scopes its unique scope value.
         thisScope->whichScope = scopeCount;
@@ -794,6 +771,7 @@ Node* Parser::FOR(){
 //while loop
 Node* Parser::WHILE(){
     if(check("while") & check("(")){
+        std::string_view name = given[iter - 2].name;
         Node* condition = nullptr;
         Scope* theScope = nullptr;
         WhileLoop* result = nullptr;
@@ -824,6 +802,7 @@ Node* Parser::WHILE(){
         result = stack->alloc<WhileLoop>();
         result->condition = condition;
         result->body = theScope;
+        theScope->name = name;
 
         return result;
 
@@ -1001,12 +980,23 @@ Node* Parser::function(){
 
     if(bool1 & bool2 & bool3){
         Function* result = stack->alloc<Function>();
+        result->previous = stack->currentFunction;
+        stack->currentFunction = result;
         result->returnable = returnable;
         result->name = name;
+
+        //Include the function for use in the original scope.   
+        result->next = stack->currScope->functions;
+        stack->currScope->functions = result;
+
+        //Include the function in the allFunctions chain for the VM.
+        result->allFunctions = stack->allFunctions;
+        stack->allFunctions = result;
 
         result->type = returnType;
         int64_t variableCount = 0;
         Scope* newScope = stack->alloc<Scope>();
+        newScope->name = name;
         
         //Assign the scope its own unqiue value.
         newScope->whichScope = scopeCount;
@@ -1051,9 +1041,11 @@ Node* Parser::function(){
             return nullptr;
         }
 
+        //Return the relevant function scope to the previous function.
+        stack->currentFunction = stack->currentFunction->previous;
+        //Return the scope to the previous scope.
         stack->currScope = newScope->parent;
-        //Include the function for use in its respective scope.
-        functionAppend(result);
+
         return result;
 
     }
@@ -1072,17 +1064,24 @@ Call* Parser::call(){
     bool bool2 = given[iter + 1].getName() == "(";
 
     if(bool1 & bool2){
+        //Find out which function it is.
         Scope* tempScope = stack->currScope;
+        Scope* oldScope = tempScope;
         while(tempScope->funGet(given[iter].getName()) == nullptr){
             tempScope = tempScope->parent;
             if(tempScope == nullptr){
                 std::cout << "Function '" << name << "' was not found in any reachable scope.\n";
+                return nullptr;
             }
         }
         iter++;
         iter++;
+        //Create the call object, and adjust the scope to a new scope.
+        //If I don't, variables/functions might not be grabbed from the proper scope.
         Call* result = stack->alloc<Call>();
         result->function = tempScope->funGet(name);
+        //Adjust the scope here.
+        stack->currScope = result->function->code;
         Arguments* arguments = stack->alloc<Arguments>();
         result->arguments = arguments;
         arguments->current = commonStatements();
@@ -1099,6 +1098,9 @@ Call* Parser::call(){
             return nullptr;
         }
 
+        //Readjust the scope to the previous scope.
+        stack->currScope = oldScope;
+
         return result;
 
     }
@@ -1113,7 +1115,24 @@ ReturnClass* Parser::Return(){
     }
     //Check for the string and then the statement that follows.
     if(check("return")){
-        ReturnClass* result = stack->alloc<ReturnClass>(commonStatements());
+        Node* statement = commonStatements();
+        ReturnClass* result = stack->alloc<ReturnClass>();
+        result->statement = statement;
+        int64_t returnCount = 1;
+
+        //currScope will always be a deeper scope or the same scope as currFunct.
+        Scope* currScope = stack->currScope;
+        Scope* currFunct = stack->currentFunction->code;
+
+        //The current function scope will always be an outer scope if not the current one.
+        while(currScope != currFunct){
+            returnCount++;
+            currScope = currScope->parent;
+        }
+
+        //This is how many scopes to escape upon returning from the function.
+        result->returnCount = returnCount;
+
         if(!check(";")){
             error = true;
             std::cout << "Missing ';' expected at [" + std::to_string(given[iter].row) + ", " + std::to_string(given[iter].column) +"]\n";

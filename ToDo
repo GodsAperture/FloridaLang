@@ -1,2 +1,2 @@
 Finish up functions in the VM.
-Fix variables so that they have integers to use the correct ExistingScope.
+Debug functions as necessary.

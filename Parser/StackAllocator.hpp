@@ -27,8 +27,14 @@ public:
     Scope* globalScope = nullptr;
     //The currently active scope.
     Scope* currScope = nullptr;
+    //The function/method being currently defined.
+    Function* currentFunction = nullptr;
     //A linked list of all the functions in the program.
     Function* allFunctions = nullptr;
+    //The class being currently defined.
+    //Object* currentObject = nullptr;
+    //A linked list of all the classes in the program.
+    //Ojbect* allObjects = nullptr;
 
     StackAllocator();
 

@@ -17,13 +17,13 @@ public:
     class CallAllocator{
     public:
         ExistingScope* head = nullptr;
-        ExistingScope* top = nullptr;
         ExistingScope* current = nullptr;
+        ExistingScope* top = nullptr; 
         ExistingScope* end = nullptr;
 
         CallAllocator(uint64_t input){
             //Generate the calls allocator.
-            head = (ExistingScope*) malloc(input * sizeof(ExistingScope));
+            head = (ExistingScope*) malloc(input * sizeof(ExistingScope) + (8 - (sizeof(ExistingScope) * input) % 8) % 8);
             //The current pointer will be the start.
             current = head;
             //The end of the memory region.
@@ -35,6 +35,10 @@ public:
             head = nullptr;
             current = nullptr;
             end = nullptr;
+        }
+
+        ExistingScope* operator[](int64_t input){
+            return (ExistingScope*) ((char*) head + input * sizeof(ExistingScope));
         }
 
     };
@@ -49,6 +53,8 @@ public:
     std::vector<types> computationVector = std::vector<types>();
     //The call stack. The stack that manages the function calls.
     CallAllocator* allCalls = nullptr;
+    //A place for all unique existing Scopes.
+    CallAllocator* uniqueScopes = nullptr;
 
     //The abstract syntax tree of the program.
     Node* AST = nullptr;
@@ -70,6 +76,8 @@ public:
     types pop();
     //Get the current value from the computation vector.
     types top();
+    //Just prints out relevant information about the VM's state.
+    void infoPrint();
 
     //Call stack related methods.
     //Generate a new callStack object in the Stack Allocator.
@@ -83,10 +91,23 @@ public:
         //Generate the function bytecode.
         input.stack->allFunctions->FLVMCodeGen(programInstructions);
         //The function stack. The stack for the functions.
-        allCalls = new CallAllocator(100 * sizeof(ExistingScope));
-        //Create the first call, which is the main program.
-        callNew();
-        callTop()->reference = 0;
+        allCalls = new CallAllocator(100);
+        //The placement for all unique ExistingScopes.
+        uniqueScopes = new CallAllocator(input.allScopes.size());
+        uniqueScopes->top = uniqueScopes->head;
+        //Place each unique scope into the uniqueScopes allocation IN ORDER.
+        for(size_t i = 0; i < input.allScopes.size(); i++){
+            //Allocate an object first and foremost.
+            uniqueScopes->current = new(uniqueScopes->current) ExistingScope();
+            //Copy over its elements.
+            uniqueScopes->current->instructionNumber = input.allScopes[i]->instructionNumber;
+            uniqueScopes->current->reference = input.allScopes[i]->reference;
+            uniqueScopes->current->whichScope = input.allScopes[i]->whichScope;
+            //top now points to it.
+            uniqueScopes->top = uniqueScopes->current;
+            //Current now points to an empty space.
+            uniqueScopes->current = uniqueScopes->current + 1;
+        }
         //Adjust the start of the program.
         instructionNumber = programInstructions.size();
         //Generate the rest of the instructions.
@@ -99,6 +120,7 @@ public:
 
     ~FloridaVM(){
         delete allCalls;
+        delete uniqueScopes;
     }
 
 };

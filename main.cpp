@@ -93,9 +93,24 @@ int main(){
 
 	//Execute the instructions.
 	bool successful = true;
+	uint64_t counter = 0;
+	bool infoPrinter = 1;
+	bool VMBreaker = 0;
+
 	while(successful){
+		//This is just useful for debugging the VM.
+		if(infoPrinter){
+			Florida.infoPrint();
+		}
+		//This is also for debugging purposes.
+		if(VMBreaker and (counter == 6)){
+			break;
+		}
 		successful = Florida.next();
+		counter++;
 	}
+
+	std::cout << "Finished\n";
 
 	return 0;
 

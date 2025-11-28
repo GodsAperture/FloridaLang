@@ -15,6 +15,13 @@ types FloridaVM::top(){
     return computationVector.back();
 }
 
+void FloridaVM::infoPrint(){
+    std::cout << "--Instruction number: " << instructionNumber << "\n";
+    std::cout << "--Stack size: " << computationVector.size() << "\n";
+    std::cout << "--Call Stack count: " << allCalls->current - allCalls->head << "\n";
+    std::cout << "\n";
+}
+
 inline void padRight(std::string input){
     for(size_t i = 0; i < 12 - input.size(); i++){
         input += " ";
@@ -37,10 +44,9 @@ inline void padRight(std::string input, std::string number){
 
 
 ExistingScope* FloridaVM::callNew(){
-    if(allCalls->head < allCalls->end){
-        allCalls->head = new(allCalls->current) ExistingScope();
-        allCalls->top = allCalls->current;
-        allCalls->current = (ExistingScope*) (sizeof(ExistingScope) + (size_t) allCalls->current);
+    if(allCalls->current < allCalls->end){
+        allCalls->top = new(allCalls->current) ExistingScope();
+        allCalls->current++;
         return allCalls->current;
     } else {
         std::cout << "The callAllocator does not have enough memory.\nThe limit of " + std::to_string(((size_t)(allCalls->end) - (size_t)(allCalls->head)) / sizeof(ExistingScope)) + " was exceeded.";
@@ -53,8 +59,7 @@ ExistingScope* FloridaVM::callNew(){
 
 void FloridaVM::callPop(){
     if(allCalls->current != allCalls->head){
-        allCalls->current = allCalls->head;
-        allCalls->head = (ExistingScope*) ((size_t) (allCalls->head) - sizeof(ExistingScope));
+        allCalls->current--;;
     } else {
         std::cout << "The virtual machine has attempted to release a scope it does not have.";
     }
@@ -64,8 +69,6 @@ ExistingScope* FloridaVM::callTop(){
     return allCalls->top;
 }
 
-
-
 void FloridaVM::printAll(){
     std::cout << "\n    ====Instruction set debugger====\n\n";
     std::string result = "";
@@ -73,7 +76,7 @@ void FloridaVM::printAll(){
         result += allFunctions->printAll();
     }
 
-    result += "(*MAIN SCRIPT*)\n";
+    result += "\t(*MAIN SCRIPT*)\n";
 
     std::cout << result + AST->printAll();
 }
@@ -83,7 +86,6 @@ bool FloridaVM::next(){
     types left;
     types right;
     types result;
-    ExistingScope* newScope = nullptr;
 
     //Check to see if all of instructions have been executed.
     if(instructionNumber >= programInstructions.size()){
@@ -92,10 +94,10 @@ bool FloridaVM::next(){
 
     switch (programInstructions[instructionNumber].oper){
         case Operation::call:
-            //Move the instruction to the start of its instruction set.
-            instructionNumber = programInstructions[instructionNumber].literal.fixed64;
             //Adjust the instruction number of the Existing Scope.
             callTop()->instructionNumber = instructionNumber;
+            //Move the instruction to the start of its instruction set.
+            instructionNumber = programInstructions[instructionNumber].literal.fixed64;
             return true;
         case Operation::newScope:
             //Create a new scope in the call stack.
@@ -104,12 +106,14 @@ bool FloridaVM::next(){
             callTop()->reference = reference;
             //Adjust the VM's current reference to be the new size of the vector.
             reference = computationVector.size();
+            std::cout << "Scope made.\n";
             break;
         case Operation::deleteScope:
             //Readjust the reference to be the prior reference.
             reference = callTop()->reference;
             //Pop the Existing Scope from the scope stack.
             callPop();
+            std::cout << "Scope deleted.\n";
             break;
         case Operation::ireturn:
             //Adjust these to pre-scope values.
@@ -146,21 +150,42 @@ bool FloridaVM::next(){
             //Push the global value onto the stack.
             computationVector.push_back(computationVector[programInstructions[instructionNumber].literal.fixed64]);
             break;
-/*This*/case Operation::mfetch:
+        case Operation::mfetch:
+            //Grab the prior value to index allScopes.
+            left = computationVector[computationVector.size() - 2];
+            //Get the proper scope in question and fetch its reference.
+            left.fixed64 = (*uniqueScopes)[left.fixed64]->reference;
+            //Grab the offset from the top of the computation stack.
+            right = computationVector[computationVector.size() - 1];
+            //Using the distance provided at the top of the stack, push the resulting value onto the stack.
+            result = computationVector[left.fixed64 + computationVector[computationVector.size() - 1].fixed64];
+            push(result);
             break;
         case Operation::lfetch:
             //Push the local value onto the stack.
-            computationVector.push_back(computationVector[reference + programInstructions[instructionNumber].literal.fixed64]);
+            push(computationVector[reference + programInstructions[instructionNumber].literal.fixed64]);
             break;
         case Operation::initialize:
             left.fixed64 = 0;
-            computationVector.push_back(left);
+            push(left);
             break;
         case Operation::gassign:
             computationVector[programInstructions[instructionNumber].literal.fixed64] = top();
             pop();
             break;
-/*This*/case Operation::massign:
+        case Operation::massign:
+            //This is the result for the variable.
+            result = computationVector[computationVector.size() - 2];
+            //Grab the offset for the index.
+            left = computationVector[computationVector.size() - 1];
+            //Get the proper scope in question and fetch its reference.
+            left.fixed64 = (*uniqueScopes)[left.fixed64]->reference;
+            //Grab the offset from the top of the computation stack.
+            right = computationVector[computationVector.size() - 1];
+            //Assign the top of the stack to the correct position in the computation stack.
+            computationVector[left.fixed64 + right.fixed64] = result;
+            //Pop the result and the ExistingScope position.
+            pop();
             pop();
             break;
         case Operation::lassign:

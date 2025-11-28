@@ -17,6 +17,7 @@ FloridaType typeReturn(std::string inString);
 bool typeCheck(FloridaType inType);
 
 class StackAllocator;
+class ExistingScope;
 class Scope;
 
 //If you need to be told what a node is, God help you.
@@ -88,18 +89,18 @@ class Scope : public Node{
     public:
         //This points to the outerscope.
         Scope* parent = nullptr;
-        //The unique Existing Scope for this Scope.
-        ExistingScope* stackScope;
+        //The corresponding "name" of the scope.
+        std::string_view name;
+        //The unique ExistingScope for this Scope.
+        ExistingScope* stackScope = nullptr;
         //This is the body of code within the scope.
         Body* body = nullptr;
         //This will be the variables of the current scope.
         Variable* variables = nullptr;
         //A "linked list" of functions for the current scope.
         Function* functions = nullptr;
-        //The counter will determine which index to use in the BasePointerArray in the VM.
-        uint64_t whichScope = 0;
-        //0 = function, 1 = method, 2 = if, 3 = while, 4 = for, 5 = do-while, 6 = error.
-        char scopeType = 6;
+        //The counter will determine which index to use in the `uniqueScopes` in the VM.
+        int64_t whichScope = 0;
 
         //Find where in some given Scope a particular variable lies.
         //If it does not exist in the scope, it returns -1.
@@ -475,6 +476,8 @@ public:
     //For use in the parser and VM.
     //This points to the next function in the scope, if any.
     Function* next = nullptr;
+    //Previous functions are needed to determine what is the previous scope.
+    Function* previous = nullptr;
     //This connects all functions across scopes.
     Function* allFunctions = nullptr;
     //This makes sure code isn't generated twice.
@@ -520,10 +523,11 @@ public:
 
 class ReturnClass : public Node{
 public:
+    //There will always be a minimum of 1 scope to exit.
+    int64_t returnCount = 1;
     Node* statement = nullptr;
 
     ReturnClass();
-    ReturnClass(Node* input);
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
@@ -542,11 +546,17 @@ public:
     uint64_t instructionNumber = 0;
 
     ExistingScope();
+    ExistingScope(ExistingScope* input){
+        whichScope = input->whichScope;
+        reference = input->reference;
+        instructionNumber = input->instructionNumber;
+    }
     void operator=(ExistingScope right){
         whichScope = right.whichScope;
         reference = right.reference;
         instructionNumber = right.instructionNumber;
     }
+
 };
 
 #endif
