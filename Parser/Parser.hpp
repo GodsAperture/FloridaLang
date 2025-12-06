@@ -39,8 +39,6 @@ public:
 
     //The iterator points to the current token.
     uint64_t iter = 0;
-    //Retain a vector for all of the existing scopes.
-    std::vector<ExistingScope*> allScopes = std::vector<ExistingScope*>();
     //Error flag for errors.
     bool error = false;
     //All the errors logged.
@@ -132,6 +130,7 @@ public:
     Call* call();
     ReturnClass* Return();
 
+    //TO-DO
     //This is so I can "pretty print" the number of errors found.
     //Example, if I have 99 errors I can print out:
     //[ 9] ...

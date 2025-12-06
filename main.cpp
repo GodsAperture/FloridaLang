@@ -89,29 +89,33 @@ int main(){
 	//Make the virtual machine.
 	FloridaVM Florida = FloridaVM(FloridaParser);
 	Florida.printAll();
+	std::cout << "\n";
 	//Debug the bytecode.
 
 	//Execute the instructions.
 	bool successful = true;
 	uint64_t counter = 0;
 	bool infoPrinter = 1;
-	bool VMBreaker = 0;
+	uint64_t VMBreaker = 15;
 
-	while(successful){
+	//Use this to skip loads of nonsense in the VM's execution and print information.	
+	for(uint64_t i = 0; (i < VMBreaker) and successful; i++){
 		//This is just useful for debugging the VM.
 		if(infoPrinter){
+			std::cout << "--Counter: " << counter << "\n";
 			Florida.infoPrint();
+			counter++;
 		}
-		//This is also for debugging purposes.
-		if(VMBreaker and (counter == 6)){
-			break;
-		}
+		successful = Florida.next();
+	}
+
+	//Standard method for VM execution.
+	while(successful){
 		successful = Florida.next();
 		counter++;
 	}
 
 	std::cout << "Finished\n";
-
 	return 0;
 
 }

@@ -145,7 +145,14 @@ Node* Parser::primitive(){
     //Check for numbers.
     if(given[iter].type == FloridaType::fixed8){ 
         Fixed8* number = stack->alloc<Fixed8>(given[iter].getName());
-        iter++; 
+        iter++;
+
+        return number;
+    }
+    if(given[iter].type == FloridaType::float8){
+        Float8* number = stack->alloc<Float8>();
+        iter++;
+        number->value = std::stod(given[iter - 1].getName());
 
         return number;
     }
@@ -471,11 +478,6 @@ Scope* Parser::scope(){
     //Increment the scope counter in the parser.
     scopeCount++;
 
-    //Push back an empty existing scope. Don't worry about its contents.
-    ExistingScope* someScopePtr = new ExistingScope();
-    allScopes.push_back(someScopePtr);
-    newScope->stackScope = someScopePtr;
-
     //Assign the current scope as the parent of the new scope.
     newScope->parent = stack->currScope;
     //Assign the newest scope to be the current scope.
@@ -690,11 +692,6 @@ Node* Parser::FOR(){
         thisScope->whichScope = scopeCount;
         //Increment the scope counter.
         scopeCount++;
-
-        //Push back an empty existing scope. Don't worry about its contents.
-        ExistingScope* existingScopePtr = new ExistingScope();
-        allScopes.push_back(existingScopePtr);
-        thisScope->stackScope = existingScopePtr;
 
         //Make the current scope the new one.
         thisScope->parent = stack->currScope;
@@ -1003,11 +1000,6 @@ Node* Parser::function(){
         //Increment the scope counter.
         scopeCount++;
 
-        //Push back an empty existing scope. Don't worry about its contents.
-        ExistingScope* existingScopePtr = new ExistingScope();
-        allScopes.push_back(existingScopePtr);
-        newScope->stackScope = existingScopePtr;
-
         //Adjust the current scope to be that of the function.
         newScope->parent = stack->currScope;
         result->code = newScope;
@@ -1045,6 +1037,8 @@ Node* Parser::function(){
         stack->currentFunction = stack->currentFunction->previous;
         //Return the scope to the previous scope.
         stack->currScope = newScope->parent;
+
+        std::cout << "Function " << name << " of number: " << result->code->whichScope << "\n";
 
         return result;
 

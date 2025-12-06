@@ -12,49 +12,26 @@
 
 class FloridaVM{
 public:
-
-    //This will emulate function calls.
-    class CallAllocator{
-    public:
-        ExistingScope* head = nullptr;
-        ExistingScope* current = nullptr;
-        ExistingScope* top = nullptr; 
-        ExistingScope* end = nullptr;
-
-        CallAllocator(uint64_t input){
-            //Generate the calls allocator.
-            head = (ExistingScope*) malloc(input * sizeof(ExistingScope) + (8 - (sizeof(ExistingScope) * input) % 8) % 8);
-            //The current pointer will be the start.
-            current = head;
-            //The end of the memory region.
-            end = (ExistingScope*) (input * sizeof(ExistingScope) + (size_t) head);
-        }
-
-        ~CallAllocator(){
-            delete head;
-            head = nullptr;
-            current = nullptr;
-            end = nullptr;
-        }
-
-        ExistingScope* operator[](int64_t input){
-            return (ExistingScope*) ((char*) head + input * sizeof(ExistingScope));
-        }
-
-    };
-
     //This will handle relative scopes.
-    size_t reference = 0;
+    uint64_t reference = 0;
     //The current instruction.
     size_t instructionNumber = 0;
     //All of the program instructions.
     std::vector<Instruction> programInstructions = std::vector<Instruction>();
     //The pseudo-stack of the language.
     std::vector<types> computationVector = std::vector<types>();
-    //The call stack. The stack that manages the function calls.
-    CallAllocator* allCalls = nullptr;
-    //A place for all unique existing Scopes.
-    CallAllocator* uniqueScopes = nullptr;
+    //Base pointer stack. Takes the form WhichScope, Reference.
+    uint64_t* BPStack = nullptr;
+    uint64_t BPStackSize = 0;
+    uint64_t BPMax = 0;
+    //Instruction number stack.
+    uint64_t* INStack = nullptr;
+    uint64_t INStackSize = 0;
+    uint64_t INMax = 0;
+    /*The most currently relevant base pointers and where they are in the stack.
+    The index represents the respective scope.*/
+    uint64_t* CurrentBP = nullptr;
+    //No need for CurrentInfoSize, that depends on how many scopes exist in the original code.
 
     //The abstract syntax tree of the program.
     Node* AST = nullptr;
@@ -80,34 +57,41 @@ public:
     void infoPrint();
 
     //Call stack related methods.
-    //Generate a new callStack object in the Stack Allocator.
-    ExistingScope* callNew();
-    //Pop the top-most callStack from the Stack Allocator.
-    void callPop();
-    //Get the topmost element from the Stack Allocator.
-    ExistingScope* callTop();
+    //Add a new element in the BPStack.
+    void BPPush(uint64_t input, uint64_t whichScope);
+    //Get the top-most Reference from the BPStack.
+    uint64_t BPTopReference();
+    //Get the top-most Scope from the BPStack.
+    uint64_t BPTopScope();
+
+    //Index the appropriate scope.
+    uint64_t BPScope(uint64_t input);
+    //Index the appropriate reference.
+    uint64_t BPReference(uint64_t input);
+
+    //Pop the top-most element (WhichScope, Reference) from the BPStack.
+    void BPPop();
+    //Add a new element in the INStack.
+    void INPush(uint64_t input);
+    //Pop the top-most element from the INStack.
+    uint64_t INPop();
 
     FloridaVM(Parser input){
         //Generate the function bytecode.
-        input.stack->allFunctions->FLVMCodeGen(programInstructions);
-        //The function stack. The stack for the functions.
-        allCalls = new CallAllocator(100);
-        //The placement for all unique ExistingScopes.
-        uniqueScopes = new CallAllocator(input.allScopes.size());
-        uniqueScopes->top = uniqueScopes->head;
-        //Place each unique scope into the uniqueScopes allocation IN ORDER.
-        for(size_t i = 0; i < input.allScopes.size(); i++){
-            //Allocate an object first and foremost.
-            uniqueScopes->current = new(uniqueScopes->current) ExistingScope();
-            //Copy over its elements.
-            uniqueScopes->current->instructionNumber = input.allScopes[i]->instructionNumber;
-            uniqueScopes->current->reference = input.allScopes[i]->reference;
-            uniqueScopes->current->whichScope = input.allScopes[i]->whichScope;
-            //top now points to it.
-            uniqueScopes->top = uniqueScopes->current;
-            //Current now points to an empty space.
-            uniqueScopes->current = uniqueScopes->current + 1;
+        if(input.stack->allFunctions != nullptr){
+            input.stack->allFunctions->FLVMCodeGen(programInstructions);
         }
+        //The base pointer stack. The stack for the base pointers and their respective scope.
+        BPStack = (uint64_t*) malloc(2 * 100 * sizeof(uint64_t));
+        INStack = (uint64_t*) malloc(100 * sizeof(uint64_t));
+        CurrentBP = (uint64_t*) malloc(sizeof(uint64_t) * input.scopeCount);
+
+        for(int i = 0; i < input.scopeCount; i++){
+            CurrentBP[i] = 0;
+        }
+
+        BPMax = 2 * 100;
+        INMax = 100;
         //Adjust the start of the program.
         instructionNumber = programInstructions.size();
         //Generate the rest of the instructions.
@@ -119,8 +103,8 @@ public:
     }
 
     ~FloridaVM(){
-        delete allCalls;
-        delete uniqueScopes;
+        delete BPStack;
+        delete INStack;
     }
 
 };

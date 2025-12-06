@@ -18,7 +18,7 @@ types FloridaVM::top(){
 void FloridaVM::infoPrint(){
     std::cout << "--Instruction number: " << instructionNumber << "\n";
     std::cout << "--Stack size: " << computationVector.size() << "\n";
-    std::cout << "--Call Stack count: " << allCalls->current - allCalls->head << "\n";
+    std::cout << "--Call Stack count: " << BPStackSize / 2 << "\n";
     std::cout << "\n";
 }
 
@@ -43,31 +43,51 @@ inline void padRight(std::string input, std::string number){
 
 
 
-ExistingScope* FloridaVM::callNew(){
-    if(allCalls->current < allCalls->end){
-        allCalls->top = new(allCalls->current) ExistingScope();
-        allCalls->current++;
-        return allCalls->current;
+void FloridaVM::BPPush(uint64_t whichScope, uint64_t reference){
+    if(BPStackSize + 2 < BPMax){
+        BPStack[BPStackSize] = whichScope;
+        BPStack[BPStackSize + 1] = reference;
+        BPStackSize += 2;
     } else {
-        std::cout << "The callAllocator does not have enough memory.\nThe limit of " + std::to_string(((size_t)(allCalls->end) - (size_t)(allCalls->head)) / sizeof(ExistingScope)) + " was exceeded.";
-        std::bad_alloc();
-    }
-
-    //Unreachable
-    return nullptr;
-}
-
-void FloridaVM::callPop(){
-    if(allCalls->current != allCalls->head){
-        allCalls->current--;;
-    } else {
-        std::cout << "The virtual machine has attempted to release a scope it does not have.";
+        throw new std::bad_alloc();
     }
 }
 
-ExistingScope* FloridaVM::callTop(){
-    return allCalls->top;
+uint64_t FloridaVM::BPScope(uint64_t input){
+    return BPStack[2 * input];
 }
+
+uint64_t FloridaVM::BPReference(uint64_t input){
+    return BPStack[2 * input + 1];
+}
+
+uint64_t FloridaVM::BPTopScope(){
+    return BPStack[BPStackSize - 2];
+}
+
+uint64_t FloridaVM::BPTopReference(){
+    return BPStack[BPStackSize - 1];
+}
+
+void FloridaVM::BPPop(){
+    BPStackSize -= 2;
+}
+
+void FloridaVM::INPush(uint64_t input){
+    if(INStackSize + 1 < INMax){
+        INStack[INStackSize] = input;
+        INStackSize++;
+    } else {
+        throw new std::bad_alloc();
+    }
+}
+
+uint64_t FloridaVM::INPop(){
+    INStackSize--;
+    return INStack[INStackSize];
+}
+
+
 
 void FloridaVM::printAll(){
     std::cout << "\n    ====Instruction set debugger====\n\n";
@@ -82,7 +102,7 @@ void FloridaVM::printAll(){
 }
 
 bool FloridaVM::next(){
-    //left and right hand members for operations.
+    //left, right, and resulting members for operations and convenience.
     types left;
     types right;
     types result;
@@ -92,40 +112,56 @@ bool FloridaVM::next(){
         return false;
     }
 
+    //Other variables that exist for convenience.
+    Instruction current = programInstructions[instructionNumber];
+    //ExistingScope* currScope = allCalls->top;
     switch (programInstructions[instructionNumber].oper){
         case Operation::call:
-            //Adjust the instruction number of the Existing Scope.
-            callTop()->instructionNumber = instructionNumber;
+            //Push the current Instruction number to the INStack.
+            INPush(instructionNumber);            
             //Move the instruction to the start of its instruction set.
             instructionNumber = programInstructions[instructionNumber].literal.fixed64;
             return true;
         case Operation::newScope:
-            //Create a new scope in the call stack.
-            callNew();
-            //Define the base pointer for the new ExistingScope.
-            callTop()->reference = reference;
+            //Use left to get the correct UniqueScope.
+            left = top();
+            //Move the CurrentInfo value to the BPStack.
+            BPPush(left.fixed64, CurrentBP[left.fixed64]);
+            //Adjust CurrentBP.
+            CurrentBP[left.fixed64] = reference;
             //Adjust the VM's current reference to be the new size of the vector.
-            reference = computationVector.size();
-            std::cout << "Scope made.\n";
+            reference = computationVector.size() - 1;
+            //Pop the information used to adjust the proper unique scope.
+            pop();
             break;
         case Operation::deleteScope:
             //Readjust the reference to be the prior reference.
-            reference = callTop()->reference;
-            //Pop the Existing Scope from the scope stack.
-            callPop();
-            std::cout << "Scope deleted.\n";
+            reference = CurrentBP[BPTopScope()];
+            //Readjust the most recent scope reference.
+            CurrentBP[BPTopScope()] = BPTopScope();
+            //Pop the last scope from the BPStack.
+            BPPop();
+            //Pop the trash from the top of the stack.
+            pop();
             break;
         case Operation::ireturn:
-            //Adjust these to pre-scope values.
-            reference = callTop()->reference;
-            //Adjust the instruction number to be whatever it was before the call.
-            instructionNumber = callTop()->instructionNumber;
-            //Remove the scope from the call stack.
-            callPop();
-            //Move the result to the top of the old stack.
-            computationVector[reference] = top();
+            //Grab the resulting value that is to be returned from the scope.
+            result = top();
+            //The return instruction has to exit scope a particular number of times.
+            for(int i = 0; i < current.literal.fixed64; i++){
+                //Readjust the reference to be the prior reference.
+                reference = CurrentBP[BPTopScope()];
+                //Readjust the most recent scope reference.
+                CurrentBP[BPTopScope()] = BPTopReference();
+                //Pop the last scope from the BPStack.
+                BPPop();
+            }
+            //Adjust the Instruction number to the last known value.
+            instructionNumber = INPop();
+            //Move the result to the spot above the old stack.
+            computationVector[reference + 1] = result;
             //Shed all elements above the original top of the stack.
-            for(size_t i = computationVector.size(); i > reference; i--){
+            for(size_t i = computationVector.size(); i > reference + 2; i--){
                 computationVector.pop_back();
             }
             break;
@@ -138,28 +174,32 @@ bool FloridaVM::next(){
                 return true;
             } else {
                 //This is to adjust the position of the instruction number.
-                instructionNumber = programInstructions[instructionNumber].literal.fixed64;
+                instructionNumber = current.literal.fixed64;
                 //Pop the boolean from the stack.
                 pop();
                 return true;
             }
         case Operation::jump:
-            instructionNumber = programInstructions[instructionNumber].literal.fixed64;
+            instructionNumber = current.literal.fixed64;
             break;
+
+
+
+////Variable related instructions.
         case Operation::gfetch:
             //Push the global value onto the stack.
             computationVector.push_back(computationVector[programInstructions[instructionNumber].literal.fixed64]);
             break;
         case Operation::mfetch:
             //Grab the prior value to index allScopes.
-            left = computationVector[computationVector.size() - 2];
+            //This is WhichScope.   
+            left = computationVector[computationVector.size() - 1];
             //Get the proper scope in question and fetch its reference.
-            left.fixed64 = (*uniqueScopes)[left.fixed64]->reference;
-            //Grab the offset from the top of the computation stack.
-            right = computationVector[computationVector.size() - 1];
+            left.fixed64 = BPScope(left.fixed64);
             //Using the distance provided at the top of the stack, push the resulting value onto the stack.
-            result = computationVector[left.fixed64 + computationVector[computationVector.size() - 1].fixed64];
-            push(result);
+            result = computationVector[left.fixed64 + current.literal.fixed64];
+            //Overwrite the trash with 
+            computationVector[computationVector.size() - 1] = result;
             break;
         case Operation::lfetch:
             //Push the local value onto the stack.
@@ -176,14 +216,10 @@ bool FloridaVM::next(){
         case Operation::massign:
             //This is the result for the variable.
             result = computationVector[computationVector.size() - 2];
-            //Grab the offset for the index.
+            //Grab WhichScope.
             left = computationVector[computationVector.size() - 1];
-            //Get the proper scope in question and fetch its reference.
-            left.fixed64 = (*uniqueScopes)[left.fixed64]->reference;
-            //Grab the offset from the top of the computation stack.
-            right = computationVector[computationVector.size() - 1];
-            //Assign the top of the stack to the correct position in the computation stack.
-            computationVector[left.fixed64 + right.fixed64] = result;
+            //Move the result to the place in the computation vector.
+            computationVector[BPReference(left.fixed64)] = result;
             //Pop the result and the ExistingScope position.
             pop();
             pop();
@@ -192,13 +228,64 @@ bool FloridaVM::next(){
             computationVector[reference + programInstructions[instructionNumber].literal.fixed64] = top();
             pop();            
             break;
+
+
+
+////VM related instructions.
         case Operation::push:
             push(programInstructions[instructionNumber].literal);
             break;
         case Operation::pop:
             computationVector.pop_back();
             break;
-        case Operation::add:
+
+
+
+////horizontal casting
+        case Operation::float8TOfixed8:
+            computationVector[computationVector.size() - 1].fixed64 = (int64_t) computationVector[computationVector.size() - 1].float64;
+            break;
+        case Operation::float8TOufixed8:
+            computationVector[computationVector.size() - 1].ufixed64 = (uint64_t) computationVector[computationVector.size() - 1].float64;
+            break;
+        case Operation::fixed8TOufixed8:
+            computationVector[computationVector.size() - 1].ufixed64 = (uint64_t) computationVector[computationVector.size() - 1].fixed64;
+            break;
+        case Operation::fixed8TOfloat8:
+            computationVector[computationVector.size() - 1].float64 = (_Float64) computationVector[computationVector.size() - 1].fixed64;
+            break;
+        case Operation::ufixed8TOfloat8:
+            computationVector[computationVector.size() - 1].float64 = (_Float64) computationVector[computationVector.size() - 1].ufixed64;
+            break;
+        case Operation::ufixed8TOfixed8:
+            computationVector[computationVector.size() - 1].fixed64 = (uint64_t) computationVector[computationVector.size() - 1].ufixed64;
+            break;
+
+
+
+////float8 downcasting
+        case Operation::float8TOfloat4:
+            computationVector[computationVector.size() - 1].float32 = (_Float32) computationVector[computationVector.size() - 1].float64;
+            break;
+
+////float8 upcasting
+        case Operation::float4TOfloat8:
+            computationVector[computationVector.size() - 1].float64 = (_Float64) computationVector[computationVector.size() - 1].float32;
+            break;
+
+////ufixed8 downcasting
+        case Operation::ufixed8TOufixed4:
+            computationVector[computationVector.size() - 1].ufixed32 = (uint32_t) computationVector[computationVector.size() - 1].ufixed64;
+            break;
+        case Operation::ufixed8TOufixed2:
+            computationVector[computationVector.size() - 1].ufixed16 = (uint16_t) computationVector[computationVector.size() - 1].ufixed64;
+            break;
+        case Operation::ufixed8TOufixed1:
+            computationVector[computationVector.size() - 1].ufixed8 = (uint8_t) computationVector[computationVector.size() - 1].ufixed64;
+            break;
+
+////fixed8 mathematical instructions.
+        case Operation::fixed8add:
             //Get the right operand;
             right = pop();
             //Get the left operand;
@@ -207,7 +294,7 @@ bool FloridaVM::next(){
             result.fixed64 = left.fixed64 + right.fixed64;
             push(result);
             break;
-        case Operation::subtract:
+        case Operation::fixed8subtract:
             //Get the right operand;
             right = pop();
             //Get the left operand;
@@ -216,11 +303,11 @@ bool FloridaVM::next(){
             result.fixed64 = left.fixed64 - right.fixed64;
             push(result);
             break;
-        case Operation::negate:
+        case Operation::fixed8negate:
             //Negate the value;
             computationVector[computationVector.size() - 1].fixed64 = -computationVector[computationVector.size() - 1].fixed64;
             break;
-        case Operation::multiply:
+        case Operation::fixed8multiply:
             //Get the right operand;
             right = pop();
             //Get the left operand;
@@ -229,7 +316,7 @@ bool FloridaVM::next(){
             result.fixed64 = left.fixed64 * right.fixed64;
             push(result);
             break;
-        case Operation::divide:
+        case Operation::fixed8divide:
             //Get the right operand;
             right = pop();
             //Get the left operand;
@@ -238,6 +325,54 @@ bool FloridaVM::next(){
             result.fixed64 = left.fixed64 / right.fixed64;
             push(result);
             break;
+
+
+
+////float8 mathematical operations
+            case Operation::float8add:
+            //Get the right operand;
+            right = pop();
+            //Get the left operand;
+            left = pop();
+            //Operate and push;
+            result.float64 = left.float64 + right.float64;
+            push(result);
+            break;
+        case Operation::float8subtract:
+            //Get the right operand;
+            right = pop();
+            //Get the left operand;
+            left = pop();
+            //Operate and push;
+            result.float64 = left.float64 - right.float64;
+            push(result);
+            break;
+        case Operation::float8negate:
+            //Negate the value;
+            computationVector[computationVector.size() - 1].float64 = -computationVector[computationVector.size() - 1].float64;
+            break;
+        case Operation::float8multiply:
+            //Get the right operand;
+            right = pop();
+            //Get the left operand;
+            left = pop();
+            //Operate and push;
+            result.float64 = left.float64 * right.float64;
+            push(result);
+            break;
+        case Operation::float8divide:
+            //Get the right operand;
+            right = pop();
+            //Get the left operand;
+            left = pop();
+            //Operate and push;
+            result.float64 = left.float64 / right.float64;
+            push(result);
+            break;
+
+
+
+////Boolean algebra instructions.
         case equals:
             //Get the right operand;
             right = pop();

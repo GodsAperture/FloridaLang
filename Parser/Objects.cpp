@@ -9,7 +9,49 @@ inline std::string padding(std::string input){
 
 }
 
-//Fixed64
+
+
+//Float8
+    Float8::Float8(){
+        //Do nothing
+    }
+
+    std::string Float8::ToString(std::string inLeft, std::string inRight){
+        return "\x1b[37m" + std::to_string(value) + "\x1b[0m";
+    }
+
+    std::string Float8::printAll(){
+        return padding("push") + std::to_string(value) + "\n";
+    }
+
+    void Float8::FLVMCodeGen(std::vector<Instruction>& inInstructions){
+        Instruction result = Instruction();
+        result.literal.float64 = value;
+        result.oper = Operation::push;
+        result.type = FloridaType::fixed8;
+
+        inInstructions.push_back(result);
+    }
+
+    Node* Float8::copy(StackAllocator& input){
+        Float8* thisptr = input.alloc<Float8>();
+
+        thisptr->value = value;
+
+        return thisptr;
+    }
+
+    Float8* Float8::pcopy(StackAllocator& input){
+        Float8* thisptr = input.alloc<Float8>();
+
+        thisptr->value = value;
+
+        return thisptr;  
+    }
+
+
+
+//Fixed8
     Fixed8::Fixed8(){
         //Do nothing
     };
@@ -27,7 +69,12 @@ inline std::string padding(std::string input){
     }
 
     void Fixed8::FLVMCodeGen(std::vector<Instruction>& inInstructions){
-        inInstructions.push_back(Instruction(Operation::push, value));
+        Instruction result = Instruction();
+        result.literal.fixed64 = value;
+        result.oper = Operation::push;
+        result.type = FloridaType::fixed8;
+
+        inInstructions.push_back(result);
     }
 
     Node* Fixed8::copy(StackAllocator& input){

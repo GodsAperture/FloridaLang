@@ -225,10 +225,18 @@ bool typeCheck(FloridaType inType){
     }
 
     void Scope::FLVMCodeGen(std::vector<Instruction>& inInstructions){
+        Instruction result = Instruction();
+        result.oper = Operation::push;
+        result.literal.fixed64 = whichScope;
+        //Be sure to add this otherwise I can never adjust the unique scopes.
+        inInstructions.push_back(result);
+        //The new scope will use the last value to pick the proper scope and adjust its value.
         inInstructions.push_back(Instruction(newScope));
         if(body != nullptr){
             body->FLVMCodeGen(inInstructions);
         }
+        //Add it here to be able to adjust the unique Scope here too.
+        inInstructions.push_back(result);
         inInstructions.push_back(Instruction(deleteScope));
     }
 
@@ -407,7 +415,7 @@ bool typeCheck(FloridaType inType){
             inst.literal.fixed64 = distance;
             //Push back the instruction for local variable.
             inInstructions.push_back(inst);
-        } 
+        }
         if(where == 1){
             inst.oper = push;
             inst.literal.fixed64 = owner->whichScope;
@@ -1592,11 +1600,17 @@ bool typeCheck(FloridaType inType){
     }
 
     void WhileLoop::FLVMCodeGen(std::vector<Instruction>& inInstructions){
-        //Start of the scope, granted while loops don't really need scope. It just make work easier for me.
+        Instruction result = Instruction();
+        result.oper = Operation::push;
+        result.literal.fixed64 = body->whichScope;
+        //Push the corresponding scope value to the instructions.
+        inInstructions.push_back(result);
+        //Start of the scope, granted while loops don't really need scopes.
+        //It just makes work easier for me.
         inInstructions.push_back(Instruction(Operation::newScope));
         //Where the unconditional jump will always land.
         size_t start = inInstructions.size();
-        //Generate the code for the condition.
+        //Generate the code for the condition, if any.
         condition->FLVMCodeGen(inInstructions);
         //The location of the conditional jump statement.
         size_t here = inInstructions.size();
@@ -1813,6 +1827,11 @@ bool typeCheck(FloridaType inType){
     }
 
     void Call::FLVMCodeGen(std::vector<Instruction>& inInstructions){
+        Instruction uniqueScopeNumber;
+        uniqueScopeNumber.oper = Operation::push;
+        uniqueScopeNumber.literal.fixed64 = function->code->whichScope;
+        //Push the necessary scope reference onto the stack.
+        inInstructions.push_back(uniqueScopeNumber);
         //Start the scope here.
         inInstructions.push_back(Instruction(Operation::newScope));
         //Generate the arguments, if any.

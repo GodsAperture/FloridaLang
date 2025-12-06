@@ -23,6 +23,7 @@ class Scope;
 //If you need to be told what a node is, God help you.
 class Node{
 public:
+    FloridaType type = FloridaType::BadToken;
     Node(){
         //Exists for the sake of the default constructor.    
     }
@@ -67,7 +68,6 @@ public:
     int64_t distance = -1;
     types value;
     Variable* next = nullptr;
-    FloridaType type = FloridaType::BadToken;
 
     Variable();
     void operator=(Variable* input){
@@ -91,8 +91,6 @@ class Scope : public Node{
         Scope* parent = nullptr;
         //The corresponding "name" of the scope.
         std::string_view name;
-        //The unique ExistingScope for this Scope.
-        ExistingScope* stackScope = nullptr;
         //This is the body of code within the scope.
         Body* body = nullptr;
         //This will be the variables of the current scope.
@@ -257,10 +255,21 @@ public:
 
 
 
+class Float8 : public Node{
+public:
+    double value = 0.0;
+
+    Float8();
+    std::string ToString(std::string inLeft, std::string inRight) override;
+    std::string printAll() override;
+    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
+    Node* copy(StackAllocator& input) override;
+    Float8* pcopy(StackAllocator& input);
+};
 
 class Fixed8 : public Node{
 public:
-    int64_t value;
+    int64_t value = 0;
 
     Fixed8();
     Fixed8(std::string input);

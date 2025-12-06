@@ -26,12 +26,53 @@ enum Operation{
     push,
     pop,
 
-    //Math instructions
-    multiply,
-    divide,
-    add,
-    subtract,
-    negate,
+    //Horizontal casting
+    float8TOfixed8,
+    float8TOufixed8,
+    fixed8TOufixed8,
+    fixed8TOfloat8,
+    ufixed8TOfloat8,
+    ufixed8TOfixed8,
+
+    //float8 downcasting
+    float8TOfloat4,
+
+    //float8 upcasting
+    float4TOfloat8,
+
+    //ufixed8 downcasting
+    ufixed8TOufixed4,
+    ufixed8TOufixed2,
+    ufixed8TOufixed1,
+
+    //ufixed8 upcasting
+    ufixed1TOufixed8,
+    ufixed2TOufixed8,
+    ufixed4TOufixed8,
+
+    //fixed8 downcasting
+    fixed8TOfixed4,
+    fixed8TOfixed2,
+    fixed8TOfixed1,
+
+    //fixed8 upcasting
+    fixed1TOfixed8,
+    fixed2TOfixed8,
+    fixed4TOfixed8,
+
+    //fixed8 math instructions
+    fixed8multiply,
+    fixed8divide,
+    fixed8add,
+    fixed8subtract,
+    fixed8negate,
+
+    //float8 math instructions
+    float8multiply,
+    float8divide,
+    float8add,
+    float8subtract,
+    float8negate,
 
     //Object comparisons
     equals,

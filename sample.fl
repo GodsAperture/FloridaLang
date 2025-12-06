@@ -1,13 +1,1 @@
-fixed8 f(fixed8 x){
-    fixed8 fun(fixed8 y){
-        return x * y;
-    }
-    
-    return f(x) * x;
-}
-
-fixed8 z = f(4);
-
-if(z > 0){
-    z = f(z);
-}
+3.141 * ;

@@ -40,6 +40,12 @@ enum FloridaType{
 
     //Operators are strings of non-alphanumerical characters. 
     Operator,
+    //Binary operators operate on the objects to the left and right.
+    BinaryOperator,
+    //Left Operators operate on the object to the left.
+    LeftOperator,
+    //Right Operators operate on the object the right.
+    RightOperator,
 
     //End of File
     eof,
