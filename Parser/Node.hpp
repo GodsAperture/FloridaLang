@@ -103,6 +103,7 @@ class Scope : public Node{
         //Find where in some given Scope a particular variable lies.
         //If it does not exist in the scope, it returns -1.
         int64_t varWhere(std::string input);
+        Variable* getVar(std::string input);
         //Find where in some given Scope a particular variable lies.
         //If it does not exist in the scope, it returns -1.
         Function* funGet(std::string input);
@@ -126,29 +127,27 @@ class Scope : public Node{
 class Initialize : public Node{
 public:
     Variable* thisVariable = nullptr;
+    //Only useful for function, method, class, constructor, etc. defintions.
+    Initialize* next = nullptr;
 
     Initialize();
-    Initialize(Variable* inVariable);
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     Node* copy(StackAllocator& input) override;
-    Initialize* pcopy(StackAllocator& input);
+    virtual Initialize* pcopy(StackAllocator& input);
 };
 
-class InitializeAssign : public Node{
+class InitializeAssign : public Initialize{
 public:
-    Variable* thisVariable = nullptr;
     Node* code = nullptr;
-    FloridaType type;
 
     InitializeAssign();
-    InitializeAssign(Variable* inVariable, Node* inCode);
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     Node* copy(StackAllocator& input) override;
-    InitializeAssign* pcopy(StackAllocator& input);
+    InitializeAssign* pcopy(StackAllocator& input) override;
 };
 
 class Assignment : public Node{
@@ -167,6 +166,7 @@ public:
 
 
 
+//Mathematical operations
 class Add : public Node{
 public:
     Node* left = nullptr;
@@ -255,9 +255,10 @@ public:
 
 
 
+//Primitive types
 class Float8 : public Node{
 public:
-    double value = 0.0;
+    _Float64 value = 0.0;
 
     Float8();
     std::string ToString(std::string inLeft, std::string inRight) override;
@@ -267,12 +268,23 @@ public:
     Float8* pcopy(StackAllocator& input);
 };
 
+class Float4 : public Node{
+public:
+    _Float32 value = 0.0;
+
+    Float4();
+    std::string ToString(std::string inLeft, std::string inRight) override;
+    std::string printAll() override;
+    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
+    Node* copy(StackAllocator& input) override;
+    Float4* pcopy(StackAllocator& input);
+};
+
 class Fixed8 : public Node{
 public:
     int64_t value = 0;
 
     Fixed8();
-    Fixed8(std::string input);
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
@@ -280,17 +292,115 @@ public:
     Fixed8* pcopy(StackAllocator& input);
 };
 
+class Fixed4 : public Node{
+public:
+    int32_t value = 0;
+
+    Fixed4();
+    std::string ToString(std::string inLeft, std::string inRight) override;
+    std::string printAll() override;
+    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
+    Node* copy(StackAllocator& input) override;
+    Fixed4* pcopy(StackAllocator& input);
+};
+
+class Fixed2 : public Node{
+public:
+    int16_t value = 0;
+
+    Fixed2();
+    std::string ToString(std::string inLeft, std::string inRight) override;
+    std::string printAll() override;
+    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
+    Node* copy(StackAllocator& input) override;
+    Fixed2* pcopy(StackAllocator& input);
+};
+
+class Fixed1 : public Node{
+public:
+    int8_t value = 0;
+
+    Fixed1();
+    std::string ToString(std::string inLeft, std::string inRight) override;
+    std::string printAll() override;
+    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
+    Node* copy(StackAllocator& input) override;
+    Fixed1* pcopy(StackAllocator& input);
+};
+
+class Ufixed8 : public Node{
+public:
+    uint64_t value = 0;
+
+    Ufixed8();
+    std::string ToString(std::string inLeft, std::string inRight) override;
+    std::string printAll() override;
+    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
+    Node* copy(StackAllocator& input) override;
+    Ufixed8* pcopy(StackAllocator& input);
+};
+
+class Ufixed4 : public Node{
+public:
+    uint32_t value = 0;
+
+    Ufixed4();
+    std::string ToString(std::string inLeft, std::string inRight) override;
+    std::string printAll() override;
+    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
+    Node* copy(StackAllocator& input) override;
+    Ufixed4* pcopy(StackAllocator& input);
+};
+
+class Ufixed2 : public Node{
+public:
+    uint16_t value = 0;
+
+    Ufixed2();
+    std::string ToString(std::string inLeft, std::string inRight) override;
+    std::string printAll() override;
+    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
+    Node* copy(StackAllocator& input) override;
+    Ufixed2* pcopy(StackAllocator& input);
+};
+
+class Ufixed1 : public Node{
+public:
+    uint8_t value = 0;
+
+    Ufixed1();
+    std::string ToString(std::string inLeft, std::string inRight) override;
+    std::string printAll() override;
+    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
+    Node* copy(StackAllocator& input) override;
+    Ufixed1* pcopy(StackAllocator& input);
+};
+
 class Boolean : public Node{
 public:
     bool value;
 
     Boolean();
-    Boolean(bool inBool);
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     Node* copy(StackAllocator& input) override;
     Boolean* pcopy(StackAllocator& input);
+};
+
+
+
+//Type casts
+class TypecastClass : public Node{
+public:
+    Node* body = nullptr;
+
+    TypecastClass();
+    std::string ToString(std::string inLeft, std::string inRight) override;
+    std::string printAll() override;
+    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
+    Node* copy(StackAllocator& input) override;
+    TypecastClass* pcopy(StackAllocator& input);
 };
 
 
@@ -426,7 +536,6 @@ public:
 
 
 
-//if statements
 class IfClass : public Node{
 public:
     Node* condition = nullptr;
@@ -475,8 +584,7 @@ class Function : public Node{
 public:
     std::string_view name;
     bool returnable = false;
-    FloridaType type = FloridaType::BadToken;
-    //This is where the instruction set begings.
+    //This is where the instruction set begins.
     int64_t position = -1;
     //This is how many arguments the function has.
     int64_t argumentCount = 0;
@@ -544,28 +652,49 @@ public:
     ReturnClass* pcopy(StackAllocator& input);
 };
 
-//This will be placed on a separate stack to track which scope is current.
-class ExistingScope{
+
+
+// class Method : public Node{
+// public:
+//     std::string_view name;
+//     //This is where the instruction set begings.
+//     int64_t position = -1;
+//     //This is how many arguments the method has.
+//     //There will always be at least 1 argument.
+//     int64_t argumentCount = 1;
+//     //This is the full method definition.
+//     Scope* code = nullptr;
+//     //For use in the parser and VM.
+//     //This points to the next method in the scope, if any.
+//     Method* next = nullptr;
+//     //Previous methods are needed to determine what is the previous scope.
+//     Method* previous = nullptr;
+//     //This connects all methods across scopes.
+//     Method* allMethods = nullptr;
+//     //This makes sure code isn't generated twice.
+//     bool alreadyGenerated = false;
+//
+//     Method();
+//     std::string ToString(std::string inLeft, std::string inRight) override;
+//     std::string printAll() override;
+//     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
+//     void append(Variable* input);
+//     Node* copy(StackAllocator& input) override;
+//     Method* pcopy(StackAllocator& input);
+// };
+
+class ObjectClass : public Node{
 public:
-    //The counter will determine which index to use in the BasePointerArray in the VM.
-    uint64_t whichScope = 0;
-    //This is the base pointer when the scope is created.
-    uint64_t reference = 0;
-    //This is the instruction number when the scope is created.
-    uint64_t instructionNumber = 0;
+    std::string_view name;
+    Scope* code = nullptr;
+    //Method* allMethods = nullptr;
 
-    ExistingScope();
-    ExistingScope(ExistingScope* input){
-        whichScope = input->whichScope;
-        reference = input->reference;
-        instructionNumber = input->instructionNumber;
-    }
-    void operator=(ExistingScope right){
-        whichScope = right.whichScope;
-        reference = right.reference;
-        instructionNumber = right.instructionNumber;
-    }
-
+    ObjectClass();
+    std::string ToString(std::string inLeft, std::string inRight) override;
+    std::string printAll() override;
+    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
+    Node* copy(StackAllocator& input) override;
+    ObjectClass* pcopy(StackAllocator& input);
 };
 
 #endif

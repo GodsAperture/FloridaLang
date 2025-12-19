@@ -1,19 +1,22 @@
 #include "VM.hpp"
 
-void FloridaVM::push(types input){
+inline void FloridaVM::push(types input){
     computationVector.push_back(input);
 }
 
-types FloridaVM::pop(){
-    types result = computationVector.back();
+inline void FloridaVM::pop(){
     computationVector.pop_back();
-
-    return result;
 }
 
-types FloridaVM::top(){
+inline types FloridaVM::top(){
     return computationVector.back();
 }
+
+inline void FloridaVM::edit(types input){
+    computationVector[computationVector.size() - 1] = input;
+}
+
+
 
 void FloridaVM::infoPrint(){
     std::cout << "--Instruction number: " << instructionNumber << "\n";
@@ -114,21 +117,20 @@ bool FloridaVM::next(){
 
     //Other variables that exist for convenience.
     Instruction current = programInstructions[instructionNumber];
-    //ExistingScope* currScope = allCalls->top;
     switch (programInstructions[instructionNumber].oper){
         case Operation::call:
             //Push the current Instruction number to the INStack.
             INPush(instructionNumber);            
             //Move the instruction to the start of its instruction set.
-            instructionNumber = programInstructions[instructionNumber].literal.fixed64;
+            instructionNumber = programInstructions[instructionNumber].literal.fixed8;
             return true;
         case Operation::newScope:
             //Use left to get the correct UniqueScope.
             left = top();
             //Move the CurrentInfo value to the BPStack.
-            BPPush(left.fixed64, CurrentBP[left.fixed64]);
+            BPPush(left.fixed8, CurrentBP[left.fixed8]);
             //Adjust CurrentBP.
-            CurrentBP[left.fixed64] = reference;
+            CurrentBP[left.fixed8] = reference;
             //Adjust the VM's current reference to be the new size of the vector.
             reference = computationVector.size() - 1;
             //Pop the information used to adjust the proper unique scope.
@@ -148,7 +150,7 @@ bool FloridaVM::next(){
             //Grab the resulting value that is to be returned from the scope.
             result = top();
             //The return instruction has to exit scope a particular number of times.
-            for(int i = 0; i < current.literal.fixed64; i++){
+            for(int i = 0; i < current.literal.fixed8; i++){
                 //Readjust the reference to be the prior reference.
                 reference = CurrentBP[BPTopScope()];
                 //Readjust the most recent scope reference.
@@ -174,13 +176,13 @@ bool FloridaVM::next(){
                 return true;
             } else {
                 //This is to adjust the position of the instruction number.
-                instructionNumber = current.literal.fixed64;
+                instructionNumber = current.literal.fixed8;
                 //Pop the boolean from the stack.
                 pop();
                 return true;
             }
         case Operation::jump:
-            instructionNumber = current.literal.fixed64;
+            instructionNumber = current.literal.fixed8;
             break;
 
 
@@ -188,29 +190,29 @@ bool FloridaVM::next(){
 ////Variable related instructions.
         case Operation::gfetch:
             //Push the global value onto the stack.
-            computationVector.push_back(computationVector[programInstructions[instructionNumber].literal.fixed64]);
+            push(computationVector[programInstructions[instructionNumber].literal.fixed8]);
             break;
         case Operation::mfetch:
             //Grab the prior value to index allScopes.
             //This is WhichScope.   
             left = computationVector[computationVector.size() - 1];
             //Get the proper scope in question and fetch its reference.
-            left.fixed64 = BPScope(left.fixed64);
+            left.fixed8 = BPScope(left.fixed8);
             //Using the distance provided at the top of the stack, push the resulting value onto the stack.
-            result = computationVector[left.fixed64 + current.literal.fixed64];
-            //Overwrite the trash with 
-            computationVector[computationVector.size() - 1] = result;
+            result = computationVector[left.fixed8 + current.literal.fixed8];
+            //Overwrite the trash with the result.
+            edit(result);
             break;
         case Operation::lfetch:
             //Push the local value onto the stack.
-            push(computationVector[reference + programInstructions[instructionNumber].literal.fixed64]);
+            push(computationVector[reference + programInstructions[instructionNumber].literal.fixed8]);
             break;
         case Operation::initialize:
-            left.fixed64 = 0;
+            left.fixed8 = 0;
             push(left);
             break;
         case Operation::gassign:
-            computationVector[programInstructions[instructionNumber].literal.fixed64] = top();
+            computationVector[programInstructions[instructionNumber].literal.fixed8] = top();
             pop();
             break;
         case Operation::massign:
@@ -219,13 +221,13 @@ bool FloridaVM::next(){
             //Grab WhichScope.
             left = computationVector[computationVector.size() - 1];
             //Move the result to the place in the computation vector.
-            computationVector[BPReference(left.fixed64)] = result;
+            computationVector[BPReference(left.fixed8)] = result;
             //Pop the result and the ExistingScope position.
             pop();
             pop();
             break;
         case Operation::lassign:
-            computationVector[reference + programInstructions[instructionNumber].literal.fixed64] = top();
+            computationVector[reference + programInstructions[instructionNumber].literal.fixed8] = top();
             pop();            
             break;
 
@@ -241,89 +243,461 @@ bool FloridaVM::next(){
 
 
 
-////horizontal casting
-        case Operation::float8TOfixed8:
-            computationVector[computationVector.size() - 1].fixed64 = (int64_t) computationVector[computationVector.size() - 1].float64;
+////Typecasting, in a different order.
+        //TOufixed1 casts.
+        case Operation::ufixed1TOufixed1:
+            //Redundant. Intentionally undefined.
+        case Operation::ufixed2TOufixed1:
+            result.ufixed1 = (uint8_t) top().ufixed2;
+            edit(result);
             break;
-        case Operation::float8TOufixed8:
-            computationVector[computationVector.size() - 1].ufixed64 = (uint64_t) computationVector[computationVector.size() - 1].float64;
-            break;
-        case Operation::fixed8TOufixed8:
-            computationVector[computationVector.size() - 1].ufixed64 = (uint64_t) computationVector[computationVector.size() - 1].fixed64;
-            break;
-        case Operation::fixed8TOfloat8:
-            computationVector[computationVector.size() - 1].float64 = (_Float64) computationVector[computationVector.size() - 1].fixed64;
-            break;
-        case Operation::ufixed8TOfloat8:
-            computationVector[computationVector.size() - 1].float64 = (_Float64) computationVector[computationVector.size() - 1].ufixed64;
-            break;
-        case Operation::ufixed8TOfixed8:
-            computationVector[computationVector.size() - 1].fixed64 = (uint64_t) computationVector[computationVector.size() - 1].ufixed64;
-            break;
-
-
-
-////float8 downcasting
-        case Operation::float8TOfloat4:
-            computationVector[computationVector.size() - 1].float32 = (_Float32) computationVector[computationVector.size() - 1].float64;
-            break;
-
-////float8 upcasting
-        case Operation::float4TOfloat8:
-            computationVector[computationVector.size() - 1].float64 = (_Float64) computationVector[computationVector.size() - 1].float32;
-            break;
-
-////ufixed8 downcasting
-        case Operation::ufixed8TOufixed4:
-            computationVector[computationVector.size() - 1].ufixed32 = (uint32_t) computationVector[computationVector.size() - 1].ufixed64;
-            break;
-        case Operation::ufixed8TOufixed2:
-            computationVector[computationVector.size() - 1].ufixed16 = (uint16_t) computationVector[computationVector.size() - 1].ufixed64;
+        case Operation::ufixed4TOufixed1:
+            result.ufixed1 = (uint8_t) top().ufixed4;
+            edit(result);
             break;
         case Operation::ufixed8TOufixed1:
-            computationVector[computationVector.size() - 1].ufixed8 = (uint8_t) computationVector[computationVector.size() - 1].ufixed64;
+            result.ufixed1 = (uint8_t) top().ufixed8;
+            edit(result);
+            break;
+        case Operation::fixed1TOufixed1:
+            result.ufixed1 = (uint8_t) top().fixed1;
+            edit(result);
+            break;
+        case Operation::fixed2TOufixed1:
+            result.ufixed1 = (uint8_t) top().fixed2;
+            edit(result);
+            break;
+        case Operation::fixed4TOufixed1:
+            result.ufixed1 = (uint8_t) top().fixed4;
+            edit(result);
+            break;
+        case Operation::fixed8TOufixed1:
+            result.ufixed1 = (uint8_t) top().fixed8;
+            edit(result);
+            break;
+        case Operation::float4TOufixed1:
+            result.ufixed1 = (uint8_t) top().float4;
+            edit(result);
+            break;
+        case Operation::float8TOufixed1:
+            result.ufixed1 = (uint8_t) top().float8;
+            edit(result);
+            break;
+
+        //TOufixed2 casts.
+        case Operation::ufixed1TOufixed2:
+            result.ufixed2 = (uint16_t) top().ufixed1;
+            edit(result);
+            break;
+        case Operation::ufixed2TOufixed2:
+            //Redundant. Intentionally undefined.
+        case Operation::ufixed4TOufixed2:
+            result.ufixed2 = (uint16_t) top().ufixed4;
+            edit(result);
+            break;
+        case Operation::ufixed8TOufixed2:
+            result.ufixed2 = (uint16_t) top().ufixed8;
+            edit(result);
+            break;
+        case Operation::fixed1TOufixed2:
+            result.ufixed2 = (uint16_t) top().fixed1;
+            edit(result);
+            break;
+        case Operation::fixed2TOufixed2:
+            result.ufixed2 = (uint16_t) top().fixed2;
+            edit(result);
+            break;
+        case Operation::fixed4TOufixed2:
+            result.ufixed2 = (uint16_t) top().fixed4;
+            edit(result);
+            break;
+        case Operation::fixed8TOufixed2:
+            result.ufixed2 = (uint16_t) top().fixed8;
+            edit(result);
+            break;
+        case Operation::float4TOufixed2:
+            result.ufixed2 = (uint16_t) top().float4;
+            edit(result);
+            break;
+        case Operation::float8TOufixed2:
+            result.ufixed2 = (uint16_t) top().float8;
+            edit(result);
+            break;
+
+        //TOufixed4 casts.
+        case Operation::ufixed1TOufixed4:
+            result.ufixed4 = (uint32_t) top().ufixed1;
+            edit(result);
+            break;
+        case Operation::ufixed2TOufixed4:
+            result.ufixed4 = (uint32_t) top().ufixed2;
+            edit(result);
+            break;
+        case Operation::ufixed4TOufixed4:
+            //Redundant. Intentionally undefined.
+            break;
+        case Operation::ufixed8TOufixed4:
+            result.ufixed4 = (uint32_t) top().ufixed8;
+            edit(result);
+            break;
+        case Operation::fixed1TOufixed4:
+            result.ufixed4 = (uint32_t) top().fixed1;
+            edit(result);
+            break;
+        case Operation::fixed2TOufixed4:
+            result.ufixed4 = (uint32_t) top().fixed2;
+            edit(result);
+            break;
+        case Operation::fixed4TOufixed4:
+            result.ufixed4 = (uint32_t) top().fixed4;
+            edit(result);
+            break;
+        case Operation::fixed8TOufixed4:
+            result.ufixed4 = (uint32_t) top().fixed8;
+            edit(result);
+            break;
+        case Operation::float4TOufixed4:
+            result.ufixed4 = (uint32_t) top().float4;
+            edit(result);
+            break;
+        case Operation::float8TOufixed4:
+            result.ufixed4 = (uint32_t) top().float8;
+            edit(result);
+            break;
+
+        //TOufixed8 casts.
+        case Operation::ufixed1TOufixed8:
+            result.ufixed8 = (uint64_t) top().ufixed1;
+            edit(result);
+            break;
+        case Operation::ufixed2TOufixed8:
+            result.ufixed8 = (uint64_t) top().ufixed2;
+            edit(result);
+            break;
+        case Operation::ufixed4TOufixed8:
+            result.ufixed8 = (uint64_t) top().fixed4;
+            edit(result);
+            break;
+        case Operation::ufixed8TOufixed8:
+            result.ufixed8 = (uint64_t) top().ufixed8;
+            edit(result);
+            break;
+        case Operation::fixed1TOufixed8:
+            result.ufixed8 = (uint64_t) top().fixed1;
+            edit(result);
+            break;
+        case Operation::fixed2TOufixed8:
+            result.ufixed8 = (uint64_t) top().fixed2;
+            edit(result);
+            break;
+        case Operation::fixed4TOufixed8:
+            result.ufixed8 = (uint64_t) top().fixed4;
+            edit(result);
+            break;
+        case Operation::fixed8TOufixed8:
+            result.ufixed8 = (uint64_t) top().fixed8;
+            edit(result);
+            break;
+        case Operation::float4TOufixed8:
+            result.ufixed8 = (uint64_t) top().float4;
+            edit(result);
+            break;
+        case Operation::float8TOufixed8:
+            result.ufixed8 = (uint64_t) top().float8;
+            edit(result);
+            break;
+
+        //TOfixed1 casts.
+        case Operation::ufixed1TOfixed1:
+            result.fixed1 = (int8_t) top().ufixed1;
+            edit(result);
+            break;
+        case Operation::ufixed2TOfixed1:
+            result.fixed1 = (int8_t) top().ufixed2;
+            edit(result);
+            break;
+        case Operation::ufixed4TOfixed1:
+            result.fixed1 = (int8_t) top().fixed4;
+            edit(result);
+            break;
+        case Operation::ufixed8TOfixed1:
+            result.fixed1 = (int8_t) top().ufixed8;
+            edit(result);
+            break;
+        case Operation::fixed1TOfixed1:
+            //Redundant. Intentionally undefined.
+            break;
+        case Operation::fixed2TOfixed1:
+            result.fixed1 = (int8_t) top().fixed2;
+            edit(result);
+            break;
+        case Operation::fixed4TOfixed1:
+            result.fixed1 = (int8_t) top().fixed4;
+            edit(result);
+            break;
+        case Operation::fixed8TOfixed1:
+            result.fixed1 = (int8_t) top().fixed8;
+            edit(result);
+            break;
+        case Operation::float4TOfixed1:
+            result.fixed1 = (int8_t) top().float4;
+            edit(result);
+            break;
+        case Operation::float8TOfixed1:
+            result.fixed1 = (int8_t) top().float8;
+            edit(result);
+            break;
+
+        //TOfixed2 casts.
+        case Operation::ufixed1TOfixed2:
+            result.fixed2 = (int16_t) top().ufixed1;
+            edit(result);
+            break;
+        case Operation::ufixed2TOfixed2:
+            result.fixed2 = (int16_t) top().ufixed2;
+            edit(result);
+            break;
+        case Operation::ufixed4TOfixed2:
+            result.fixed2 = (int16_t) top().fixed4;
+            edit(result);
+            break;
+        case Operation::ufixed8TOfixed2:
+            result.ufixed8 = (int16_t) top().fixed2;
+            edit(result);
+            break;
+        case Operation::fixed1TOfixed2:
+            result.fixed2 = (int16_t) top().fixed1;
+            edit(result);
+            break;
+        case Operation::fixed2TOfixed2:
+            //Redundant. Intentionally undefined.
+            break;
+        case Operation::fixed4TOfixed2:
+            result.fixed2 = (int16_t) top().fixed4;
+            edit(result);
+            break;
+        case Operation::fixed8TOfixed2:
+            result.fixed2 = (int16_t) top().fixed8;
+            edit(result);
+            break;
+        case Operation::float4TOfixed2:
+            result.fixed2 = (int16_t) top().float4;
+            edit(result);
+            break;
+        case Operation::float8TOfixed2:
+            result.fixed2 = (int16_t) top().float8;
+            edit(result);
+            break;
+
+        //TOfixed4 casts.
+        case Operation::ufixed1TOfixed4:
+            result.fixed4 = (int32_t) top().ufixed1;
+            edit(result);
+            break;
+        case Operation::ufixed2TOfixed4:
+            result.fixed4 = (int32_t) top().ufixed2;
+            edit(result);
+            break;
+        case Operation::ufixed4TOfixed4:
+            result.fixed4 = (int32_t) top().fixed4;
+            edit(result);
+            break;
+        case Operation::ufixed8TOfixed4:
+            result.fixed4 = (int32_t) top().ufixed8;
+            edit(result);
+            break;
+        case Operation::fixed1TOfixed4:
+            result.fixed4 = (int32_t) top().fixed1;
+            edit(result);
+            break;
+        case Operation::fixed2TOfixed4:
+            result.fixed4 = (int32_t) top().fixed2;
+            edit(result);
+            break;
+        case Operation::fixed4TOfixed4:
+            //Redundant. Intentionally undefined.
+            break;
+        case Operation::fixed8TOfixed4:
+            result.fixed4 = (int32_t) top().fixed8;
+            edit(result);
+            break;
+        case Operation::float4TOfixed4:
+            result.fixed4 = (int32_t) top().float4;
+            edit(result);
+            break;
+        case Operation::float8TOfixed4:
+            result.fixed4 = (int32_t) top().float8;
+            edit(result);
+            break;
+
+        //TOfixed8 casts.
+        case Operation::ufixed1TOfixed8:
+            result.fixed8 = (int64_t) top().ufixed1;
+            edit(result);
+            break;
+        case Operation::ufixed2TOfixed8:
+            result.fixed8 = (int64_t) top().ufixed2;
+            edit(result);
+            break;
+        case Operation::ufixed4TOfixed8:
+            result.fixed8 = (int64_t) top().fixed4;
+            edit(result);
+            break;
+        case Operation::ufixed8TOfixed8:
+            result.fixed8 = (int64_t) top().ufixed8;
+            edit(result);
+            break;
+        case Operation::fixed1TOfixed8:
+            result.fixed8 = (int64_t) top().fixed1;
+            edit(result);
+            break;
+        case Operation::fixed2TOfixed8:
+            result.fixed8 = (int64_t) top().fixed2;
+            edit(result);
+            break;
+        case Operation::fixed4TOfixed8:
+            result.fixed8 = (int64_t) top().fixed4;
+            edit(result);
+            break;
+        case Operation::fixed8TOfixed8:
+            //Redundant. Intentionally undefined.
+            break;
+        case Operation::float4TOfixed8:
+            result.fixed8 = (int64_t) top().float4;
+            edit(result);
+            break;
+        case Operation::float8TOfixed8:
+            result.fixed8 = (int64_t) top().float8;
+            edit(result);
+            break;
+
+        //TOfloat4 casts.
+        case Operation::ufixed1TOfloat4:
+            result.float4 = (_Float32) top().ufixed1;
+            edit(result);
+            break;
+        case Operation::ufixed2TOfloat4:
+            result.float4 = (_Float32) top().ufixed2;
+            edit(result);
+            break;
+        case Operation::ufixed4TOfloat4:
+            result.float4 = (_Float32) top().fixed4;
+            edit(result);
+            break;
+        case Operation::ufixed8TOfloat4:
+            result.float4 = (_Float32) top().ufixed8;
+            edit(result);
+            break;
+        case Operation::fixed1TOfloat4:
+            result.float4 = (_Float32) top().fixed1;
+            edit(result);
+            break;
+        case Operation::fixed2TOfloat4:
+            result.float4 = (_Float32) top().fixed2;
+            edit(result);
+            break;
+        case Operation::fixed4TOfloat4:
+            result.float4 = (_Float32) top().fixed4;
+            edit(result);
+            break;
+        case Operation::fixed8TOfloat4:
+            result.float4 = (_Float32) top().fixed8;
+            edit(result);
+            break;
+        case Operation::float4TOfloat4:
+            //Redundant. Intentionally undefined.
+            break;
+        case Operation::float8TOfloat4:
+            result.float4 = (_Float32) top().float8;
+            edit(result);
+            break;
+
+        //TOfloat8 casts.
+        case Operation::ufixed1TOfloat8:
+            result.float8 = (uint64_t) top().ufixed1;
+            edit(result);
+            break;
+        case Operation::ufixed2TOfloat8:
+            result.float8 = (uint64_t) top().ufixed2;
+            edit(result);
+            break;
+        case Operation::ufixed4TOfloat8:
+            result.float8 = (uint64_t) top().fixed4;
+            edit(result);
+            break;
+        case Operation::ufixed8TOfloat8:
+            result.float8 = (uint64_t) top().ufixed8;
+            edit(result);
+            break;
+        case Operation::fixed1TOfloat8:
+            result.float8 = (uint64_t) top().fixed1;
+            edit(result);
+            break;
+        case Operation::fixed2TOfloat8:
+            result.float8 = (uint64_t) top().fixed2;
+            edit(result);
+            break;
+        case Operation::fixed4TOfloat8:
+            result.float8 = (uint64_t) top().fixed4;
+            edit(result);
+            break;
+        case Operation::fixed8TOfloat8:
+            result.float8 = (uint64_t) top().fixed8;
+            edit(result);
+            break;
+        case Operation::float4TOfloat8:
+            result.float8 = (uint64_t) top().float4;
+            edit(result);
+            break;
+        case Operation::float8TOfloat8:
+            result.float8 = (uint64_t) top().float8;
+            edit(result);
             break;
 
 ////fixed8 mathematical instructions.
         case Operation::fixed8add:
             //Get the right operand;
-            right = pop();
+            right = top();
+            pop();
             //Get the left operand;
-            left = pop();
-            //Operate and push;
-            result.fixed64 = left.fixed64 + right.fixed64;
-            push(result);
+            left = top();
+            //Operate and edit;
+            result.fixed8 = left.fixed8 + right.fixed8;
+            edit(result);
             break;
         case Operation::fixed8subtract:
             //Get the right operand;
-            right = pop();
+            right = top();
+            pop();
             //Get the left operand;
-            left = pop();
-            //Operate and push;
-            result.fixed64 = left.fixed64 - right.fixed64;
-            push(result);
+            left = top();
+            //Operate and edit;
+            result.fixed8 = left.fixed8 - right.fixed8;
+            edit(result);
             break;
         case Operation::fixed8negate:
             //Negate the value;
-            computationVector[computationVector.size() - 1].fixed64 = -computationVector[computationVector.size() - 1].fixed64;
+            computationVector[computationVector.size() - 1].fixed8 = -computationVector[computationVector.size() - 1].fixed8;
             break;
         case Operation::fixed8multiply:
             //Get the right operand;
-            right = pop();
+            right = top();
+            pop();
             //Get the left operand;
-            left = pop();
+            left = top();
             //Operate and push;
-            result.fixed64 = left.fixed64 * right.fixed64;
-            push(result);
+            result.fixed8 = left.fixed8 * right.fixed8;
+            edit(result);
             break;
         case Operation::fixed8divide:
             //Get the right operand;
-            right = pop();
+            right = top();
+            pop();
             //Get the left operand;
-            left = pop();
+            left = top();
             //Operate and push;
-            result.fixed64 = left.fixed64 / right.fixed64;
-            push(result);
+            result.fixed8 = left.fixed8 / right.fixed8;
+            edit(result);
             break;
 
 
@@ -331,123 +705,152 @@ bool FloridaVM::next(){
 ////float8 mathematical operations
             case Operation::float8add:
             //Get the right operand;
-            right = pop();
+            right = top();
+            pop();
             //Get the left operand;
-            left = pop();
+            left = top();
+            pop();
             //Operate and push;
-            result.float64 = left.float64 + right.float64;
+            result.float8 = left.float8 + right.float8;
             push(result);
             break;
         case Operation::float8subtract:
             //Get the right operand;
-            right = pop();
+            right = top();
+            pop();
             //Get the left operand;
-            left = pop();
+            left = top();
+            pop();
             //Operate and push;
-            result.float64 = left.float64 - right.float64;
+            result.float8 = left.float8 - right.float8;
             push(result);
             break;
         case Operation::float8negate:
             //Negate the value;
-            computationVector[computationVector.size() - 1].float64 = -computationVector[computationVector.size() - 1].float64;
+            computationVector[computationVector.size() - 1].float8 = -computationVector[computationVector.size() - 1].float8;
             break;
         case Operation::float8multiply:
             //Get the right operand;
-            right = pop();
+            right = top();
+            pop();
             //Get the left operand;
-            left = pop();
+            left = top();
+            pop();
             //Operate and push;
-            result.float64 = left.float64 * right.float64;
+            result.float8 = left.float8 * right.float8;
             push(result);
             break;
         case Operation::float8divide:
             //Get the right operand;
-            right = pop();
+            right = top();
+            pop();
             //Get the left operand;
-            left = pop();
+            left = top();
+            pop();
             //Operate and push;
-            result.float64 = left.float64 / right.float64;
+            result.float8 = left.float8 / right.float8;
             push(result);
             break;
 
 
 
-////Boolean algebra instructions.
+////Comparison instructions.
         case equals:
             //Get the right operand;
-            right = pop();
+            right = top();
+            pop();
             //Get the left operand;
-            left = pop();
+            left = top();
+            pop();
             //Operate and push;
-            result.boolean = left.fixed64 == right.fixed64;
+            result.boolean = left.fixed8 == right.fixed8;
             push(result);
             break;
         case nequals:
             //Get the right operand;
-            right = pop();
+            right = top();
+            pop();
             //Get the left operand;
-            left = pop();
+            left = top();
+            pop();
             //Operate and push;
-            result.boolean = left.fixed64 != right.fixed64;
+            result.boolean = left.fixed8 != right.fixed8;
             push(result);
             break;
         case greater:
             //Get the right operand;
-            right = pop();
+            right = top();
+            pop();
             //Get the left operand;
-            left = pop();
+            left = top();
+            pop();
             //Operate and push;
-            result.boolean = left.fixed64 > right.fixed64;
+            result.boolean = left.fixed8 > right.fixed8;
             push(result);
             break;
         case greateror:
             //Get the right operand;
-            right = pop();
+            right = top();
+            pop();
             //Get the left operand;
-            left = pop();
+            left = top();
+            pop();
             //Operate and push;
-            result.boolean = left.fixed64 >= right.fixed64;
+            result.boolean = left.fixed8 >= right.fixed8;
             push(result);
             break;
         case lesser:
             //Get the right operand;
-            right = pop();
+            right = top();
+            pop();
             //Get the left operand;
-            left = pop();
+            left = top();
+            pop();
             //Operate and push;
-            result.boolean = left.fixed64 < right.fixed64;
+            result.boolean = left.fixed8 < right.fixed8;
             push(result);
             break;
         case lesseror:
             //Get the right operand;
-            right = pop();
+            right = top();
+            pop();
             //Get the left operand;
-            left = pop();
+            left = top();
+            pop();
             //Operate and push;
-            result.boolean = left.fixed64 <= right.fixed64;
+            result.boolean = left.fixed8 <= right.fixed8;
             push(result);
             break;
         case ior:
             //Get the right operand;
-            right = pop();
+            right = top();
+            pop();
             //Get the left operand;
-            left = pop();
+            left = top();
+            pop();
             //Operate and push;
             result.boolean = left.boolean or right.boolean;
             push(result);
             break;
+
+
+
+//Boolean algebra
         case iand:
             //Get the right operand;
-            right = pop();
+            right = top();
+            pop();
             //Get the left operand;
-            left = pop();
+            left = top();
+            pop();
             //Operate and push;
             result.boolean = left.boolean and right.boolean;
             push(result);
             break;
         case inot:
             //Get the right operand;
-            right = pop();
+            right = top();
+            pop();
             //Operate and push;
             result.boolean = !right.boolean;
             push(result);

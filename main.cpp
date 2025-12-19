@@ -96,10 +96,10 @@ int main(){
 	bool successful = true;
 	uint64_t counter = 0;
 	bool infoPrinter = 1;
-	uint64_t VMBreaker = 15;
+	uint64_t VMBreaker = 7;
 
 	//Use this to skip loads of nonsense in the VM's execution and print information.	
-	for(uint64_t i = 0; (i < VMBreaker) and successful; i++){
+	for(uint64_t i = 0; (i < VMBreaker) or successful; i++){
 		//This is just useful for debugging the VM.
 		if(infoPrinter){
 			std::cout << "--Counter: " << counter << "\n";

@@ -5,9 +5,9 @@ enum FloridaType{
     tvoid,
     //Default type, for errors;
     Null,
-
-    //Keywords
-    If, For, Break, While, Return, Object, Try, Catch,
+    //Adjectives describe what type an object is.
+    //This will prevent the parser from trying to convert "float8", and others, into a number.
+    Adjective,
 
     //Pesky fucking comments.
     Comment,
@@ -24,6 +24,9 @@ enum FloridaType{
     fixed1, fixed2, fixed4, fixed8,
     float4, float8,
     ufixedn, fixedn, floatn,
+
+    //Keywords
+    If, For, Break, While, Return, Object, Try, Catch, Typecast,
 
     //scifix numbers are scientific notation numbers such as 2.718e0 and 1.234E32
     scifix8, scifixn,

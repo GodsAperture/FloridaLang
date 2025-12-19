@@ -63,10 +63,8 @@ public:
 
     //Check for a variable.
     Variable* variable();
-    //Check for an initialization.
+    //Check for an initialization with or without assignment.
     Initialize* initialize();
-    //Check for an initialization with an assignment.
-    InitializeAssign* initializeAssign();
     //Check for an assignment.
     Assignment* assignment();
 

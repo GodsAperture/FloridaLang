@@ -1,1 +1,4 @@
-3.141 * ;
+object thisThing{
+    float8 theDouble = 3.14;
+    fixed8 theInteger = 8;
+}

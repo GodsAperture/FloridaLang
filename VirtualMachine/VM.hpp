@@ -47,14 +47,19 @@ public:
     void printStack();
     //Prints the stack with some prettier debugging.
     void printAll();
-    //Push the given value to the computation vector.
-    void push(types input);
-    //Pop the current value from the computation vector.
-    types pop();
-    //Get the current value from the computation vector.
-    types top();
     //Just prints out relevant information about the VM's state.
     void infoPrint();
+
+////Computation stack specific tools.
+
+    //Push the given value to the computation vector.
+    inline void push(types input);
+    //Pop the current value from the computation vector.
+    inline void pop();
+    //Get the current value from the computation vector.
+    inline types top();
+    //Edit the top of the stack.
+    inline void edit(types input);
 
     //Call stack related methods.
     //Add a new element in the BPStack.

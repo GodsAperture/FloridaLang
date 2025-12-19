@@ -32,7 +32,32 @@ bool Parser::check(std::string inString){
     return false;
 }
 
+inline FloridaType adjustedType(FloridaType input){
+    switch(input){
+        case FloridaType::ufixed1:
+            return FloridaType::ufixed4;
+        case FloridaType::ufixed2:
+            return FloridaType::ufixed4;
+        case FloridaType::fixed1:
+            return FloridaType::fixed4;
+        case FloridaType::fixed2:
+            return FloridaType::fixed4;
+        default:
+            return input;
+    }
+}
 
+//This function will determine the return type of math operations.
+inline FloridaType returnType(FloridaType left, FloridaType right){
+    left = adjustedType(left);
+    right = adjustedType(right);
+
+    if(left > right){
+        return left;
+    } else {
+        return right;
+    }
+}
 
 //Mathy stuff
 Node* Parser::AddSub(){
@@ -52,6 +77,7 @@ Node* Parser::AddSub(){
 
     std::string current = given[iter].getName();
     while(check("+") or check("-")){
+        std::cout << "Sum or difference found!\n";
         //Check for a product/division subexpression.
         right = MulDiv();
         if(right == nullptr){
@@ -61,14 +87,41 @@ Node* Parser::AddSub(){
             return nullptr;
         }
 
+        FloridaType resultType = returnType(left->type, right->type);
+        //Determine if either the left or the right need to be typecasted.
+        if(left->type != resultType){
+            TypecastClass* that = stack->alloc<TypecastClass>();
+            that->body = left;
+            that->type = resultType;
+
+            left = that;
+        }
+        if(right->type != resultType){
+            TypecastClass* that = stack->alloc<TypecastClass>();
+            that->body = right;
+            that->type = resultType;
+
+            right = that;
+        }
+
         //Check for any sort of sum or difference.
         if(current == "+"){
-            left = stack->alloc<Add>(left, right);
+            Add* result = stack->alloc<Add>();
+            result->left = left;
+            result->right = right;
+            result->type = resultType;
+
+            left = result;
             current = given[iter].name;
             continue;
         }
         if(current == "-"){
-            left = stack->alloc<Subtract>(left, right);
+            Subtract* result = stack->alloc<Subtract>();
+            result->left = left;
+            result->right = right;
+            result->type = resultType;
+
+            left = result;
             current = given[iter].name;
             continue;
         }
@@ -103,15 +156,42 @@ Node* Parser::MulDiv(){
             return nullptr;
         }
 
+        FloridaType resultType = returnType(left->type, right->type);
+        //Determine if either the left or the right need to be typecasted.
+        if(left->type != resultType){
+            TypecastClass* that = stack->alloc<TypecastClass>();
+            that->body = left;
+            that->type = resultType;
+
+            left = that;     
+        }
+        if(right->type != resultType){
+            TypecastClass* that = stack->alloc<TypecastClass>();
+            that->body = right;
+            that->type = resultType;
+
+            right = that;
+        }
+
         //Start checking for products or divisions.
         if(current == "*"){
-            left = stack->alloc<Multiply>(left, right);
+            Multiply* result = stack->alloc<Multiply>();
+            result->left = left;
+            result->right = right;
+            result->type = resultType;
+
             current = given[iter].name;
+            left = result;
             continue;
         }
         if(current == "/"){
-            left = stack->alloc<Divide>(left, right);
+            Divide* result = stack->alloc<Divide>();
+            result->left = left;
+            result->right = right;
+            result->type = resultType;
+
             current = given[iter].name;
+            left = result;
             continue;
         }
     }
@@ -119,6 +199,8 @@ Node* Parser::MulDiv(){
     return left;
 
 }
+
+
 
 Node* Parser::primitive(){
     //Check for negations
@@ -142,37 +224,49 @@ Node* Parser::primitive(){
 
         return expression;
     }
+
+
+
     //Check for numbers.
-    if(given[iter].type == FloridaType::fixed8){ 
-        Fixed8* number = stack->alloc<Fixed8>(given[iter].getName());
+    if((given[iter].type == FloridaType::fixed8) and (given[iter].getName() != "fixed8")){
+        Fixed8* number = stack->alloc<Fixed8>();
+        number->value = std::stol(given[iter].getName());
         iter++;
 
         return number;
     }
-    if(given[iter].type == FloridaType::float8){
+    if((given[iter].type == FloridaType::float8) and (given[iter].getName() != "float8")){
         Float8* number = stack->alloc<Float8>();
+        number->value = std::stod(given[iter].getName());
         iter++;
-        number->value = std::stod(given[iter - 1].getName());
 
         return number;
     }
+
+
+    
     //Check for booleans.
     if(given[iter].type == FloridaType::Bool){
+        Boolean* result = stack->alloc<Boolean>();
         if(given[iter].getName() == "true"){
+            result->value = true;
             iter++;
-            return stack->alloc<Boolean>(true);
+
+            return result;
         } else {
+            result->value = false;
             iter++;
-            return stack->alloc<Boolean>(false);
+            
+            return result;
         }
-    }
-    Node* thisVariable = variable();
-    if(thisVariable != nullptr){
-        return thisVariable;
     }
     Call* thisCall = call();
     if(thisCall != nullptr){
         return thisCall;
+    }
+    Node* thisVariable = variable();
+    if(thisVariable != nullptr){
+        return thisVariable;
     }
     //No primitives were found.
     return nullptr;
@@ -189,6 +283,7 @@ Node* Parser::equal(){
     Start start = currInfo();
     Node* left = nullptr;
     Node* right = nullptr;
+    Equal* result = nullptr;
 
     left = AddSub();
     if(left == nullptr){
@@ -208,7 +303,29 @@ Node* Parser::equal(){
         return nullptr;
     }
 
-    return stack->alloc<Equal>(left, right);
+    FloridaType resultType = returnType(left->type, right->type);
+    //Determine if either the left or the right need to be typecasted.
+    if(left->type != resultType){
+        TypecastClass* that = stack->alloc<TypecastClass>();
+        that->body = left;
+        that->type = resultType;
+
+        left = that;     
+    }
+    if(right->type != resultType){
+        TypecastClass* that = stack->alloc<TypecastClass>();
+        that->body = right;
+        that->type = resultType;
+
+        right = that;
+    }
+
+    result = stack->alloc<Equal>();
+    result->left = left;
+    result->right = right;
+    result->type = FloridaType::Bool;
+
+    return result;
 
 }
 
@@ -220,6 +337,7 @@ Node* Parser::notEqual(){
     Start start = currInfo();
     Node* left = nullptr;
     Node* right = nullptr;
+    NotEqual* result = nullptr;
 
     left = AddSub();
     if(left == nullptr){
@@ -241,7 +359,29 @@ Node* Parser::notEqual(){
         return nullptr;
     }
 
-    return stack->alloc<NotEqual>(left, right);
+    FloridaType resultType = returnType(left->type, right->type);
+    //Determine if either the left or the right need to be typecasted.
+    if(left->type != resultType){
+        TypecastClass* that = stack->alloc<TypecastClass>();
+        that->body = left;
+        that->type = resultType;
+
+        left = that;     
+    }
+    if(right->type != resultType){
+        TypecastClass* that = stack->alloc<TypecastClass>();
+        that->body = right;
+        that->type = resultType;
+
+        right = that;
+    }
+
+    result = stack->alloc<NotEqual>();
+    result->left = left;
+    result->right = right;
+    result->type = FloridaType::Bool;
+
+    return result;
 
 }
 
@@ -253,6 +393,7 @@ Node* Parser::greaterThan(){
     Start start = currInfo();
     Node* left = nullptr;
     Node* right = nullptr;
+    GreaterThan* result = nullptr;
 
     left = AddSub();
     if(left == nullptr){
@@ -272,7 +413,29 @@ Node* Parser::greaterThan(){
         return nullptr;
     }
 
-    return stack->alloc<GreaterThan>(left, right);
+    FloridaType resultType = returnType(left->type, right->type);
+    //Determine if either the left or the right need to be typecasted.
+    if(left->type != resultType){
+        TypecastClass* that = stack->alloc<TypecastClass>();
+        that->body = left;
+        that->type = resultType;
+
+        left = that;     
+    }
+    if(right->type != resultType){
+        TypecastClass* that = stack->alloc<TypecastClass>();
+        that->body = right;
+        that->type = resultType;
+
+        right = that;
+    }
+
+    result = stack->alloc<GreaterThan>();
+    result->left = left;
+    result->right = right;
+    result->type = FloridaType::Bool;
+
+    return result;
 
 }
 
@@ -315,6 +478,7 @@ Node* Parser::lessThan(){
     Start start = currInfo();
     Node* left = nullptr;
     Node* right = nullptr;
+    LessThan* result = nullptr;
 
     left = AddSub();
     if(left == nullptr){
@@ -334,7 +498,29 @@ Node* Parser::lessThan(){
         return nullptr;
     }
 
-    return stack->alloc<LessThan>(left, right);
+    FloridaType resultType = returnType(left->type, right->type);
+    //Determine if either the left or the right need to be typecasted.
+    if(left->type != resultType){
+        TypecastClass* that = stack->alloc<TypecastClass>();
+        that->body = left;
+        that->type = resultType;
+
+        left = that;     
+    }
+    if(right->type != resultType){
+        TypecastClass* that = stack->alloc<TypecastClass>();
+        that->body = right;
+        that->type = resultType;
+
+        right = that;
+    }
+
+    result = stack->alloc<LessThan>();
+    result->left = left;
+    result->right = right;
+    result->type = FloridaType::Bool;
+
+    return result;
 
 }
 
@@ -346,6 +532,7 @@ Node* Parser::lessThanOr(){
     Start start = currInfo();
     Node* left = nullptr;
     Node* right = nullptr;
+    LessThanOr* result = nullptr;
 
     left = AddSub();
     if(left == nullptr){
@@ -365,7 +552,29 @@ Node* Parser::lessThanOr(){
         return nullptr;
     }
 
-    return stack->alloc<LessThanOr>(left, right);
+    FloridaType resultType = returnType(left->type, right->type);
+    //Determine if either the left or the right need to be typecasted.
+    if(left->type != resultType){
+        TypecastClass* that = stack->alloc<TypecastClass>();
+        that->body = left;
+        that->type = resultType;
+
+        left = that;     
+    }
+    if(right->type != resultType){
+        TypecastClass* that = stack->alloc<TypecastClass>();
+        that->body = right;
+        that->type = resultType;
+
+        right = that;
+    }
+
+    result = stack->alloc<LessThanOr>();
+    result->left = left;
+    result->right = right;
+    result->type = FloridaType::Bool;
+
+    return result;
 
 }
 
@@ -417,6 +626,7 @@ Node* Parser::OR(){
     Start start = currInfo();
     Node* left = nullptr;
     Node* right = nullptr;
+    Or* result = nullptr;
 
     left = AND();
     if(left == nullptr){
@@ -432,7 +642,12 @@ Node* Parser::OR(){
             return nullptr;
         }
 
-        left = stack->alloc<Or>(left, right);
+        result = stack->alloc<Or>();
+        result->left = left;
+        result->right = right;
+        result->type = FloridaType::Bool;
+
+        left = result;
 
     }
 
@@ -444,6 +659,7 @@ Node* Parser::AND(){
     Start start = currInfo();
     Node* left = nullptr;
     Node* right = nullptr;
+    And* result = nullptr;
 
     left = compare();
     if(left == nullptr){
@@ -459,7 +675,12 @@ Node* Parser::AND(){
             return nullptr;
         }
 
-        left = stack->alloc<And>(left, right);
+        result = stack->alloc<And>();
+        result->left = left;
+        result->right = right;
+        result->type = FloridaType::Bool;
+
+        left = result;
 
     }
 
@@ -544,15 +765,6 @@ Node* Parser::commonExpressions(){
 
     result = function();
     if(result != nullptr){
-        return result;
-    }
-
-    result = initializeAssign();
-    if(result != nullptr){
-        if(!check(";")){
-            error = true;
-            std::cout << "Missing ';' expected at [" + std::to_string(given[iter].row) + ", " + std::to_string(given[iter].column) +"]\n";
-        }
         return result;
     }
 
@@ -679,7 +891,7 @@ Node* Parser::IF(){
 Node* Parser::FOR(){
     //These first three can remain nullptrs.
     Initialize* initializeVar = nullptr;
-    InitializeAssign* initializeAssignVar = nullptr;
+    Initialize* initializeAssignVar = nullptr;
     Node* condition = nullptr;
     Node* incrementer = nullptr;
 
@@ -699,11 +911,7 @@ Node* Parser::FOR(){
 
         //Get an assignment, if any.
         if(!check(";")){
-            initializeAssignVar = initializeAssign();
-            //Edge case. A new variable could be made.
-            if(initializeAssignVar == nullptr){
-                initializeVar = initialize();
-            }
+            initializeAssignVar = initialize();
             if(!check(";")){
                 error = true;
                 std::cout << "Missing ';' expected at [" + std::to_string(given[iter].row) + ", " + std::to_string(given[iter].column) +"]\n";
@@ -815,6 +1023,7 @@ Variable* Parser::variable(){
     }
     //Check to see if the variable is a valid token.
     if((given[iter].getType() == FloridaType::Identifier) & (given[iter + 1].getName() != "(")){
+        //Where is the way to describe if a variable is local, middle, or global.
         char where = 3;
         Scope* thisScope = stack->currScope;
         int64_t position = -1;
@@ -834,7 +1043,9 @@ Variable* Parser::variable(){
                 }
             }
         }
-
+        
+        FloridaType theType = thisScope->getVar(given[iter].getName())->type;
+        
         //Determine if lfetch, mfetch, or gfetch is needed.
         //This is for lfetch
         if(thisScope == stack->currScope){
@@ -855,6 +1066,7 @@ Variable* Parser::variable(){
         newVariable->distance = position;
         newVariable->where = where;
         newVariable->owner = thisScope;
+        newVariable->type = theType;
 
         iter++;
         return newVariable;
@@ -865,56 +1077,45 @@ Variable* Parser::variable(){
 }
 
 Initialize* Parser::initialize(){
-    if(!hasTokens(2)){
-        return nullptr;
-    }
-    //Check to see if the variable is a valid token.
-    bool bool1 = typeCheck(given[iter].getType());
-    Token theToken = given[iter + 1];
-    theToken.type = typeReturn(given[iter].getName());
-    bool bool2 = given[iter + 1].getType() == FloridaType::Identifier;
-
-    if(bool1 & bool2){
-        iter++;
-        iter++;
-        //This will be stack allocated in scope().
-        Variable* newVariable = stack->alloc<Variable>();
-        newVariable->thisToken = theToken;
-        newVariable->distance = stack->currScope->varCount();
-        newVariable->owner = stack->currScope;
-        newVariable->type = theToken.type;
-        
-        //The expected stack size will be larger because of the new variable.
-        Initialize* newInitialize = stack->alloc<Initialize>(newVariable);
-        //Add the variable to the current scope.
-        stack->currScope->push(newVariable);
-
-        return newInitialize;
-    }
-
-    //This isn't an error, just that a variable wasn't found.
-    return nullptr;
-}
-
-InitializeAssign* Parser::initializeAssign(){
     if(!hasTokens(3)){
         return nullptr;
     }
     //Check to see if the variable is a valid token.
     bool bool1 = typeCheck(given[iter].getType());
-    FloridaType type = typeReturn(given[iter].getName());
+    FloridaType theType = typeReturn(given[iter].getName());
     bool bool2 = given[iter + 1].getType() == FloridaType::Identifier;
     Token theToken = given[iter + 1];
-    theToken.type = type;
+    theToken.type = theType;
     bool bool3 = given[iter + 2].getName() == "=";
 
+    //Check for a plain initialization.
+    if(bool1 & bool2 & !bool3){
+        iter++;
+        iter++;
+        //This will be stack allocated in scope().
+        Variable* newVariable = stack->alloc<Variable>();
+        Initialize* result = stack->alloc<Initialize>();
+        newVariable->thisToken = theToken;
+        newVariable->distance = stack->currScope->varCount();
+        newVariable->owner = stack->currScope;
+        newVariable->type = theType;
+        
+        //The expected stack size will be larger because of the new variable.
+        result->thisVariable = newVariable;
+        //Add the variable to the current scope.
+        stack->currScope->push(newVariable);
+
+        return result;
+    }
+
+    //Check for an initialization with an assignment.
     if(bool1 & bool2 & bool3){
         iter++;
         iter++;
         iter++;
         Node* code = nullptr;
-        InitializeAssign* result = stack->alloc<InitializeAssign>(nullptr, nullptr);
-        result->type = type;
+        InitializeAssign* result = stack->alloc<InitializeAssign>();
+        result->type = theType;
 
         //This will be stack allocated in the scope `currScope`.
         Variable* newVariable = stack->alloc<Variable>();
@@ -928,14 +1129,20 @@ InitializeAssign* Parser::initializeAssign(){
         stack->currScope->push(newVariable);
 
         code = commonExpressions();
+        //If the types don't match, make a typecast.
+        if(newVariable->type != code->type){
+            TypecastClass* cast = stack->alloc<TypecastClass>();
+            cast->body = code;
+            cast->type = newVariable->type;
+        }
         result->code = code;
 
         return result;
 
     }
 
+    //This isn't an error, just that a variable wasn't found.
     return nullptr;
-
 }
 
 Assignment* Parser::assignment(){
@@ -1038,7 +1245,7 @@ Node* Parser::function(){
         //Return the scope to the previous scope.
         stack->currScope = newScope->parent;
 
-        std::cout << "Function " << name << " of number: " << result->code->whichScope << "\n";
+        //std::cout << "Function " << name << " of number: " << result->code->whichScope << "\n";
 
         return result;
 
@@ -1054,7 +1261,7 @@ Call* Parser::call(){
     }
 
     bool bool1 = given[iter].type == FloridaType::Identifier;
-    std::string name = given[iter].getName();
+    std::string name = given[iter].getName();   
     bool bool2 = given[iter + 1].getName() == "(";
 
     if(bool1 & bool2){
@@ -1116,10 +1323,10 @@ ReturnClass* Parser::Return(){
 
         //currScope will always be a deeper scope or the same scope as currFunct.
         Scope* currScope = stack->currScope;
-        Scope* currFunct = stack->currentFunction->code;
+        Scope* thisScope = stack->currentFunction->code;
 
-        //The current function scope will always be an outer scope if not the current one.
-        while(currScope != currFunct){
+        //The current function scope will always be in an outer scope if not the current one.
+        while(currScope != thisScope){
             returnCount++;
             currScope = currScope->parent;
         }
@@ -1131,6 +1338,15 @@ ReturnClass* Parser::Return(){
             error = true;
             std::cout << "Missing ';' expected at [" + std::to_string(given[iter].row) + ", " + std::to_string(given[iter].column) +"]\n";
         }
+
+        //Check if the return type differs from what is on the return line.
+        if(statement->type != stack->currentFunction->type){
+            TypecastClass* thing = stack->alloc<TypecastClass>();
+            thing->type = stack->currentFunction->type;
+            thing->body = statement;
+            result->statement = thing;
+        }
+
         return result;
     }
     //The return is a lie.

@@ -90,10 +90,16 @@ FloridaType typeReturn(std::string inString){
 
 bool typeCheck(FloridaType inType){
     switch(inType){
+        case FloridaType::ufixed1:
+        case FloridaType::ufixed2:
+        case FloridaType::ufixed4:
+        case FloridaType::ufixed8:
         case FloridaType::fixed1:
         case FloridaType::fixed2:
         case FloridaType::fixed4:
         case FloridaType::fixed8:
+        case FloridaType::float4:
+        case FloridaType::float8:
         case FloridaType::Bool:
             return true;
         default:
@@ -101,6 +107,85 @@ bool typeCheck(FloridaType inType){
 
     }
 }
+
+
+////Typecast
+    TypecastClass::TypecastClass(){
+        //This is just a placeholder. It will be changed later.
+        type = FloridaType::Typecast;
+    }
+
+    std::string TypecastClass::ToString(std::string inLeft, std::string inRight){
+        return body->ToString(inLeft, inRight);
+    }
+
+    std::string TypecastClass::printAll(){
+        std::string result = "";
+
+        switch(type){
+            case FloridaType::ufixed1:
+                result = "ufixed1cast\n";
+                break;
+            case FloridaType::ufixed2:
+                result = "ufixed2cast\n";
+                break;
+            case FloridaType::ufixed4:
+                result = "ufixed4cast\n";
+                break;
+            case FloridaType::ufixed8:
+                result = "ufixed8cast\n";
+                break;
+            case FloridaType::fixed1:
+                result = "fixed1cast\n";
+                break;
+            case FloridaType::fixed2:
+                result = "fixed2cast\n";
+                break;
+            case FloridaType::fixed4:
+                result = "fixed4cast\n";
+                break;
+            case FloridaType::fixed8:
+                result = "fixed8cast\n";
+                break;
+            case FloridaType::float4:
+                result = "float4cast\n";
+                break;
+            case FloridaType::float8:
+                result = "float8cast\n";
+                break;
+            default:
+                break;
+                //Do nothing, unreachable.
+        }
+
+        return body->printAll() + result;
+    }
+
+    void TypecastClass::FLVMCodeGen(std::vector<Instruction>& inInstructions){
+        Instruction result = Instruction();
+        body->FLVMCodeGen(inInstructions);
+        //Once again, I abuse the integer nature to get the correct operation.
+        //This will pick the correct one among 100 total options.
+        //10 of those are redundant and only necessary to let the math work.
+        result.oper = (Operation) ((body->type - FloridaType::ufixed1) * 10 + (type - FloridaType::ufixed1) + ufixed1TOufixed1);
+
+        inInstructions.push_back(result);
+    }
+
+    Node* TypecastClass::copy(StackAllocator& input){
+        TypecastClass* result = input.alloc<TypecastClass>();
+        result->body = body->copy(input);
+
+        return result;
+    }
+
+    TypecastClass* TypecastClass::pcopy(StackAllocator& input){
+        TypecastClass* result = input.alloc<TypecastClass>();
+        result->body = body->copy(input);
+
+        return result;
+    }
+
 
 //Scope
     Scope::Scope(){
@@ -125,6 +210,20 @@ bool typeCheck(FloridaType inType){
         }
         //If there is no such member, return -1.
         return result;
+    }
+
+    Variable* Scope::getVar(std::string input){
+        Variable* currVar = variables;
+        //If it exists, then we'll find the position.
+        while(currVar != nullptr){
+            if(currVar->thisToken.getName() == input){
+                return currVar;
+            } else {
+                currVar = currVar->next;
+            }
+        }
+        //If there is no such member, return -1.
+        return nullptr;
     }
 
     //Determine if a particular function exists in a given scope.
@@ -227,7 +326,7 @@ bool typeCheck(FloridaType inType){
     void Scope::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         Instruction result = Instruction();
         result.oper = Operation::push;
-        result.literal.fixed64 = whichScope;
+        result.literal.fixed8 = whichScope;
         //Be sure to add this otherwise I can never adjust the unique scopes.
         inInstructions.push_back(result);
         //The new scope will use the last value to pick the proper scope and adjust its value.
@@ -412,23 +511,23 @@ bool typeCheck(FloridaType inType){
         Instruction inst;
         if(where == 0){
             inst.oper = lfetch;
-            inst.literal.fixed64 = distance;
+            inst.literal.fixed8 = distance;
             //Push back the instruction for local variable.
             inInstructions.push_back(inst);
         }
         if(where == 1){
             inst.oper = push;
-            inst.literal.fixed64 = owner->whichScope;
+            inst.literal.fixed8 = owner->whichScope;
             //Push the push instruction onto the stack.
             inInstructions.push_back(inst);
             inst.oper = mfetch;
-            inst.literal.fixed64 = distance;
+            inst.literal.fixed8 = distance;
             //Push the mfetch instruction onto the stack.
             inInstructions.push_back(inst);
         }
         if(where == 2){
             inst.oper = gfetch;
-            inst.literal.fixed64 = distance;
+            inst.literal.fixed8 = distance;
             //Push back the instruction for the global variable.
             inInstructions.push_back(inst);
         }
@@ -464,10 +563,6 @@ bool typeCheck(FloridaType inType){
     Initialize::Initialize(){
         //Do nothing.
     };
-
-    Initialize::Initialize(Variable* inVariable){
-        thisVariable = inVariable;
-    }
 
     std::string Initialize::ToString(std::string inLeft, std::string inRight){
         return inLeft + typeString(thisVariable->thisToken.type) + " " + thisVariable->thisToken.getName() + inRight;
@@ -507,11 +602,6 @@ bool typeCheck(FloridaType inType){
         //Do nothing
     }
 
-    InitializeAssign::InitializeAssign(Variable* inVariable, Node* inBody){
-        thisVariable = inVariable;
-        code = inBody;
-    }
-
     std::string InitializeAssign::ToString(std::string inLeft, std::string inRight){
         return inLeft + "\x1b[36m" + typeString(thisVariable->thisToken.type) + "\x1b[0m " + thisVariable->ToString(inLeft, inRight) + " = " + code->ToString(inLeft, inRight) + inRight;
     }
@@ -537,7 +627,7 @@ bool typeCheck(FloridaType inType){
         //Generate the code for the right hand side.
         code->FLVMCodeGen(inInstructions);
         inst.oper = lassign;
-        inst.literal.fixed64 = thisVariable->distance;
+        inst.literal.fixed8 = thisVariable->distance;
         //Assign it to the local variable.
         inInstructions.push_back(inst);
     }
@@ -605,23 +695,23 @@ bool typeCheck(FloridaType inType){
         //Push back the instruction for assignment.
         if(thisVariable->where == 0){
             inst.oper = lassign;
-            inst.literal.fixed64 = thisVariable->distance;
+            inst.literal.fixed8 = thisVariable->distance;
             inInstructions.push_back(inst);
             return;
         }
         if(thisVariable->where == 1){
             inst.oper = push;
-            inst.literal.fixed64 = thisVariable->owner->whichScope;
+            inst.literal.fixed8 = thisVariable->owner->whichScope;
             //Add the location of the scope in the instruction set.
             inInstructions.push_back(inst);
             inst.oper = massign;
-            inst.literal.fixed64 = thisVariable->distance;
+            inst.literal.fixed8 = thisVariable->distance;
             //Push back the assignment instruction.
             inInstructions.push_back(inst);
         }
         if(thisVariable->where == 2){
             inst.oper = gassign;
-            inst.literal.fixed64 = thisVariable->distance;
+            inst.literal.fixed8 = thisVariable->distance;
             inInstructions.push_back(inst);
             return;
         }
@@ -668,9 +758,21 @@ bool typeCheck(FloridaType inType){
     }
 
     void Add::FLVMCodeGen(std::vector<Instruction>& inInstructions){
+        FloridaType theType = left->type;
+        Instruction result = Instruction();
+
+        if(left->type < right->type){
+            theType = right->type;
+        }
+
+        //Determine which operation needs to be generated.
+        //Because of the organization in Instruction.cpp,
+        //A linear combination can find the operation type.
+        result.oper = (Operation) ((theType - FloridaType::ufixed1) * 5 + Operation::ufixed1add);
+
         left->FLVMCodeGen(inInstructions);
         right->FLVMCodeGen(inInstructions);
-        inInstructions.push_back(Instruction(Operation::add, -1));
+        inInstructions.push_back(result);
     }
 
     Node* Add::copy(StackAllocator& input){
@@ -712,9 +814,21 @@ bool typeCheck(FloridaType inType){
     }
 
     void Subtract::FLVMCodeGen(std::vector<Instruction>& inInstructions){
+        FloridaType theType = left->type;
+        Instruction result = Instruction();
+
+        if(left->type < right->type){
+            theType = right->type;
+        }
+
+        //Determine which operation needs to be generated.
+        //Because of the organization in Instruction.cpp,
+        //A linear combination can find the operation type.
+        result.oper = (Operation) ((theType - FloridaType::ufixed1) * 5 + Operation::ufixed1subtract);
+
         left->FLVMCodeGen(inInstructions);
         right->FLVMCodeGen(inInstructions);
-        inInstructions.push_back(Instruction(Operation::subtract, -1));
+        inInstructions.push_back(result);
     }
 
     Node* Subtract::copy(StackAllocator& input){
@@ -756,9 +870,21 @@ bool typeCheck(FloridaType inType){
     }
 
     void Multiply::FLVMCodeGen(std::vector<Instruction>& inInstructions){
+        FloridaType theType = left->type;
+        Instruction result = Instruction();
+
+        if(left->type < right->type){
+            theType = right->type;
+        }
+
+        //Determine which operation needs to be generated.
+        //Because of the organization in Instruction.cpp,
+        //A linear combination can find the operation type.
+        result.oper = (Operation) ((theType - FloridaType::ufixed1) * 5 + Operation::ufixed1multiply);
+
         left->FLVMCodeGen(inInstructions);
         right->FLVMCodeGen(inInstructions);
-        inInstructions.push_back(Instruction(Operation::multiply, -1));
+        inInstructions.push_back(result);
     }
 
     Node* Multiply::copy(StackAllocator& input){
@@ -800,9 +926,21 @@ bool typeCheck(FloridaType inType){
     }
 
     void Divide::FLVMCodeGen(std::vector<Instruction>& inInstructions){
+        FloridaType theType = left->type;
+        Instruction result = Instruction();
+
+        if(left->type < right->type){
+            theType = right->type;
+        }
+
+        //Determine which operation needs to be generated.
+        //Because of the organization in Instruction.cpp,
+        //A linear combination can find the operation type.
+        result.oper = (Operation) ((theType - FloridaType::ufixed1) * 5 + Operation::ufixed1divide);
+
         left->FLVMCodeGen(inInstructions);
         right->FLVMCodeGen(inInstructions);
-        inInstructions.push_back(Instruction(Operation::divide, -1));
+        inInstructions.push_back(result);
     }
 
     Node* Divide::copy(StackAllocator& input){
@@ -882,8 +1020,14 @@ bool typeCheck(FloridaType inType){
     }
 
     void Negative::FLVMCodeGen(std::vector<Instruction>& inInstructions){
+        Instruction result = Instruction();
+        //Determine which operation needs to be generated.
+        //Because of the organization in Instruction.cpp,
+        //A linear combination can find the operation type.
+        result.oper = (Operation) ((right->type - FloridaType::ufixed1) * 5 + Operation::ufixed1negate);
+
         right->FLVMCodeGen(inInstructions);
-        inInstructions.push_back(Instruction(Operation::negate, -1));
+        inInstructions.push_back(result);
     }
 
     Node* Negative::copy(StackAllocator& input){
@@ -1350,7 +1494,7 @@ bool typeCheck(FloridaType inType){
             ifBody->FLVMCodeGen(inInstructions);
 
             //Adjust the conditional jump destination.
-            inInstructions[cjumpPosition].literal.fixed64 = inInstructions.size();
+            inInstructions[cjumpPosition].literal.fixed8 = inInstructions.size();
         } else {
             //Generate the instructions for the if condition.
             condition->FLVMCodeGen(inInstructions);
@@ -1371,13 +1515,13 @@ bool typeCheck(FloridaType inType){
             int64_t endIfSize = inInstructions.size();
 
             //Adjust the conditional jump destination.
-            inInstructions[cjumpPosition].literal.fixed64 = endIfSize;
+            inInstructions[cjumpPosition].literal.fixed8 = endIfSize;
             
             //Generate the bytecode for the else statement.
             elseBody->FLVMCodeGen(inInstructions);
 
             //Adjust the unconditional jump destination.
-            inInstructions[endIfSize - 1].literal.fixed64 = inInstructions.size();
+            inInstructions[endIfSize - 1].literal.fixed8 = inInstructions.size();
         }
 
     }
@@ -1524,7 +1668,7 @@ bool typeCheck(FloridaType inType){
         inInstructions.push_back(Instruction(jump, jumpTo));
 
         //Adjust the position of the conditional jump to be outside of the loop
-        inInstructions[cjumpPosition].literal.fixed64 = inInstructions.size();
+        inInstructions[cjumpPosition].literal.fixed8 = inInstructions.size();
 
         //End the existing scope.
         inInstructions.push_back(Instruction(Operation::deleteScope));
@@ -1602,7 +1746,7 @@ bool typeCheck(FloridaType inType){
     void WhileLoop::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         Instruction result = Instruction();
         result.oper = Operation::push;
-        result.literal.fixed64 = body->whichScope;
+        result.literal.fixed8 = body->whichScope;
         //Push the corresponding scope value to the instructions.
         inInstructions.push_back(result);
         //Start of the scope, granted while loops don't really need scopes.
@@ -1621,7 +1765,7 @@ bool typeCheck(FloridaType inType){
         //Place an unconditional jump to restart the loop.
         inInstructions.push_back(Instruction(Operation::jump, start));
         //Adjust where the unconditional jump will land.
-        inInstructions[here].literal.fixed64 = inInstructions.size();
+        inInstructions[here].literal.fixed8 = inInstructions.size();
         //End the scope.
         inInstructions.push_back(Instruction(Operation::deleteScope));
     }
@@ -1829,7 +1973,7 @@ bool typeCheck(FloridaType inType){
     void Call::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         Instruction uniqueScopeNumber;
         uniqueScopeNumber.oper = Operation::push;
-        uniqueScopeNumber.literal.fixed64 = function->code->whichScope;
+        uniqueScopeNumber.literal.fixed8 = function->code->whichScope;
         //Push the necessary scope reference onto the stack.
         inInstructions.push_back(uniqueScopeNumber);
         //Start the scope here.
@@ -1991,7 +2135,7 @@ bool typeCheck(FloridaType inType){
         Instruction result = Instruction();
         result.oper = Operation::ireturn;
         //This determines how many scopes to exit.
-        result.literal.fixed64 = returnCount;
+        result.literal.fixed8 = returnCount;
         inInstructions.push_back(result);
     }
 
@@ -2017,7 +2161,30 @@ bool typeCheck(FloridaType inType){
 
 
 
-//CallStack
-    ExistingScope::ExistingScope(){
-        //Do nothing lmao.
+//Objects
+    ObjectClass::ObjectClass(){
+        type = FloridaType::Object;
     }
+
+    std::string ObjectClass::ToString(std::string inLeft, std::string inRight){
+        std::string theInitialize = "";
+        Initialize* current = code->allInitializations;
+
+        //Combine all of the initializations into a single string.
+        if(current != nullptr){
+            while(current->next != nullptr){
+                theInitialize += current->ToString("", "") + ", ";
+                current = current->next;
+            }
+            //Grab the last one in the list, if there is one.
+            if(current != nullptr){
+                theInitialize += current->ToString("", "");
+            }
+        }
+
+        return "object " + std::string(name) + "{\n" + 
+            
+        inLeft + "}\n";
+    }
+
+

@@ -128,6 +128,22 @@
 		if(compare("while")){
 			return Token(FloridaType::While, std::string_view(file.data() + start, count - start), row, column - 5);
 		}
+		
+		if(compare("ufixed1")){
+			return Token(FloridaType::ufixed1, std::string_view(file.data() + start, count - start), row, column - 7);
+		}
+
+		if(compare("ufixed2")){
+			return Token(FloridaType::ufixed2, std::string_view(file.data() + start, count - start), row, column - 7);
+		}
+
+		if(compare("ufixed4")){
+			return Token(FloridaType::ufixed4, std::string_view(file.data() + start, count - start), row, column - 7);
+		}
+
+		if(compare("ufixed8")){
+			return Token(FloridaType::ufixed8, std::string_view(file.data() + start, count - start), row, column - 7);
+		}
 
 		if(compare("fixed1")){
 			return Token(FloridaType::fixed1, std::string_view(file.data() + start, count - start), row, column - 6);
@@ -143,6 +159,14 @@
 
 		if(compare("fixed8")){
 			return Token(FloridaType::fixed8, std::string_view(file.data() + start, count - start), row, column - 6);
+		}
+
+		if(compare("float4")){
+			return Token(FloridaType::float4, std::string_view(file.data() + start, count - start), row, column - 6);
+		}
+
+		if(compare("float8")){
+			return Token(FloridaType::float8, std::string_view(file.data() + start, count - start), row, column - 6);
 		}
 
 		if(compare("boolean")){
