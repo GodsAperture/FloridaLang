@@ -195,31 +195,32 @@ bool typeCheck(FloridaType inType){
     //Determine where a particular variable exists in a given scope.
     //If it is not found, then return -1.
     int64_t Scope::varWhere(std::string input){
-        Variable* currVar = variables;
+        Initialize* currInit = allInitializations;
         int64_t count = 0;
         int64_t result = -1;
         //If it exists, then we'll find the position.
-        while(currVar != nullptr){
-            if(currVar->thisToken.getName() == input){
+        while(currInit != nullptr){
+            if(currInit->thisVariable->thisToken.getName() == input){
                 result = count;
-                currVar = currVar->next;
+                currInit = currInit->next;
             } else {
                 count++;
-                currVar = currVar->next;
+                currInit = currInit->next;
             }
         }
         //If there is no such member, return -1.
         return result;
     }
 
-    Variable* Scope::getVar(std::string input){
-        Variable* currVar = variables;
+    //Given a variable name, find its initialization.
+    Initialize* Scope::getInit(std::string input){
+        Initialize* currInit = allInitializations;
         //If it exists, then we'll find the position.
-        while(currVar != nullptr){
-            if(currVar->thisToken.getName() == input){
-                return currVar;
+        while(currInit != nullptr){
+            if(currInit->thisVariable->thisToken.getName() == input){
+                return currInit;
             } else {
-                currVar = currVar->next;
+                currInit = currInit->next;
             }
         }
         //If there is no such member, return -1.
@@ -242,20 +243,37 @@ bool typeCheck(FloridaType inType){
         return nullptr;
     }
 
-    void Scope::push(Variable* input){
-        //If there are no variables, then just slap the variable onto the list.
-        if(variables == nullptr){
-            variables = input;
+    //Determine if a particular object exists in a given scope.
+    //If it is found, then return its pointer.
+    //Otherwise, return the nullptr.
+    ObjectClass* Scope::objGet(std::string input){
+        ObjectClass* currObj = allObjects;
+        if(currObj != nullptr){
+            while(currObj != nullptr){
+                if(std::string(currObj->name) == input){
+                    return currObj;
+                } else {
+                    currObj = currObj->next;
+                }
+            }
+        }
+        return nullptr;
+    }
+
+    void Scope::push(Initialize* input){
+        //If there are no initializations, then just slap the variable onto the list.
+        if(allInitializations == nullptr){
+            allInitializations = input;
             return;
         }
-        Variable* currVar = variables;
-        //Reach the tail end of the "linked list" of Variables.
-        while(currVar->next != nullptr){
-            currVar = currVar->next;
+        Initialize* currInit = allInitializations;
+        //Reach the tail end of the "linked list" of initializations.
+        while(currInit->next != nullptr){
+            currInit = currInit->next;
         }
 
-        //Append the Variable to the tail end of the "linked list."
-        currVar->next = input;
+        //Append the initialization to the tail end of the "linked list."
+        currInit->next = input;
 
     }
 
@@ -276,25 +294,27 @@ bool typeCheck(FloridaType inType){
 
     }
 
-    //pop will remove variables that are going out of scope.
-    void Scope::varPop(){
-        Variable* currVar = variables;
-        Variable* lastVar = nullptr;
-        if(currVar != nullptr){
-            while(currVar->next != nullptr){
-                lastVar = currVar;
-                currVar = currVar->next;
-            }
-            lastVar->next = nullptr;
+    void Scope::push(ObjectClass* input){
+        //If there are no objects, then this is the first defined class in the scope.
+        if(allObjects == nullptr){
+            allObjects = input;
+            return;
         }
+        ObjectClass* currObj = allObjects;
+        //Find the last element of the linked list.
+        while(currObj->next != nullptr){
+            currObj = currObj->next;
+        }
+
+        currObj->next = input;
     }
 
     size_t Scope::varCount(){
         size_t count = 0;
-        Variable* currVar = variables;
-        while(currVar != nullptr){
+        Initialize* currInit = allInitializations;
+        while(currInit != nullptr){
             count++;
-            currVar = currVar->next;
+            currInit = currInit->next;
         }
 
         return count;
@@ -381,6 +401,133 @@ bool typeCheck(FloridaType inType){
         return thisptr;
     }
 
+
+
+//Primitive
+    Primitive::Primitive(){
+        value.object = nullptr;
+        //The type will be determined after a Primitive is created.
+    }
+
+    std::string Primitive::ToString(std::string inLeft, std::string inRight){
+        std::string result = "";
+        switch(type){
+            case ufixed1:
+                result = std::to_string(value.ufixed1);
+                break;
+            case ufixed2:
+                result = std::to_string(value.ufixed2);
+                break;
+            case ufixed4:
+                result = std::to_string(value.ufixed4);
+                break;
+            case ufixed8:
+                result = std::to_string(value.ufixed8);
+                break;
+            case fixed1:
+                result = std::to_string(value.fixed1);
+                break;
+            case fixed2:
+                result = std::to_string(value.fixed2);
+                break;
+            case fixed4:
+                result = std::to_string(value.fixed4);
+                break;
+            case fixed8:
+                result = std::to_string(value.fixed8);
+                break;
+            case float4:
+                result = std::to_string(value.float4);
+                break;
+            case float8:
+                result = std::to_string(value.float8);
+                break;
+            case Bool:
+                if(value.boolean){
+                    result = "\x1b[32mtrue\x1b[0m";
+                } else {
+                    result = "\x1b[31mfalse\x1b[0m";
+                }
+                break;
+            default:
+            //Error
+        }
+
+        return result;
+    }
+
+    std::string Primitive::printAll(){
+        std::string result = "";
+        switch(type){
+            case ufixed1:
+                result = std::to_string(value.ufixed1);
+                break;
+            case ufixed2:
+                result = std::to_string(value.ufixed2);
+                break;
+            case ufixed4:
+                result = std::to_string(value.ufixed4);
+                break;
+            case ufixed8:
+                result = std::to_string(value.ufixed8);
+                break;
+            case fixed1:
+                result = std::to_string(value.fixed1);
+                break;
+            case fixed2:
+                result = std::to_string(value.fixed2);
+                break;
+            case fixed4:
+                result = std::to_string(value.fixed4);
+                break;
+            case fixed8:
+                result = std::to_string(value.fixed8);
+                break;
+            case float4:
+                result = std::to_string(value.float4);
+                break;
+            case float8:
+                result = std::to_string(value.float8);
+                break;
+            case Bool:
+                if(value.boolean){
+                    result = "\x1b[32mtrue\x1b[0m";
+                } else {
+                    result = "\x1b[31mfalse\x1b[0m";
+                }
+                break;
+            default:
+            //Error
+        }
+
+        return padding("push") + result + "\n";
+
+    }
+
+    void Primitive::FLVMCodeGen(std::vector<Instruction>& inInstructions){
+        Instruction result = Instruction();
+        result.literal = value;
+        result.type = type;
+        result.oper = Operation::push;
+
+        inInstructions.push_back(result);
+    }
+
+    Node* Primitive::copy(StackAllocator& input){
+        Primitive* result = input.alloc<Primitive>();
+        result->type = type;
+        result->value = value;
+
+        return result;
+    }
+
+    Primitive* Primitive::pcopy(StackAllocator& input){
+        Primitive* result = input.alloc<Primitive>();
+        result->type = type;
+        result->value = value;
+
+        return result;        
+    }
 
 
 
@@ -581,7 +728,7 @@ bool typeCheck(FloridaType inType){
         Initialize* thisptr = input.alloc<Initialize>();
 
         thisptr->thisVariable = thisVariable->pcopy(input);
-        input.currScope->push(thisptr->thisVariable);
+        input.currScope->push(thisptr);
 
         return thisptr;
     }
@@ -590,7 +737,7 @@ bool typeCheck(FloridaType inType){
         Initialize* thisptr = input.alloc<Initialize>();
 
         thisptr->thisVariable = thisVariable->pcopy(input);
-        input.currScope->push(thisptr->thisVariable);
+        input.currScope->push(thisptr);
 
         return thisptr;
     }
@@ -640,7 +787,7 @@ bool typeCheck(FloridaType inType){
         thisptr->code = code->copy(input);
         thisptr->type = type;
         //Add this variable to the scope.
-        input.currScope->push(thisptr->thisVariable);
+        input.currScope->push(thisptr);
 
         return thisptr;
     }
@@ -653,7 +800,7 @@ bool typeCheck(FloridaType inType){
         thisptr->code = code->copy(input);
         thisptr->type = type;
         //Add this variable to the scope.
-        input.currScope->push(thisptr->thisVariable);
+        input.currScope->push(thisptr);
 
         return thisptr;
     }
@@ -1529,8 +1676,6 @@ bool typeCheck(FloridaType inType){
     Node* IfClass::copy(StackAllocator& input){
         IfClass* thisptr = input.alloc<IfClass>();
 
-        uint64_t startCount = input.currScope->varCount();
-
         //Check for a condition.
         if(condition != nullptr){
             thisptr->condition = condition->copy(input);
@@ -1538,18 +1683,10 @@ bool typeCheck(FloridaType inType){
         //Check for an ifBody
         if(ifBody != nullptr){
             thisptr->ifBody = ifBody->pcopy(input);
-            //Pop any variables added in the ifBody.
-            for(uint64_t i = 0; i < input.currScope->varCount() - startCount; i++){
-            input.currScope->varPop();
-            }
         }
         //Check for an elseBody
         if(elseBody != nullptr){
             thisptr->elseBody = elseBody->pcopy(input);
-            //Pop any variables added in the elseBody.
-            for(uint64_t i = 0; i < input.currScope->varCount() - startCount; i++){
-            input.currScope->varPop();
-            }
         }
 
         return thisptr;
@@ -1558,8 +1695,6 @@ bool typeCheck(FloridaType inType){
     IfClass* IfClass::pcopy(StackAllocator& input){
         IfClass* thisptr = input.alloc<IfClass>();
 
-        uint64_t startCount = input.currScope->varCount();
-
         //Check for a condition.
         if(condition != nullptr){
             thisptr->condition = condition->copy(input);
@@ -1567,18 +1702,10 @@ bool typeCheck(FloridaType inType){
         //Check for an ifBody
         if(ifBody != nullptr){
             thisptr->ifBody = ifBody->pcopy(input);
-            //Pop any variables added in the ifBody.
-            for(uint64_t i = 0; i < input.currScope->varCount() - startCount; i++){
-            input.currScope->varPop();
-            }
         }
         //Check for an elseBody
         if(elseBody != nullptr){
             thisptr->elseBody = elseBody->pcopy(input);
-            //Pop any variables added in the elseBody.
-            for(uint64_t i = 0; i < input.currScope->varCount() - startCount; i++){
-            input.currScope->varPop();
-            }
         }
 
         return thisptr;
@@ -1676,7 +1803,6 @@ bool typeCheck(FloridaType inType){
 
     Node* ForLoop::copy(StackAllocator& input){
         ForLoop* thisptr = input.alloc<ForLoop>();
-        int64_t startCount = input.currScope->varCount();
 
         if(assign != nullptr){
             thisptr->assign = assign->copy(input);
@@ -1689,10 +1815,6 @@ bool typeCheck(FloridaType inType){
         }
         if(body != nullptr){
             thisptr->body = body->pcopy(input);
-            //Pop all the local variables in the body after generating its code.
-            for(uint64_t i = startCount; i < input.currScope->varCount(); i++){
-                input.currScope->varPop();
-            }
         }
 
         return thisptr;
@@ -1805,17 +1927,17 @@ bool typeCheck(FloridaType inType){
 
     std::string Function::ToString(std::string inLeft, std::string inRight){
         std::string varString = "";
-        Variable* currVar = code->variables;
+        Initialize* currInit = code->allInitializations;
 
         //Combine all the variables, if any.
-        if(code->variables != nullptr){
+        if(code->allInitializations != nullptr){
             //Stop right before the last variable to not append an extra comma.
             for(int i = 1; i < argumentCount; i++){
-                varString += "\x1b[36m" + typeString(currVar->thisToken.type) + "\x1b[0m " + currVar->thisToken.getName() + ", ";
-                currVar = currVar->next;
+                varString += "\x1b[36m" + typeString(currInit->thisVariable->thisToken.type) + "\x1b[0m " + currInit->thisVariable->thisToken.getName() + ", ";
+                currInit = currInit->next;
             }
             //Append the last variable without an extra comma.
-            varString += "\x1b[36m" + typeString(currVar->thisToken.type) + "\x1b[0m " + currVar->thisToken.getName();
+            varString += "\x1b[36m" + typeString(currInit->thisVariable->thisToken.type) + "\x1b[0m " + currInit->thisVariable->thisToken.getName();
         }
         //Return the function printed in the only correct format.
         std::string result = inLeft + "\x1b[36m" + typeString(type) + "\x1b[35m " + std::string(name) + "\x1b[0m(" + varString + "){\n" + 
@@ -1832,14 +1954,14 @@ bool typeCheck(FloridaType inType){
 
     std::string Function::printAll(){
         std::string result = "\t(*Function " + std::string(name) + "(";
-        Variable* thisVariable = code->variables;
+        Initialize* thisInitialize = code->allInitializations;
 
         for(int64_t i = 0; i < argumentCount - 1; i++){
-            result += std::string(thisVariable->thisToken.name) + ", ";
-            thisVariable = thisVariable->next;
+            result += std::string(thisInitialize->thisVariable->thisToken.name) + ", ";
+            thisInitialize = thisInitialize->next;
         }
-        if(thisVariable != nullptr){
-            result += std::string(thisVariable->thisToken.name);
+        if(thisInitialize != nullptr){
+            result += std::string(thisInitialize->thisVariable->thisToken.name);
         }
 
         result += ")*)\n";
@@ -1853,15 +1975,15 @@ bool typeCheck(FloridaType inType){
         return result;
     }
 
-    void Function::append(Variable* input){
-        Variable* currVar = code->variables;
-        if(currVar != nullptr){
-            while(currVar->next != nullptr){
-                currVar = currVar->next;
+    void Function::append(Initialize* input){
+        Initialize* currInit = code->allInitializations;
+        if(currInit != nullptr){
+            while(currInit->next != nullptr){
+                currInit = currInit->next;
             }
-            currVar->next = input;
+            currInit->next = input;
         } else {
-            code->variables = input;
+            code->allInitializations = input;
         }
     }
 
@@ -1900,12 +2022,12 @@ bool typeCheck(FloridaType inType){
         input.currScope = newScope;
         //Directly copy the arguments over to the new scope.
         //Otherwise, they are never found and added in the correct order.
-        Variable* theirVariable = code->variables;
-        Variable* newVariable = nullptr;
+        Initialize* theirInitialize = code->allInitializations;
+        Initialize* newInitialize = nullptr;
         for(int64_t i = 0; i < argumentCount; i++){
-            newVariable = theirVariable->pcopy(input);
-            newScope->push(newVariable);
-            theirVariable = theirVariable->next;
+            newInitialize = theirInitialize->pcopy(input);
+            newScope->push(newInitialize);
+            theirInitialize = theirInitialize->next;
         }
         //Copy the body of the function over.
         newScope->body = code->body->pcopy(input);
@@ -2170,21 +2292,24 @@ bool typeCheck(FloridaType inType){
         std::string theInitialize = "";
         Initialize* current = code->allInitializations;
 
-        //Combine all of the initializations into a single string.
-        if(current != nullptr){
-            while(current->next != nullptr){
-                theInitialize += current->ToString("", "") + ", ";
-                current = current->next;
-            }
-            //Grab the last one in the list, if there is one.
-            if(current != nullptr){
-                theInitialize += current->ToString("", "");
-            }
-        }
-
         return "object " + std::string(name) + "{\n" + 
-            
+            code->body->ToString("  " + inLeft, inRight) + 
         inLeft + "}\n";
     }
 
+    std::string ObjectClass::printAll(){
+        return "";
+    }
 
+    void ObjectClass::FLVMCodeGen(std::vector<Instruction>& inInstructions){
+        //TO DO
+    }
+
+    Node* ObjectClass::copy(StackAllocator& input){
+        ObjectClass* result = input.alloc<ObjectClass>();
+        Scope* currScope = input.currScope;
+
+        result->name = name;
+        result->code = code->pcopy(input);
+        currScope->push(result);
+    }

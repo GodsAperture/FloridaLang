@@ -1,6 +1,7 @@
 #include "Parser.hpp"
 #include "Node.hpp"
 #include "StackAllocator.hpp"
+#include <cstring>
 #include <iostream>
 
 void Parser::parse(){
@@ -229,15 +230,17 @@ Node* Parser::primitive(){
 
     //Check for numbers.
     if((given[iter].type == FloridaType::fixed8) and (given[iter].getName() != "fixed8")){
-        Fixed8* number = stack->alloc<Fixed8>();
-        number->value = std::stol(given[iter].getName());
+        Primitive* number = stack->alloc<Primitive>();
+        number->value.fixed8 = std::stol(given[iter].getName());
+        number->type = FloridaType::fixed8;
         iter++;
 
         return number;
     }
     if((given[iter].type == FloridaType::float8) and (given[iter].getName() != "float8")){
-        Float8* number = stack->alloc<Float8>();
-        number->value = std::stod(given[iter].getName());
+        Primitive* number = stack->alloc<Primitive>();
+        number->value.float8 = std::stod(given[iter].getName());
+        number->type = FloridaType::float8;
         iter++;
 
         return number;
@@ -246,15 +249,15 @@ Node* Parser::primitive(){
 
     
     //Check for booleans.
-    if(given[iter].type == FloridaType::Bool){
-        Boolean* result = stack->alloc<Boolean>();
+    if((given[iter].type == FloridaType::Bool) and (given[iter].getName() != "boolean")){
+        Primitive* result = stack->alloc<Primitive>();
         if(given[iter].getName() == "true"){
-            result->value = true;
+            result->value.boolean = true;
             iter++;
 
             return result;
         } else {
-            result->value = false;
+            result->value.boolean = false;
             iter++;
             
             return result;
@@ -1044,7 +1047,7 @@ Variable* Parser::variable(){
             }
         }
         
-        FloridaType theType = thisScope->getVar(given[iter].getName())->type;
+        FloridaType theType = thisScope->getInit(given[iter].getName())->type;
         
         //Determine if lfetch, mfetch, or gfetch is needed.
         //This is for lfetch
@@ -1103,7 +1106,7 @@ Initialize* Parser::initialize(){
         //The expected stack size will be larger because of the new variable.
         result->thisVariable = newVariable;
         //Add the variable to the current scope.
-        stack->currScope->push(newVariable);
+        stack->currScope->push(result);
 
         return result;
     }
@@ -1126,7 +1129,7 @@ Initialize* Parser::initialize(){
 
         result->thisVariable = newVariable;
         //Add the variable to the current scope.
-        stack->currScope->push(newVariable);
+        stack->currScope->push(result);
 
         code = commonExpressions();
         //If the types don't match, make a typecast.
@@ -1164,6 +1167,44 @@ Assignment* Parser::assignment(){
     }
     //This isn't an error, just that an assignment wasn't found.
     return nullptr;
+}
+
+ObjectClass* Parser::object(){
+    if(!hasTokens(3)){
+        return nullptr;
+    }
+
+    bool bool1 = given[iter].getName() == "object";
+    std::string_view name = given[iter + 1].name;
+    bool bool2 = given[iter + 2].getName() == "{";
+
+    std::cout << "Object " + std::string(name) + " found!\n";
+
+    if(bool1 & bool2){
+        iter++;
+        iter++;
+        iter++;
+        ObjectClass* result = stack->alloc<ObjectClass>();
+        result->type = FloridaType::Object;
+        result->name = name;
+        result->code = scope();
+
+        //Now I'm going to make a default object from the initializations.
+        if(result->code->allInitializations != nullptr){
+            Initialize* currInit = result->code->allInitializations;
+            //Determine the size of the region in memory.
+            while(currInit != nullptr){
+                result->memorySize += 8;
+                currInit = currInit->next;
+            }
+            memset(stack->current, 0, result->memorySize);
+            stack->current = (void*) (((char*) stack->current) + result->memorySize);
+        }
+        
+    }
+
+    return nullptr;
+
 }
 
 

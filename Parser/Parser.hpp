@@ -67,6 +67,8 @@ public:
     Initialize* initialize();
     //Check for an assignment.
     Assignment* assignment();
+    //Check for a class declaration.
+    ObjectClass* object();
 
 //Tree related functions.
 
@@ -118,7 +120,7 @@ public:
     //if statement
     Node* IF();
 
-    //for loop
+    //loops
     Node* FOR();
     Node* WHILE();
 

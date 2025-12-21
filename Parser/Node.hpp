@@ -9,6 +9,8 @@
 //Forward declarations, idfk *why* though.
 //My C/C++ understanding is still hindering me.
 class Function;
+class ObjectClass;
+class Initialize;
 
 std::string typeString(FloridaType input);
 
@@ -93,8 +95,10 @@ class Scope : public Node{
         std::string_view name;
         //This is the body of code within the scope.
         Body* body = nullptr;
-        //This will be the variables of the current scope.
-        Variable* variables = nullptr;
+        //This will be the initializations of the current scope.
+        Initialize* allInitializations = nullptr;
+        //This will contain all of the class definitions in the scope.
+        ObjectClass* allObjects = nullptr;
         //A "linked list" of functions for the current scope.
         Function* functions = nullptr;
         //The counter will determine which index to use in the `uniqueScopes` in the VM.
@@ -103,14 +107,17 @@ class Scope : public Node{
         //Find where in some given Scope a particular variable lies.
         //If it does not exist in the scope, it returns -1.
         int64_t varWhere(std::string input);
-        Variable* getVar(std::string input);
+        Initialize* getInit(std::string input);
         //Find where in some given Scope a particular variable lies.
         //If it does not exist in the scope, it returns -1.
         Function* funGet(std::string input);
-        //Push a new variable into the scope's variable stack.
-        void push(Variable* input);
+        ObjectClass* objGet(std::string input);
+        //Push a new initialization into the scope's initialize stack.
+        void push(Initialize* input);
+        //Push a new function into the scope's function stack.
         void push(Function* input);
-        void varPop();
+        //Push a new class into the scope's class stack.
+        void push(ObjectClass* input);
         //funPop isn't needed because they don't disappear in pseudoscopes.
         size_t varCount();
         size_t funCount();
@@ -255,137 +262,17 @@ public:
 
 
 
-//Primitive types
-class Float8 : public Node{
+//Primitive type
+class Primitive : public Node{
 public:
-    _Float64 value = 0.0;
+    types value;
 
-    Float8();
+    Primitive();
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     Node* copy(StackAllocator& input) override;
-    Float8* pcopy(StackAllocator& input);
-};
-
-class Float4 : public Node{
-public:
-    _Float32 value = 0.0;
-
-    Float4();
-    std::string ToString(std::string inLeft, std::string inRight) override;
-    std::string printAll() override;
-    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    Node* copy(StackAllocator& input) override;
-    Float4* pcopy(StackAllocator& input);
-};
-
-class Fixed8 : public Node{
-public:
-    int64_t value = 0;
-
-    Fixed8();
-    std::string ToString(std::string inLeft, std::string inRight) override;
-    std::string printAll() override;
-    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    Node* copy(StackAllocator& input) override;
-    Fixed8* pcopy(StackAllocator& input);
-};
-
-class Fixed4 : public Node{
-public:
-    int32_t value = 0;
-
-    Fixed4();
-    std::string ToString(std::string inLeft, std::string inRight) override;
-    std::string printAll() override;
-    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    Node* copy(StackAllocator& input) override;
-    Fixed4* pcopy(StackAllocator& input);
-};
-
-class Fixed2 : public Node{
-public:
-    int16_t value = 0;
-
-    Fixed2();
-    std::string ToString(std::string inLeft, std::string inRight) override;
-    std::string printAll() override;
-    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    Node* copy(StackAllocator& input) override;
-    Fixed2* pcopy(StackAllocator& input);
-};
-
-class Fixed1 : public Node{
-public:
-    int8_t value = 0;
-
-    Fixed1();
-    std::string ToString(std::string inLeft, std::string inRight) override;
-    std::string printAll() override;
-    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    Node* copy(StackAllocator& input) override;
-    Fixed1* pcopy(StackAllocator& input);
-};
-
-class Ufixed8 : public Node{
-public:
-    uint64_t value = 0;
-
-    Ufixed8();
-    std::string ToString(std::string inLeft, std::string inRight) override;
-    std::string printAll() override;
-    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    Node* copy(StackAllocator& input) override;
-    Ufixed8* pcopy(StackAllocator& input);
-};
-
-class Ufixed4 : public Node{
-public:
-    uint32_t value = 0;
-
-    Ufixed4();
-    std::string ToString(std::string inLeft, std::string inRight) override;
-    std::string printAll() override;
-    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    Node* copy(StackAllocator& input) override;
-    Ufixed4* pcopy(StackAllocator& input);
-};
-
-class Ufixed2 : public Node{
-public:
-    uint16_t value = 0;
-
-    Ufixed2();
-    std::string ToString(std::string inLeft, std::string inRight) override;
-    std::string printAll() override;
-    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    Node* copy(StackAllocator& input) override;
-    Ufixed2* pcopy(StackAllocator& input);
-};
-
-class Ufixed1 : public Node{
-public:
-    uint8_t value = 0;
-
-    Ufixed1();
-    std::string ToString(std::string inLeft, std::string inRight) override;
-    std::string printAll() override;
-    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    Node* copy(StackAllocator& input) override;
-    Ufixed1* pcopy(StackAllocator& input);
-};
-
-class Boolean : public Node{
-public:
-    bool value;
-
-    Boolean();
-    std::string ToString(std::string inLeft, std::string inRight) override;
-    std::string printAll() override;
-    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    Node* copy(StackAllocator& input) override;
-    Boolean* pcopy(StackAllocator& input);
+    Primitive* pcopy(StackAllocator& input);
 };
 
 
@@ -604,7 +491,7 @@ public:
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    void append(Variable* input);
+    void append(Initialize* input);
     Node* copy(StackAllocator& input) override;
     Function* pcopy(StackAllocator& input);
 };
@@ -687,6 +574,10 @@ class ObjectClass : public Node{
 public:
     std::string_view name;
     Scope* code = nullptr;
+    ObjectClass* next = nullptr;
+    uint64_t memorySize = 0;
+    ////TO DO
+    void* defaultConstruction = nullptr;
     //Method* allMethods = nullptr;
 
     ObjectClass();
