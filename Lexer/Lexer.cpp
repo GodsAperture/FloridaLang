@@ -117,6 +117,9 @@
 	Token Lexer::next() {
 		uint64_t start = count;
 		//Check for particular keywords.
+		if(compare("object")){
+			return Token(FloridaType::Object, std::string_view(file.data() + start, count - start), row, column - 6);
+		}
 		if(compare("for")){
 			return Token(FloridaType::For, std::string_view(file.data() + start, count - start), row, column - 3);
 		}

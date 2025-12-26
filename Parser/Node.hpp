@@ -103,10 +103,13 @@ class Scope : public Node{
         Function* functions = nullptr;
         //The counter will determine which index to use in the `uniqueScopes` in the VM.
         int64_t whichScope = 0;
+        //This will help with how many variables there are in the
+        //scope so I can index properly.
+        int64_t variableCount = 0;
 
         //Find where in some given Scope a particular variable lies.
         //If it does not exist in the scope, it returns -1.
-        int64_t varWhere(std::string input);
+        int64_t whereVariable(std::string input);
         Initialize* getInit(std::string input);
         //Find where in some given Scope a particular variable lies.
         //If it does not exist in the scope, it returns -1.
@@ -169,6 +172,65 @@ public:
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     Node* copy(StackAllocator& input) override;
     Assignment* pcopy(StackAllocator& input);
+};
+
+
+
+//General operator classes.
+//This will let group all other operators together.
+class Operators : public Node{
+public:
+    std::string_view name;
+    bool LeftToRight = true;
+
+    virtual std::string ToString(std::string inLeft, std::string inRight) override;
+    virtual std::string printAll() override;
+    virtual void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
+    virtual Node* copy(StackAllocator& input) override;
+};
+
+
+
+class BinaryOperator : public Operators{
+public:
+    Node* left = nullptr;
+    Node* right = nullptr;
+
+    BinaryOperator();
+    std::string ToString(std::string inLeft, std::string inRight) override;
+    std::string printAll() override;
+    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
+    Node* copy(StackAllocator& input) override;
+    BinaryOperator* pcopy(StackAllocator& input);
+
+};
+
+
+
+class LeftOperator : public Operators{
+public:
+    Node* left = nullptr;
+
+    LeftOperator();
+    std::string ToString(std::string inLeft, std::string inRight) override;
+    std::string printAll() override;
+    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
+    Node* copy(StackAllocator& input) override;
+    LeftOperator* pcopy(StackAllocator& input);
+};
+
+
+
+class RightOperator : public Operators{
+public:
+    Node* right = nullptr;
+
+    RightOperator();
+    std::string ToString(std::string inLeft, std::string inRight) override;
+    std::string printAll() override;
+    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
+    Node* copy(StackAllocator& input) override;
+    RightOperator* pcopy(StackAllocator& input);
 };
 
 
@@ -576,6 +638,7 @@ public:
     Scope* code = nullptr;
     ObjectClass* next = nullptr;
     uint64_t memorySize = 0;
+    int64_t variableCount = 0;
     ////TO DO
     void* defaultConstruction = nullptr;
     //Method* allMethods = nullptr;
@@ -586,6 +649,12 @@ public:
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     Node* copy(StackAllocator& input) override;
     ObjectClass* pcopy(StackAllocator& input);
+
+    //Given some variable name, get the offset for the object from this class' stack.
+    int64_t whereVariable(std::string input);
+    //Given some variable name, get the offset in memory for it.
+    //This will be useful for objects in the heap.
+    char* variableOffset(std::string input);
 };
 
 #endif

@@ -194,7 +194,7 @@ bool typeCheck(FloridaType inType){
 
     //Determine where a particular variable exists in a given scope.
     //If it is not found, then return -1.
-    int64_t Scope::varWhere(std::string input){
+    int64_t Scope::whereVariable(std::string input){
         Initialize* currInit = allInitializations;
         int64_t count = 0;
         int64_t result = -1;
@@ -450,6 +450,7 @@ bool typeCheck(FloridaType inType){
                 }
                 break;
             default:
+                break;
             //Error
         }
 
@@ -497,6 +498,7 @@ bool typeCheck(FloridaType inType){
                 }
                 break;
             default:
+                break;
             //Error
         }
 
@@ -2290,10 +2292,9 @@ bool typeCheck(FloridaType inType){
 
     std::string ObjectClass::ToString(std::string inLeft, std::string inRight){
         std::string theInitialize = "";
-        Initialize* current = code->allInitializations;
 
         return "object " + std::string(name) + "{\n" + 
-            code->body->ToString("  " + inLeft, inRight) + 
+            code->body->ToString("  " + inLeft, inRight) + "\n" +
         inLeft + "}\n";
     }
 
@@ -2312,4 +2313,6 @@ bool typeCheck(FloridaType inType){
         result->name = name;
         result->code = code->pcopy(input);
         currScope->push(result);
+
+        return result;
     }

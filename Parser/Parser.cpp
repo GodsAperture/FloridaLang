@@ -4,6 +4,42 @@
 #include <cstring>
 #include <iostream>
 
+uint64_t allocationSize(FloridaType input){
+    switch(input){
+        case FloridaType::Bool:
+            return 1;
+        case FloridaType::ufixed8:
+            return 8;
+        case FloridaType::ufixed4:
+            return 4;
+        case FloridaType::ufixed2:
+            return 2;
+        case FloridaType::ufixed1:
+            return 1;
+        case FloridaType::fixed8:
+            return 8;
+        case FloridaType::fixed4:
+            return 4;
+        case FloridaType::fixed2:
+            return 2;
+        case FloridaType::fixed1:
+            return 1;
+        case FloridaType::float8:
+            return 8;
+        case FloridaType::float4:
+            return 4;
+        default:
+            return 0;
+    }
+}
+
+Initialize* InitializeSort(Initialize* input){
+    Initialize* result = nullptr;
+    Initialize* current = input;
+
+
+}
+
 void Parser::parse(){
     //The entire program is essentially a scope.
     stack->AST = scope();
@@ -229,10 +265,66 @@ Node* Parser::primitive(){
 
 
     //Check for numbers.
+    if((given[iter].type == FloridaType::ufixed8) and (given[iter].getName() != "ufixed8")){
+        Primitive* number = stack->alloc<Primitive>();
+        number->value.ufixed8 = std::stod(given[iter].getName());
+        number->type = FloridaType::ufixed8;
+        iter++;
+
+        return number;
+    }
+    if((given[iter].type == FloridaType::ufixed4) and (given[iter].getName() != "ufixed4")){
+        Primitive* number = stack->alloc<Primitive>();
+        number->value.ufixed4 = std::stol(given[iter].getName());
+        number->type = FloridaType::ufixed4;
+        iter++;
+
+        return number;
+    }
+    if((given[iter].type == FloridaType::ufixed2) and (given[iter].getName() != "ufixed2")){
+        Primitive* number = stack->alloc<Primitive>();
+        number->value.ufixed2 = std::stol(given[iter].getName());
+        number->type = FloridaType::ufixed2;
+        iter++;
+
+        return number;
+    }
+    if((given[iter].type == FloridaType::ufixed1) and (given[iter].getName() != "ufixed1")){
+        Primitive* number = stack->alloc<Primitive>();
+        number->value.ufixed1 = std::stol(given[iter].getName());
+        number->type = FloridaType::ufixed1;
+        iter++;
+
+        return number;
+    }
     if((given[iter].type == FloridaType::fixed8) and (given[iter].getName() != "fixed8")){
         Primitive* number = stack->alloc<Primitive>();
-        number->value.fixed8 = std::stol(given[iter].getName());
+        number->value.fixed8 = std::stod(given[iter].getName());
         number->type = FloridaType::fixed8;
+        iter++;
+
+        return number;
+    }
+    if((given[iter].type == FloridaType::fixed4) and (given[iter].getName() != "fixed4")){
+        Primitive* number = stack->alloc<Primitive>();
+        number->value.fixed4 = std::stod(given[iter].getName());
+        number->type = FloridaType::fixed4;
+        iter++;
+
+        return number;
+    }
+    if((given[iter].type == FloridaType::fixed2) and (given[iter].getName() != "fixed2")){
+        Primitive* number = stack->alloc<Primitive>();
+        number->value.fixed2 = std::stod(given[iter].getName());
+        number->type = FloridaType::fixed2;
+        iter++;
+
+        return number;
+    }
+    if((given[iter].type == FloridaType::fixed1) and (given[iter].getName() != "fixed1")){
+        Primitive* number = stack->alloc<Primitive>();
+        number->value.fixed1 = std::stod(given[iter].getName());
+        number->type = FloridaType::fixed1;
         iter++;
 
         return number;
@@ -245,6 +337,14 @@ Node* Parser::primitive(){
 
         return number;
     }
+    if((given[iter].type == FloridaType::float4) and (given[iter].getName() != "float4")){
+        Primitive* number = stack->alloc<Primitive>();
+        number->value.float4 = std::stod(given[iter].getName());
+        number->type = FloridaType::float4;
+        iter++;
+
+        return number;
+    }
 
 
     
@@ -253,11 +353,13 @@ Node* Parser::primitive(){
         Primitive* result = stack->alloc<Primitive>();
         if(given[iter].getName() == "true"){
             result->value.boolean = true;
+            result->type = FloridaType::Bool;
             iter++;
 
             return result;
         } else {
             result->value.boolean = false;
+            result->type = FloridaType::Bool;
             iter++;
             
             return result;
@@ -771,6 +873,11 @@ Node* Parser::commonExpressions(){
         return result;
     }
 
+    result = object();
+    if(result != nullptr){
+        return result;
+    }
+
     result = assignment();
     if(result != nullptr){
         if(!check(";")){
@@ -1038,7 +1145,7 @@ Variable* Parser::variable(){
                 return nullptr;
             } else {
                 //If a value other than -1 is returned, then we break from the loop.
-                position = thisScope->varWhere(given[iter].getName());
+                position = thisScope->whereVariable(given[iter].getName());
                 if(position == -1){
                     thisScope = thisScope->parent;
                 } else {
@@ -1178,8 +1285,6 @@ ObjectClass* Parser::object(){
     std::string_view name = given[iter + 1].name;
     bool bool2 = given[iter + 2].getName() == "{";
 
-    std::cout << "Object " + std::string(name) + " found!\n";
-
     if(bool1 & bool2){
         iter++;
         iter++;
@@ -1189,17 +1294,34 @@ ObjectClass* Parser::object(){
         result->name = name;
         result->code = scope();
 
+        if(!check("}")){
+            //TO DO, debugging.
+        }
+
         //Now I'm going to make a default object from the initializations.
         if(result->code->allInitializations != nullptr){
             Initialize* currInit = result->code->allInitializations;
+            void* pointer = stack->current;
+            //This way you know what the default object looks like.
+            result->defaultConstruction = pointer;
             //Determine the size of the region in memory.
             while(currInit != nullptr){
+                //Check to see if there's a simple initialization.
+                //If so, then make it part of the default object.
+                if(dynamic_cast<InitializeAssign*>(currInit) != nullptr){
+                    if(dynamic_cast<Primitive*>(dynamic_cast<InitializeAssign*>(currInit)->code) != nullptr){
+                        memset(pointer, dynamic_cast<Primitive*>(dynamic_cast<InitializeAssign*>(currInit)->code)->value.fixed8, 8);
+                    }
+                }
                 result->memorySize += 8;
                 currInit = currInit->next;
+                pointer = (void*) (((char*) pointer) + 8);
+                result->variableCount++;
             }
-            memset(stack->current, 0, result->memorySize);
             stack->current = (void*) (((char*) stack->current) + result->memorySize);
         }
+
+        return result;
         
     }
 
