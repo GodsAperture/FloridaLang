@@ -724,6 +724,16 @@ bool typeCheck(FloridaType inType){
     void Initialize::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         //Push back a placeholder.
         inInstructions.push_back(Instruction(Operation::initialize, 0));
+        //If there's code, then generate it.
+        if(code != nullptr){
+            Instruction assign = Instruction();
+            assign.oper = Operation::lassign;
+            assign.literal.fixed8 = thisVariable->distance;
+            //Generate the code for the right hand side.
+            code->FLVMCodeGen(inInstructions);
+            //Push an assignment instruction.
+            inInstructions.push_back(assign);
+        }
     }
 
     Node* Initialize::copy(StackAllocator& input){
@@ -731,6 +741,7 @@ bool typeCheck(FloridaType inType){
 
         thisptr->thisVariable = thisVariable->pcopy(input);
         input.currScope->push(thisptr);
+        thisptr->code = code->copy(input);
 
         return thisptr;
     }
@@ -740,71 +751,27 @@ bool typeCheck(FloridaType inType){
 
         thisptr->thisVariable = thisVariable->pcopy(input);
         input.currScope->push(thisptr);
-
-        return thisptr;
-    }
-
-
-
-//InitializeAssign
-    InitializeAssign::InitializeAssign(){
-        //Do nothing
-    }
-
-    std::string InitializeAssign::ToString(std::string inLeft, std::string inRight){
-        return inLeft + "\x1b[36m" + typeString(thisVariable->thisToken.type) + "\x1b[0m " + thisVariable->ToString(inLeft, inRight) + " = " + code->ToString(inLeft, inRight) + inRight;
-    }
-
-    std::string InitializeAssign::printAll(){
-        std::string thing = "";
-        if(thisVariable->where == 0){
-            thing = "lassign";
-        }
-        if(thisVariable->where == 1){
-            thing = "massign";
-        }
-        if(thisVariable->where == 2){
-            thing = "gassign";
-        }
-        return padding2("initialize") + "(*Variable " + thisVariable->thisToken.getName() + "*)\n" + code->printAll() + padding2(padding(thing) + std::to_string(thisVariable->distance)) + "(*Variable " + thisVariable->thisToken.getName() + "*)\n";
-    }
-
-    void InitializeAssign::FLVMCodeGen(std::vector<Instruction>& inInstructions){
-        Instruction inst;
-        //Push back a placeholder.
-        inInstructions.push_back(Instruction(Operation::initialize, 0));
-        //Generate the code for the right hand side.
-        code->FLVMCodeGen(inInstructions);
-        inst.oper = lassign;
-        inst.literal.fixed8 = thisVariable->distance;
-        //Assign it to the local variable.
-        inInstructions.push_back(inst);
-    }
-
-    Node* InitializeAssign::copy(StackAllocator& input){
-        InitializeAssign* thisptr = input.alloc<InitializeAssign>();
-
-        //Copy over the values
-        thisptr->thisVariable = thisVariable->pcopy(input);
         thisptr->code = code->copy(input);
-        thisptr->type = type;
-        //Add this variable to the scope.
-        input.currScope->push(thisptr);
 
         return thisptr;
     }
 
-    InitializeAssign* InitializeAssign::pcopy(StackAllocator& input){
-        InitializeAssign* thisptr = input.alloc<InitializeAssign>();
+    //Append the `input` to the end of the linked list of Initializations.
+    void Initialize::append(Initialize* input){
+        Initialize* current = this;
+        while(current->next != nullptr){
+            current = current->next;
+        }
+        current->next = input;
+    }
 
-        //Copy over the values
-        thisptr->thisVariable = thisVariable->pcopy(input);
-        thisptr->code = code->copy(input);
-        thisptr->type = type;
-        //Add this variable to the scope.
-        input.currScope->push(thisptr);
-
-        return thisptr;
+    //Append `input` to the end of the `memoryOrder` linked list.
+    void Initialize::memoryAppend(Initialize* input){
+        Initialize* current = this;
+        while(current->memoryOrder != nullptr){
+            current = current->memoryOrder;
+        }
+        current->memoryOrder = input;
     }
 
 

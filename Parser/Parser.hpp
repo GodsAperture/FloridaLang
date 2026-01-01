@@ -69,6 +69,10 @@ public:
     Assignment* assignment();
     //Check for a class declaration.
     ObjectClass* object();
+    //Determine the size of an object.
+    uint64_t allocationSize(FloridaType input);
+    //Sort the initialiations to pack memory more efficiently.
+    Initialize* InitializeSort(Initialize* input);
 
 //Tree related functions.
 

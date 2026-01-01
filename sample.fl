@@ -1,5 +1,6 @@
 object thisThing{
     float8 theDouble = 3.14;
-    fixed8 theInteger = 8;
+    fixed4 theInteger = 8;
     boolean theBool = true;
+    fixed4 secondInteger = 0;
 }

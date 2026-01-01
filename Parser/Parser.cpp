@@ -4,7 +4,7 @@
 #include <cstring>
 #include <iostream>
 
-uint64_t allocationSize(FloridaType input){
+uint64_t Parser::allocationSize(FloridaType input){
     switch(input){
         case FloridaType::Bool:
             return 1;
@@ -33,10 +33,167 @@ uint64_t allocationSize(FloridaType input){
     }
 }
 
-Initialize* InitializeSort(Initialize* input){
-    Initialize* result = nullptr;
-    Initialize* current = input;
+//This is not a standard sort method.
+//This is for allocating objects into whole 8 byte sections of memory.
+//Then the rest will be sorted by size from largest to smallest.
+Initialize* Parser::InitializeSort(Initialize* input){
+    if(input == nullptr){
+        return nullptr;
+    }
 
+    Initialize* result = nullptr;
+    Initialize* sortList = nullptr;
+    Initialize* sortedList = nullptr;
+    Initialize* current = input;
+    Initialize* next = input->next;
+
+    class DLL{
+    public:
+        DLL* previous = nullptr;
+        Initialize* current = nullptr;
+        DLL* next = nullptr;
+
+        DLL(Initialize* input){
+            current = input;
+            if(input->next != nullptr){
+                next = new DLL(input->next);
+                next->previous = this;
+            }
+            input->next = nullptr;
+        }
+
+        //Returns the next part of the chain if there is one.
+        DLL* remove(){
+            DLL* result;
+            if((previous == nullptr) && (next != nullptr)){
+                next->previous = nullptr;
+                result = next;
+            }
+            if((previous != nullptr) && (next == nullptr)){
+                previous->next = nullptr;
+                result = previous;
+            }
+            if((previous != nullptr) && (next != nullptr)){
+                previous->next = next;
+                next->previous = previous;
+                result = next;
+            }
+            if((previous == nullptr) && (next == nullptr)){
+                result = nullptr;
+            }
+            delete this;
+            return result;
+        }
+
+        DLL* getNext(){
+            if(next != nullptr){
+                return next;
+            } else {
+                return this;
+            }
+        }
+
+        DLL* rewind(){
+            DLL* result = this;
+            while(result->previous != nullptr){
+                result = result->previous;
+            }
+
+            return result;
+        }
+
+    };
+
+    //First loop puts all objects that are multiples of 8 to result.
+    while(true){
+        //Check to see if the variable uses an allocation whose size is a multiple of 8 bytes.
+        //Otherwise, push it to the sort list.
+        if(allocationSize(current->thisVariable->type) % 8 == 0){
+            //Append the allocation to result.
+            if(result != nullptr){
+                result->memoryAppend(current);
+            } else {
+                result = current;
+            }
+        } else {
+            if(sortList != nullptr){
+                sortList->memoryAppend(current);
+            } else {
+                sortList = current;
+            }
+        }
+        if(next == nullptr){
+            break;
+        } else {
+            //Move to the next part of this linked list.
+            current = next;
+            next = next->next;
+        }
+        
+    }
+
+    //If there are any members to be sorted, then sort them manually.
+    if(sortList != nullptr){
+        //This loop sorts the SortList from largest to smallest.
+        //This is a more hard coded solution that lets me think a little less.
+        //Sort out all 4 byte primitives.
+        DLL* currentDLL = new DLL(sortList);
+        DLL* previous = nullptr;
+        while(true){
+            previous = currentDLL;
+            if(allocationSize(currentDLL->current->thisVariable->type) == 4){
+                if(sortedList != nullptr){
+                    sortedList->memoryAppend(currentDLL->current);
+                } else {
+                    sortedList = currentDLL->current;
+                }
+                currentDLL = currentDLL->remove();
+            } else {
+                currentDLL = currentDLL->getNext();
+            }
+            if(previous == currentDLL->getNext()){
+                break;
+            }
+        }
+
+
+        if(currentDLL != nullptr){
+            currentDLL = currentDLL->rewind();
+            previous = nullptr;
+
+            //Get all 2 byte allocations and append them.
+            while(true){
+                previous = currentDLL;
+                if(allocationSize(currentDLL->current->thisVariable->type) == 2){
+                    if(sortedList != nullptr){
+                        sortedList->memoryAppend(currentDLL->current);
+                    } else {
+                        sortedList = currentDLL->current;
+                    }
+                    currentDLL = currentDLL->remove();
+                } else {
+                    currentDLL = currentDLL->getNext();
+                }
+                if(previous == currentDLL->getNext()){
+                    break;
+                }
+            }
+        }
+
+        if(currentDLL != nullptr){
+            currentDLL = currentDLL->rewind();
+            //Get all 1 byte allocations and append them.
+            //All that can remain are 1 byte allocations.
+            while(currentDLL != nullptr){
+                sortedList->memoryAppend(currentDLL->current);
+                currentDLL = currentDLL->remove();
+            }
+        }
+
+        result->memoryAppend(sortedList);
+    }
+
+    return result;
 
 }
 
@@ -381,7 +538,7 @@ Node* Parser::primitive(){
 
 //Comparisons
 Node* Parser::equal(){
-    if(!hasTokens(1)){
+    if(!hasTokens(3)){
         return nullptr;
     }
 
@@ -1199,7 +1356,7 @@ Initialize* Parser::initialize(){
     bool bool3 = given[iter + 2].getName() == "=";
 
     //Check for a plain initialization.
-    if(bool1 & bool2 & !bool3){
+    if(bool1 & bool2){
         iter++;
         iter++;
         //This will be stack allocated in scope().
@@ -1215,43 +1372,15 @@ Initialize* Parser::initialize(){
         //Add the variable to the current scope.
         stack->currScope->push(result);
 
-        return result;
-    }
-
-    //Check for an initialization with an assignment.
-    if(bool1 & bool2 & bool3){
-        iter++;
-        iter++;
-        iter++;
-        Node* code = nullptr;
-        InitializeAssign* result = stack->alloc<InitializeAssign>();
-        result->type = theType;
-
-        //This will be stack allocated in the scope `currScope`.
-        Variable* newVariable = stack->alloc<Variable>();
-        newVariable->thisToken = theToken;
-        newVariable->distance = stack->currScope->varCount();
-        newVariable->where = 0;
-        newVariable->owner = stack->currScope;
-
-        result->thisVariable = newVariable;
-        //Add the variable to the current scope.
-        stack->currScope->push(result);
-
-        code = commonExpressions();
-        //If the types don't match, make a typecast.
-        if(newVariable->type != code->type){
-            TypecastClass* cast = stack->alloc<TypecastClass>();
-            cast->body = code;
-            cast->type = newVariable->type;
+        if(bool3){
+            iter++;
+            result->code = commonStatements();
         }
-        result->code = code;
 
         return result;
-
     }
 
-    //This isn't an error, just that a variable wasn't found.
+    //This isn't an error, just that an initialization wasn't found.
     return nullptr;
 }
 
@@ -1298,9 +1427,12 @@ ObjectClass* Parser::object(){
             //TO DO, debugging.
         }
 
+        //Sort the initializations to be packed in memory.
+        result->memoryLayout = InitializeSort(result->code->allInitializations);
+
         //Now I'm going to make a default object from the initializations.
-        if(result->code->allInitializations != nullptr){
-            Initialize* currInit = result->code->allInitializations;
+        if(result->memoryLayout != nullptr){
+            Initialize* currInit = result->memoryLayout;
             void* pointer = stack->current;
             //This way you know what the default object looks like.
             result->defaultConstruction = pointer;
@@ -1308,17 +1440,19 @@ ObjectClass* Parser::object(){
             while(currInit != nullptr){
                 //Check to see if there's a simple initialization.
                 //If so, then make it part of the default object.
-                if(dynamic_cast<InitializeAssign*>(currInit) != nullptr){
-                    if(dynamic_cast<Primitive*>(dynamic_cast<InitializeAssign*>(currInit)->code) != nullptr){
-                        memset(pointer, dynamic_cast<Primitive*>(dynamic_cast<InitializeAssign*>(currInit)->code)->value.fixed8, 8);
-                    }
+                uint64_t memSize = allocationSize(currInit->thisVariable->type);
+                //TO DO: Adjust for when an object is passed here instead of a primitive.
+                if(currInit->code != nullptr){
+                    //TO DO: support default initializations.
                 }
-                result->memorySize += 8;
-                currInit = currInit->next;
-                pointer = (void*) (((char*) pointer) + 8);
+                result->memorySize += memSize;
+                currInit = currInit->memoryOrder;
+                pointer = (void*) (((char*) pointer) + memSize);
                 result->variableCount++;
             }
-            stack->current = (void*) (((char*) stack->current) + result->memorySize);
+            uint64_t resultingMemorySize = result->memorySize + (8 - (result->memorySize % 8)) % 8;
+            result->memorySize = resultingMemorySize;
+            stack->current = (void*) (((char*) stack->current) + resultingMemorySize);
         }
 
         return result;

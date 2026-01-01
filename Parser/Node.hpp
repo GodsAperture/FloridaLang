@@ -139,6 +139,9 @@ public:
     Variable* thisVariable = nullptr;
     //Only useful for function, method, class, constructor, etc. defintions.
     Initialize* next = nullptr;
+    //This will be the order it is placed in memory to pack it tightly.
+    Initialize* memoryOrder = nullptr;
+    Node* code = nullptr;
 
     Initialize();
     std::string ToString(std::string inLeft, std::string inRight) override;
@@ -146,18 +149,11 @@ public:
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     Node* copy(StackAllocator& input) override;
     virtual Initialize* pcopy(StackAllocator& input);
-};
 
-class InitializeAssign : public Initialize{
-public:
-    Node* code = nullptr;
-
-    InitializeAssign();
-    std::string ToString(std::string inLeft, std::string inRight) override;
-    std::string printAll() override;
-    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
-    Node* copy(StackAllocator& input) override;
-    InitializeAssign* pcopy(StackAllocator& input) override;
+    //Append the `input` to the end of the linked list `next` of Initializations.
+    void append(Initialize* input);
+    //Append `input` to the end of the `memoryOrder` linked list.
+    void memoryAppend(Initialize* input);
 };
 
 class Assignment : public Node{
@@ -637,7 +633,9 @@ public:
     std::string_view name;
     Scope* code = nullptr;
     ObjectClass* next = nullptr;
+    //Memory size is also useful for determining the compressed stack size.
     uint64_t memorySize = 0;
+    Initialize* memoryLayout = nullptr;
     int64_t variableCount = 0;
     ////TO DO
     void* defaultConstruction = nullptr;
