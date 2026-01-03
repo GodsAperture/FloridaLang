@@ -424,7 +424,7 @@ Node* Parser::primitive(){
     //Check for numbers.
     if((given[iter].type == FloridaType::ufixed8) and (given[iter].getName() != "ufixed8")){
         Primitive* number = stack->alloc<Primitive>();
-        number->value.ufixed8 = std::stod(given[iter].getName());
+        number->value.ufixed8[0] = std::stod(given[iter].getName());
         number->type = FloridaType::ufixed8;
         iter++;
 
@@ -432,7 +432,7 @@ Node* Parser::primitive(){
     }
     if((given[iter].type == FloridaType::ufixed4) and (given[iter].getName() != "ufixed4")){
         Primitive* number = stack->alloc<Primitive>();
-        number->value.ufixed4 = std::stol(given[iter].getName());
+        number->value.ufixed4[0] = std::stol(given[iter].getName());
         number->type = FloridaType::ufixed4;
         iter++;
 
@@ -440,7 +440,7 @@ Node* Parser::primitive(){
     }
     if((given[iter].type == FloridaType::ufixed2) and (given[iter].getName() != "ufixed2")){
         Primitive* number = stack->alloc<Primitive>();
-        number->value.ufixed2 = std::stol(given[iter].getName());
+        number->value.ufixed2[0] = std::stol(given[iter].getName());
         number->type = FloridaType::ufixed2;
         iter++;
 
@@ -448,7 +448,7 @@ Node* Parser::primitive(){
     }
     if((given[iter].type == FloridaType::ufixed1) and (given[iter].getName() != "ufixed1")){
         Primitive* number = stack->alloc<Primitive>();
-        number->value.ufixed1 = std::stol(given[iter].getName());
+        number->value.ufixed1[0] = std::stol(given[iter].getName());
         number->type = FloridaType::ufixed1;
         iter++;
 
@@ -456,7 +456,7 @@ Node* Parser::primitive(){
     }
     if((given[iter].type == FloridaType::fixed8) and (given[iter].getName() != "fixed8")){
         Primitive* number = stack->alloc<Primitive>();
-        number->value.fixed8 = std::stod(given[iter].getName());
+        number->value.fixed8[0] = std::stod(given[iter].getName());
         number->type = FloridaType::fixed8;
         iter++;
 
@@ -464,7 +464,7 @@ Node* Parser::primitive(){
     }
     if((given[iter].type == FloridaType::fixed4) and (given[iter].getName() != "fixed4")){
         Primitive* number = stack->alloc<Primitive>();
-        number->value.fixed4 = std::stod(given[iter].getName());
+        number->value.fixed4[0] = std::stod(given[iter].getName());
         number->type = FloridaType::fixed4;
         iter++;
 
@@ -472,7 +472,7 @@ Node* Parser::primitive(){
     }
     if((given[iter].type == FloridaType::fixed2) and (given[iter].getName() != "fixed2")){
         Primitive* number = stack->alloc<Primitive>();
-        number->value.fixed2 = std::stod(given[iter].getName());
+        number->value.fixed2[0] = std::stod(given[iter].getName());
         number->type = FloridaType::fixed2;
         iter++;
 
@@ -480,7 +480,7 @@ Node* Parser::primitive(){
     }
     if((given[iter].type == FloridaType::fixed1) and (given[iter].getName() != "fixed1")){
         Primitive* number = stack->alloc<Primitive>();
-        number->value.fixed1 = std::stod(given[iter].getName());
+        number->value.fixed1[0] = std::stod(given[iter].getName());
         number->type = FloridaType::fixed1;
         iter++;
 
@@ -488,7 +488,7 @@ Node* Parser::primitive(){
     }
     if((given[iter].type == FloridaType::float8) and (given[iter].getName() != "float8")){
         Primitive* number = stack->alloc<Primitive>();
-        number->value.float8 = std::stod(given[iter].getName());
+        number->value.float8[0] = std::stod(given[iter].getName());
         number->type = FloridaType::float8;
         iter++;
 
@@ -496,7 +496,7 @@ Node* Parser::primitive(){
     }
     if((given[iter].type == FloridaType::float4) and (given[iter].getName() != "float4")){
         Primitive* number = stack->alloc<Primitive>();
-        number->value.float4 = std::stod(given[iter].getName());
+        number->value.float4[0] = std::stod(given[iter].getName());
         number->type = FloridaType::float4;
         iter++;
 
@@ -509,13 +509,13 @@ Node* Parser::primitive(){
     if((given[iter].type == FloridaType::Bool) and (given[iter].getName() != "boolean")){
         Primitive* result = stack->alloc<Primitive>();
         if(given[iter].getName() == "true"){
-            result->value.boolean = true;
+            result->value.boolean[0] = true;
             result->type = FloridaType::Bool;
             iter++;
 
             return result;
         } else {
-            result->value.boolean = false;
+            result->value.boolean[0] = false;
             result->type = FloridaType::Bool;
             iter++;
             

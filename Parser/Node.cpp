@@ -3,6 +3,35 @@
 #include <stack>
 #include <iostream>
 
+uint64_t allocationSize(FloridaType input){
+    switch(input){
+        case FloridaType::Bool:
+            return 1;
+        case FloridaType::ufixed8:
+            return 8;
+        case FloridaType::ufixed4:
+            return 4;
+        case FloridaType::ufixed2:
+            return 2;
+        case FloridaType::ufixed1:
+            return 1;
+        case FloridaType::fixed8:
+            return 8;
+        case FloridaType::fixed4:
+            return 4;
+        case FloridaType::fixed2:
+            return 2;
+        case FloridaType::fixed1:
+            return 1;
+        case FloridaType::float8:
+            return 8;
+        case FloridaType::float4:
+            return 4;
+        default:
+            return 0;
+    }
+}
+
 inline std::string padding(std::string input){
     for(size_t i = input.size(); i < 12; i++){
         input += " ";
@@ -346,11 +375,15 @@ bool typeCheck(FloridaType inType){
     void Scope::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         Instruction result = Instruction();
         result.oper = Operation::push;
-        result.literal.fixed8 = whichScope;
+        result.literal.fixed8[0] = whichScope;
         //Be sure to add this otherwise I can never adjust the unique scopes.
         inInstructions.push_back(result);
         //The new scope will use the last value to pick the proper scope and adjust its value.
         inInstructions.push_back(Instruction(newScope));
+        //This is so I can preemptively allocate slots for the scope's variables.
+        Instruction initializeCount = Instruction();
+        initializeCount.literal.fixed8[0] = variableSlotSize;
+        inInstructions.push_back(initializeCount);
         if(body != nullptr){
             body->FLVMCodeGen(inInstructions);
         }
@@ -405,7 +438,7 @@ bool typeCheck(FloridaType inType){
 
 //Primitive
     Primitive::Primitive(){
-        value.object = nullptr;
+        value.object[0] = nullptr;
         //The type will be determined after a Primitive is created.
     }
 
@@ -413,37 +446,37 @@ bool typeCheck(FloridaType inType){
         std::string result = "";
         switch(type){
             case ufixed1:
-                result = std::to_string(value.ufixed1);
+                result = std::to_string(value.ufixed1[0]);
                 break;
             case ufixed2:
-                result = std::to_string(value.ufixed2);
+                result = std::to_string(value.ufixed2[0]);
                 break;
             case ufixed4:
-                result = std::to_string(value.ufixed4);
+                result = std::to_string(value.ufixed4[0]);
                 break;
             case ufixed8:
-                result = std::to_string(value.ufixed8);
+                result = std::to_string(value.ufixed8[0]);
                 break;
             case fixed1:
-                result = std::to_string(value.fixed1);
+                result = std::to_string(value.fixed1[0]);
                 break;
             case fixed2:
-                result = std::to_string(value.fixed2);
+                result = std::to_string(value.fixed2[0]);
                 break;
             case fixed4:
-                result = std::to_string(value.fixed4);
+                result = std::to_string(value.fixed4[0]);
                 break;
             case fixed8:
-                result = std::to_string(value.fixed8);
+                result = std::to_string(value.fixed8[0]);
                 break;
             case float4:
-                result = std::to_string(value.float4);
+                result = std::to_string(value.float4[0]);
                 break;
             case float8:
-                result = std::to_string(value.float8);
+                result = std::to_string(value.float8[0]);
                 break;
             case Bool:
-                if(value.boolean){
+                if(value.boolean[0]){
                     result = "\x1b[32mtrue\x1b[0m";
                 } else {
                     result = "\x1b[31mfalse\x1b[0m";
@@ -461,37 +494,37 @@ bool typeCheck(FloridaType inType){
         std::string result = "";
         switch(type){
             case ufixed1:
-                result = std::to_string(value.ufixed1);
+                result = std::to_string(value.ufixed1[0]);
                 break;
             case ufixed2:
-                result = std::to_string(value.ufixed2);
+                result = std::to_string(value.ufixed2[0]);
                 break;
             case ufixed4:
-                result = std::to_string(value.ufixed4);
+                result = std::to_string(value.ufixed4[0]);
                 break;
             case ufixed8:
-                result = std::to_string(value.ufixed8);
+                result = std::to_string(value.ufixed8[0]);
                 break;
             case fixed1:
-                result = std::to_string(value.fixed1);
+                result = std::to_string(value.fixed1[0]);
                 break;
             case fixed2:
-                result = std::to_string(value.fixed2);
+                result = std::to_string(value.fixed2[0]);
                 break;
             case fixed4:
-                result = std::to_string(value.fixed4);
+                result = std::to_string(value.fixed4[0]);
                 break;
             case fixed8:
-                result = std::to_string(value.fixed8);
+                result = std::to_string(value.fixed8[0]);
                 break;
             case float4:
-                result = std::to_string(value.float4);
+                result = std::to_string(value.float4[0]);
                 break;
             case float8:
-                result = std::to_string(value.float8);
+                result = std::to_string(value.float8[0]);
                 break;
             case Bool:
-                if(value.boolean){
+                if(value.boolean[0]){
                     result = "\x1b[32mtrue\x1b[0m";
                 } else {
                     result = "\x1b[31mfalse\x1b[0m";
@@ -643,42 +676,112 @@ bool typeCheck(FloridaType inType){
     }
 
     std::string Variable::printAll(){
+        std::string stackOffset = std::to_string(stackBytePosition / 8);
+        std::string byteOffset = std::to_string(stackBytePosition % 8);
+        std::string byteSize = std::to_string(allocationSize(type));
         if(where == 0){
-            return padding2(padding("lfetch") + std::to_string(distance)) + "(*Variable " + thisToken.getName() + "*)\n";
+            return padding("push") + byteOffset + "\n" +
+            padding2(padding("lfetch" + byteSize) + stackOffset) + "(*Variable " + thisToken.getName() + "*)\n";
         }
         if(where == 1){
-            return padding2(padding("push") + std::to_string(owner->whichScope)) + "(*scope: " + std::string(owner->name) + "*)" + "\n" + padding2(padding("mfetch") + std::to_string(distance)) + "(*Variable " + thisToken.getName() + "*)\n";            
+            return padding2(padding("push") + std::to_string(owner->whichScope)) + "(*scope: " + std::string(owner->name) + "*)\n" +
+            padding("push") + byteOffset + "\n";
+            padding2(padding("mfetch" + byteSize) + stackOffset) + "(*Variable " + thisToken.getName() + "*)\n";            
         }
         if(where == 2){
-            return padding2(padding("gfetch") + std::to_string(distance)) + "(*Variable " + thisToken.getName() + "*)\n";
+            return padding2(padding("push" + byteOffset)) + "\n" + 
+            padding2(padding("gfetch" + byteSize) + stackOffset) + "(*Variable " + thisToken.getName() + "*)\n";
         }
-        //Unreachable.
+        if(where == 3){
+            return padding2(padding("push") + "HEAP_ADDRESS") + "(*Given at run time*)" + "\n" +
+            padding("push") + byteOffset + "\n" +
+            padding2(padding("hfetch" + byteSize) + stackOffset + ", " + byteOffset) + "(*Variable " + thisToken.getName() + "*)\n";
+        }
         return "";
     }
 
     void Variable::FLVMCodeGen(std::vector<Instruction>& inInstructions){
-        Instruction inst;
+        Instruction instruction;
+        Instruction stackIndex;
+        stackIndex.oper = Operation::push;
+        stackIndex.literal.fixed8[0] = stackBytePosition / 8;
+        //This will tell how far from the offset the object exists.
+        inInstructions.push_back(stackIndex);
         if(where == 0){
-            inst.oper = lfetch;
-            inst.literal.fixed8 = distance;
+            switch(allocationSize(type)){
+                case 1:
+                    instruction.oper = gfetch1;
+                    break;
+                case 2:
+                    instruction.oper = gfetch2;
+                    break;
+                case 4:
+                    instruction.oper = gfetch4;
+                    break;
+                case 8:
+                    instruction.oper = gfetch8;
+            }
+            instruction.literal.fixed8[0] = stackBytePosition % 8;
             //Push back the instruction for local variable.
-            inInstructions.push_back(inst);
+            inInstructions.push_back(instruction);
         }
         if(where == 1){
-            inst.oper = push;
-            inst.literal.fixed8 = owner->whichScope;
+            instruction.oper = Operation::push;
+            instruction.literal.fixed8[0] = owner->whichScope;
             //Push the push instruction onto the stack.
-            inInstructions.push_back(inst);
-            inst.oper = mfetch;
-            inst.literal.fixed8 = distance;
+            inInstructions.push_back(instruction);
+            switch(allocationSize(type)){
+                case 1:
+                    instruction.oper = mfetch1;
+                    break;
+                case 2:
+                    instruction.oper = mfetch2;
+                    break;
+                case 4:
+                    instruction.oper = mfetch4;
+                    break;
+                case 8:
+                    instruction.oper = mfetch8;
+            }            
+            instruction.literal.fixed8[0] = stackBytePosition % 8;
             //Push the mfetch instruction onto the stack.
-            inInstructions.push_back(inst);
+            inInstructions.push_back(instruction);
         }
         if(where == 2){
-            inst.oper = gfetch;
-            inst.literal.fixed8 = distance;
+            switch(allocationSize(type)){
+                case 1:
+                    instruction.oper = lfetch1;
+                    break;
+                case 2:
+                    instruction.oper = lfetch2;
+                    break;
+                case 4:
+                    instruction.oper = lfetch4;
+                    break;
+                case 8:
+                    instruction.oper = lfetch8;
+            }
+            instruction.literal.fixed8[0] = stackBytePosition % 8;
             //Push back the instruction for the global variable.
-            inInstructions.push_back(inst);
+            inInstructions.push_back(instruction);
+        }
+        if(where == 3){
+            switch(allocationSize(type)){
+                case 1:
+                    instruction.oper = hfetch1;
+                    break;
+                case 2:
+                    instruction.oper = hfetch2;
+                    break;
+                case 4:
+                    instruction.oper = hfetch4;
+                    break;
+                case 8:
+                    instruction.oper = hfetch8;
+            }
+            instruction.literal.fixed8[0] = stackBytePosition % 8;
+            //Push back the instruction for the global variable.
+            inInstructions.push_back(instruction);
         }
     }
 
@@ -687,7 +790,7 @@ bool typeCheck(FloridaType inType){
 
         thisptr->thisToken = thisToken;
         thisptr->where = where;
-        thisptr->distance = distance;
+        thisptr->stackBytePosition = stackBytePosition;
         thisptr->value = value;
         thisptr->type = type;
 
@@ -699,7 +802,7 @@ bool typeCheck(FloridaType inType){
 
         thisptr->thisToken = thisToken;
         thisptr->where = where;
-        thisptr->distance = distance;
+        thisptr->stackBytePosition = stackBytePosition;
         thisptr->value = value;
         thisptr->type = type;
 
@@ -722,15 +825,36 @@ bool typeCheck(FloridaType inType){
     }
 
     void Initialize::FLVMCodeGen(std::vector<Instruction>& inInstructions){
-        //Push back a placeholder.
-        inInstructions.push_back(Instruction(Operation::initialize, 0));
         //If there's code, then generate it.
         if(code != nullptr){
-            Instruction assign = Instruction();
-            assign.oper = Operation::lassign;
-            assign.literal.fixed8 = thisVariable->distance;
             //Generate the code for the right hand side.
             code->FLVMCodeGen(inInstructions);
+
+            //After executing those instructions, we want to assign the result.
+            Instruction push = Instruction();
+            push.oper = Operation::push;
+            //Get the byte index and push it.
+            push.literal.fixed8[0] = thisVariable->stackBytePosition % 8;
+            inInstructions.push_back(push);
+
+            //Get the correct byte size.
+            Instruction assign = Instruction();
+            switch(allocationSize(type)){
+                case 1:
+                    assign.oper = Operation::lassign1;
+                    break;
+                case 2:
+                    assign.oper = Operation::lassign2;
+                    break;
+                case 4:
+                    assign.oper = Operation::lassign4;
+                    break;
+                case 8:
+                    assign.oper = Operation::lassign8;
+                    break;
+            }
+            //Get the stack index.
+            assign.literal.fixed8[0] = thisVariable->stackBytePosition / 8;
             //Push an assignment instruction.
             inInstructions.push_back(assign);
         }
@@ -791,28 +915,60 @@ bool typeCheck(FloridaType inType){
     }
 
     std::string Assignment::printAll(){
+        std::string stackOffset = std::to_string(thisVariable->stackBytePosition / 8);
+        std::string byteOffset = std::to_string(thisVariable->stackBytePosition % 8);
+        std::string byteSize = std::to_string(allocationSize(thisVariable->type));
         if(thisVariable->where == 0){
-            return code->printAll() + padding2(padding("lassign") + std::to_string(thisVariable->distance)) + "(*Variable " + thisVariable->thisToken.getName() + "*)\n";
+            return code->printAll() + 
+            padding("push") + byteOffset + "\n" + 
+            padding2(padding("lassign" + byteSize) + stackOffset) + "(*Variable " + thisVariable->thisToken.getName() + "*)\n";
         }
         if(thisVariable->where == 1){
-            return padding2(padding("push") + std::to_string(reinterpret_cast<uintptr_t>(thisVariable->owner))) + "\n" + padding2(padding("massign") + std::to_string(thisVariable->distance)) + "(*Variable " + thisVariable->thisToken.getName() + "*)\n";            
+            return code->printAll() +
+            padding("push") + std::to_string(thisVariable->owner->whichScope) + "\n" +
+            padding("push") + byteOffset + "\n" +
+            padding2(padding("massign" + byteSize) + stackOffset) + "(*Variable " + thisVariable->thisToken.getName() + "*)\n";            
         }
         if(thisVariable->where == 2){
-            return code->printAll() + padding2(padding("gassign") + std::to_string(thisVariable->distance)) + "(*Variable " + thisVariable->thisToken.getName() + "*)\n";
+            return code->printAll() + 
+            padding("push") + byteOffset + "\n" +
+            padding2(padding("gassign" + byteSize) + stackOffset) + "(*Variable " + thisVariable->thisToken.getName() + "*)\n";
+        }
+        if(thisVariable->where = 3){
+            return code->printAll() + 
+            padding2(padding("push") + "HEAP_ADDRESS") + "(*Given at run time*)" + "\n" +
+            padding("push") + byteOffset +
+            padding2(padding("hassign" + byteSize) + stackOffset) + "(*Variable " + thisVariable->thisToken.getName() + "*)\n";
         }
         //Unreachable
         return "";
     }
 
     void Assignment::FLVMCodeGen(std::vector<Instruction>& inInstructions){
-        Instruction inst;
+        Instruction assign;
+        Instruction push;
+        push.literal.fixed8[0] = thisVariable->stackBytePosition % 8;
         //Generate code for the assignment.
         code->FLVMCodeGen(inInstructions);
         //Push back the instruction for assignment.
         if(thisVariable->where == 0){
-            inst.oper = lassign;
-            inst.literal.fixed8 = thisVariable->distance;
-            inInstructions.push_back(inst);
+            switch(allocationSize(thisVariable->type)){
+                case 1:
+                    assign.oper = Operation::lassign1;
+                    break;
+                case 2:
+                    assign.oper = Operation::lassign2;
+                    break;
+                case 4:
+                    assign.oper = Operation::lassign4;
+                    break;
+                case 8:
+                    assign.oper = Operation::lassign8;
+                    break;
+            }
+            assign.literal.fixed8[0] = thisVariable->stackBytePosition / 8;
+            inInstructions.push_back(push);
+            inInstructions.push_back(assign);
             return;
         }
         if(thisVariable->where == 1){
@@ -830,6 +986,9 @@ bool typeCheck(FloridaType inType){
             inst.literal.fixed8 = thisVariable->distance;
             inInstructions.push_back(inst);
             return;
+        }
+        if(thisVariable->where == 3){
+            
         }
     }
 

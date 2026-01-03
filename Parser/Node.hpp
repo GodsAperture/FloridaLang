@@ -64,10 +64,15 @@ public:
 class Variable : public Node{
 public:
     Token thisToken;//There exists a default Token() constructor.
-    //0 = local, 1 = middle, 2 = global, 3 = error. 
+    //0 = local, 1 = middle, 2 = global, 3 = heap, 4 = error. 
     char where = 3;
     Scope* owner = nullptr;
-    int64_t distance = -1;
+    //The `byte index` will be pushed onto the stack and then the
+    //`stack index` will be put into the instruction.
+    //Together, these will grab the correct value of the correct byte size.
+    //stackBytePosition / 8 = `stack index`.
+    //stackBytePosition % 8 = `byte index`.
+    int64_t stackBytePosition = -1;
     types value;
     Variable* next = nullptr;
 
@@ -76,7 +81,7 @@ public:
         this->thisToken = input->thisToken;
         this->owner = input->owner;
         this->where = input->where;
-        this->distance = input->distance;
+        this->stackBytePosition = input->stackBytePosition;
         this->next = input->next;
     };
     void append(Variable* input);
@@ -103,9 +108,9 @@ class Scope : public Node{
         Function* functions = nullptr;
         //The counter will determine which index to use in the `uniqueScopes` in the VM.
         int64_t whichScope = 0;
-        //This will help with how many variables there are in the
-        //scope so I can index properly.
-        int64_t variableCount = 0;
+        //This will help with how many slots there are in the stack.
+        //This does not need to be divided by 8, that will be handled in the parser.
+        int64_t variableSlotSize = 0;
 
         //Find where in some given Scope a particular variable lies.
         //If it does not exist in the scope, it returns -1.

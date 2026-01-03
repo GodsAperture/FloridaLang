@@ -12,6 +12,10 @@ inline types FloridaVM::top(){
     return computationVector.back();
 }
 
+inline void FloridaVM::copy(){
+    computationVector.push_back(computationVector[computationVector.size() - 1]);
+}
+
 inline void FloridaVM::edit(types input){
     computationVector[computationVector.size() - 1] = input;
 }
@@ -122,15 +126,15 @@ bool FloridaVM::next(){
             //Push the current Instruction number to the INStack.
             INPush(instructionNumber);            
             //Move the instruction to the start of its instruction set.
-            instructionNumber = programInstructions[instructionNumber].literal.fixed8;
+            instructionNumber = programInstructions[instructionNumber].literal.fixed8[0];
             return true;
         case Operation::newScope:
             //Use left to get the correct UniqueScope.
             left = top();
             //Move the CurrentInfo value to the BPStack.
-            BPPush(left.fixed8, CurrentBP[left.fixed8]);
+            BPPush(left.fixed8[0], CurrentBP[left.fixed8[0]]);
             //Adjust CurrentBP.
-            CurrentBP[left.fixed8] = reference;
+            CurrentBP[left.fixed8[0]] = reference;
             //Adjust the VM's current reference to be the new size of the vector.
             reference = computationVector.size() - 1;
             //Pop the information used to adjust the proper unique scope.
@@ -150,7 +154,7 @@ bool FloridaVM::next(){
             //Grab the resulting value that is to be returned from the scope.
             result = top();
             //The return instruction has to exit scope a particular number of times.
-            for(int i = 0; i < current.literal.fixed8; i++){
+            for(int i = 0; i < current.literal.fixed8[0]; i++){
                 //Readjust the reference to be the prior reference.
                 reference = CurrentBP[BPTopScope()];
                 //Readjust the most recent scope reference.
@@ -176,13 +180,13 @@ bool FloridaVM::next(){
                 return true;
             } else {
                 //This is to adjust the position of the instruction number.
-                instructionNumber = current.literal.fixed8;
+                instructionNumber = current.literal.fixed8[0];
                 //Pop the boolean from the stack.
                 pop();
                 return true;
             }
         case Operation::jump:
-            instructionNumber = current.literal.fixed8;
+            instructionNumber = current.literal.fixed8[0];
             break;
 
 

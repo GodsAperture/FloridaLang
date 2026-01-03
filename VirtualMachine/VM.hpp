@@ -58,6 +58,8 @@ public:
     inline void pop();
     //Get the current value from the computation vector.
     inline types top();
+    //Make a copy of the topmost element.
+    inline void copy();
     //Edit the top of the stack.
     inline void edit(types input);
 

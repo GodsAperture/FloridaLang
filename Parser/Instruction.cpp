@@ -12,17 +12,68 @@ enum Operation{
     deleteScope,
     call,
     ireturn,
-    gfetch,
-    mfetch,
-    lfetch,
     cjump,
     jump,
 
-    //Variable related operations
+    //gfetch = global variable fetch
+    //mfetch = middle of the stack variable fetch
+    //lfetch = local scope variable fetch
+    //hfetch = heap variable fetch
+
+    //1 byte fetch requests
+    gfetch1,
+    mfetch1,
+    lfetch1,
+    hfetch1,
+
+    //2 byte fetch requests
+    gfetch2,
+    mfetch2,
+    lfetch2,
+    hfetch2,
+
+    //4 byte fetch requests
+    gfetch4,
+    mfetch4,
+    lfetch4,
+    hfetch4,
+
+    //8 byte fetch requests
+    gfetch8,
+    mfetch8,
+    lfetch8,
+    hfetch8,
+
+    //gassign = global variable assign
+    //massign = middle of the stack variable assign
+    //lassign = local scope variable assign
+    //hassign = heap variable assign
+
+    //1 byte assign requests
+    gassign1,
+    massign1,
+    lassign1,
+    hassign1,
+
+    //2 byte assign requests
+    gassign2,
+    massign2,
+    lassign2,
+    hassign2,
+
+    //4 byte assign requests
+    gassign4,
+    massign4,
+    lassign4,
+    hassign4,
+
+    //8 byte assign requests
+    gassign8,
+    massign8,
+    lassign8,
+    hassign8,
+
     initialize,
-    gassign,
-    massign,
-    lassign,
     push,
     pop,
 
@@ -245,26 +296,26 @@ enum Operation{
 
 union types{
     //Booleans.
-    bool boolean;
+    bool boolean[8];
 
     //Floating point values;
-    double float8;
-    float float4;
+    double float8[1];
+    float float4[2];
 
     //Fixed point values;
-    int64_t fixed8;
-    int32_t fixed4;
-    int16_t fixed2;
-    int8_t fixed1;
+    int64_t fixed8[1];
+    int32_t fixed4[2];
+    int16_t fixed2[4];
+    int8_t fixed1[8];
 
     //Unsigned fixed point values;
-    uint64_t ufixed8;
-    uint32_t ufixed4;
-    uint16_t ufixed2;
-    uint8_t ufixed1;
+    uint64_t ufixed8[1];
+    uint32_t ufixed4[2];
+    uint16_t ufixed2[4];
+    uint8_t ufixed1[8];
 
     //Heap thrown objects.
-    void* object;
+    void* object[1];
 };  
 
 class Instruction{
@@ -283,7 +334,7 @@ public:
 
     Instruction(Operation inOper, int64_t inPosition){
         oper = inOper;
-        literal.fixed8 = inPosition;
+        literal.fixed8[0] = inPosition;
     }
 
     Instruction(FloridaType inType, Operation inOperation, types inLiteral){
