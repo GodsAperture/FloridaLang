@@ -1,3 +1,7 @@
+/*If you're wanting to find a particular class, just Ctrl + F and then type // followed by the class name.
+an example would be searching for //Typecast
+*/
+
 #include "Node.hpp"
 #include <math.h>
 #include <stack>
@@ -138,7 +142,7 @@ bool typeCheck(FloridaType inType){
 }
 
 
-////Typecast
+//TypecastClassz
     TypecastClass::TypecastClass(){
         //This is just a placeholder. It will be changed later.
         type = FloridaType::Typecast;
@@ -289,21 +293,39 @@ bool typeCheck(FloridaType inType){
         return nullptr;
     }
 
+    //Add the Initialization to the two linked lists that sort
+    //them by order found and size in bytes.
     void Scope::push(Initialize* input){
+        uint64_t byteSize = allocationSize(input->thisVariable->type);
         //If there are no initializations, then just slap the variable onto the list.
         if(allInitializations == nullptr){
             allInitializations = input;
+            sortedInitializations = input;
             return;
         }
-        Initialize* currInit = allInitializations;
+        Initialize* currentInitialize = allInitializations;
+        Initialize* previousInitialize = nullptr;
         //Reach the tail end of the "linked list" of initializations.
-        while(currInit->next != nullptr){
-            currInit = currInit->next;
+        while(currentInitialize->next != nullptr){
+            currentInitialize = currentInitialize->next;
         }
 
         //Append the initialization to the tail end of the "linked list."
-        currInit->next = input;
+        currentInitialize->next = input;
 
+        currentInitialize = sortedInitializations;
+        //This will append it in order based on size in the memory
+        while(byteSize < allocationSize(currentInitialize->thisVariable->type)){
+            previousInitialize = currentInitialize;
+            currentInitialize = currentInitialize->memoryOrder;
+        }
+
+        if(previousInitialize == nullptr){
+            input->memoryOrder = sortedInitializations;
+        } else {
+            previousInitialize->memoryOrder = input;
+            input->next = currentInitialize;
+        }
     }
 
     void Scope::push(Function* input){
@@ -395,14 +417,14 @@ bool typeCheck(FloridaType inType){
     Node* Scope::copy(StackAllocator& input){
         Scope* thisptr = input.alloc<Scope>();
         //If this is the first scope, then it's global and current.
-        if(input.currScope == nullptr){
+        if(input.currentScope == nullptr){
             input.globalScope = thisptr;
-            input.currScope = thisptr;
+            input.currentScope = thisptr;
         } else {
-        //Otherwise, the currScope is now the parent
-        //and change thisptr to be the currScope.
-            thisptr->parent = input.currScope;
-            input.currScope = thisptr;
+        //Otherwise, the currentScope is now the parent
+        //and change thisptr to be the currentScope.
+            thisptr->parent = input.currentScope;
+            input.currentScope = thisptr;
         }
         //Don't directly copy the variables, functions, or classes.
         //Add them as you find them to avoid future issues.
@@ -416,14 +438,14 @@ bool typeCheck(FloridaType inType){
     Scope* Scope::pcopy(StackAllocator& input){
         Scope* thisptr = input.alloc<Scope>();
         //If this is the first scope, then it's global and current.
-        if(input.currScope == nullptr){
+        if(input.currentScope == nullptr){
             input.globalScope = thisptr;
-            input.currScope = thisptr;
+            input.currentScope = thisptr;
         } else {
-        //Otherwise, the currScope is now the parent
-        //and change thisptr to be the currScope.
-            thisptr->parent = input.currScope;
-            input.currScope = thisptr;
+        //Otherwise, the currentScope is now the parent
+        //and change thisptr to be the currentScope.
+            thisptr->parent = input.currentScope;
+            input.currentScope = thisptr;
         }
         //Don't directly copy the variables, functions, or classes.
         //Add them as you find them to avoid future issues.
@@ -679,34 +701,27 @@ bool typeCheck(FloridaType inType){
         std::string stackOffset = std::to_string(stackBytePosition / 8);
         std::string byteOffset = std::to_string(stackBytePosition % 8);
         std::string byteSize = std::to_string(allocationSize(type));
+        std::string contextComment = "(*Variable " + thisToken.getName() + " || stackOffset: " + stackOffset + " byteOffset: " + byteOffset + " *)\n";
         if(where == 0){
-            return padding("push") + byteOffset + "\n" +
-            padding2(padding("lfetch" + byteSize) + stackOffset) + "(*Variable " + thisToken.getName() + "*)\n";
+            return padding2(padding("lfetch" + byteSize) + stackOffset) + contextComment;
         }
         if(where == 1){
             return padding2(padding("push") + std::to_string(owner->whichScope)) + "(*scope: " + std::string(owner->name) + "*)\n" +
-            padding("push") + byteOffset + "\n";
-            padding2(padding("mfetch" + byteSize) + stackOffset) + "(*Variable " + thisToken.getName() + "*)\n";            
+            padding2(padding("mfetch" + byteSize) + stackOffset) + contextComment;
         }
         if(where == 2){
-            return padding2(padding("push" + byteOffset)) + "\n" + 
-            padding2(padding("gfetch" + byteSize) + stackOffset) + "(*Variable " + thisToken.getName() + "*)\n";
+            return padding2(padding("push" + byteOffset)) + "\n" +
+            padding2(padding("gfetch" + byteSize) + stackOffset) + contextComment;
         }
         if(where == 3){
-            return padding2(padding("push") + "HEAP_ADDRESS") + "(*Given at run time*)" + "\n" +
-            padding("push") + byteOffset + "\n" +
-            padding2(padding("hfetch" + byteSize) + stackOffset + ", " + byteOffset) + "(*Variable " + thisToken.getName() + "*)\n";
+            return padding2(padding("push") + "HEAP_ADDRESS") + "(*Determined at run time*)" + "\n" +
+            padding2(padding("hfetch" + byteSize) + std::to_string(stackBytePosition)) + contextComment;
         }
         return "";
     }
 
     void Variable::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         Instruction instruction;
-        Instruction stackIndex;
-        stackIndex.oper = Operation::push;
-        stackIndex.literal.fixed8[0] = stackBytePosition / 8;
-        //This will tell how far from the offset the object exists.
-        inInstructions.push_back(stackIndex);
         if(where == 0){
             switch(allocationSize(type)){
                 case 1:
@@ -721,9 +736,10 @@ bool typeCheck(FloridaType inType){
                 case 8:
                     instruction.oper = gfetch8;
             }
-            instruction.literal.fixed8[0] = stackBytePosition % 8;
+            instruction.literal.fixed8[0] = stackBytePosition;
             //Push back the instruction for local variable.
             inInstructions.push_back(instruction);
+            return;
         }
         if(where == 1){
             instruction.oper = Operation::push;
@@ -743,9 +759,10 @@ bool typeCheck(FloridaType inType){
                 case 8:
                     instruction.oper = mfetch8;
             }            
-            instruction.literal.fixed8[0] = stackBytePosition % 8;
+            instruction.literal.fixed8[0] = stackBytePosition;
             //Push the mfetch instruction onto the stack.
             inInstructions.push_back(instruction);
+            return;
         }
         if(where == 2){
             switch(allocationSize(type)){
@@ -761,9 +778,10 @@ bool typeCheck(FloridaType inType){
                 case 8:
                     instruction.oper = lfetch8;
             }
-            instruction.literal.fixed8[0] = stackBytePosition % 8;
+            instruction.literal.fixed8[0] = stackBytePosition;
             //Push back the instruction for the global variable.
             inInstructions.push_back(instruction);
+            return;
         }
         if(where == 3){
             switch(allocationSize(type)){
@@ -779,9 +797,10 @@ bool typeCheck(FloridaType inType){
                 case 8:
                     instruction.oper = hfetch8;
             }
-            instruction.literal.fixed8[0] = stackBytePosition % 8;
+            instruction.literal.fixed8[0] = stackBytePosition;
             //Push back the instruction for the global variable.
             inInstructions.push_back(instruction);
+            return;
         }
     }
 
@@ -864,7 +883,7 @@ bool typeCheck(FloridaType inType){
         Initialize* thisptr = input.alloc<Initialize>();
 
         thisptr->thisVariable = thisVariable->pcopy(input);
-        input.currScope->push(thisptr);
+        input.currentScope->push(thisptr);
         thisptr->code = code->copy(input);
 
         return thisptr;
@@ -874,7 +893,7 @@ bool typeCheck(FloridaType inType){
         Initialize* thisptr = input.alloc<Initialize>();
 
         thisptr->thisVariable = thisVariable->pcopy(input);
-        input.currScope->push(thisptr);
+        input.currentScope->push(thisptr);
         thisptr->code = code->copy(input);
 
         return thisptr;
@@ -972,23 +991,65 @@ bool typeCheck(FloridaType inType){
             return;
         }
         if(thisVariable->where == 1){
-            inst.oper = push;
-            inst.literal.fixed8 = thisVariable->owner->whichScope;
+            push.oper = Operation::push;
+            push.literal.fixed8[0] = thisVariable->owner->whichScope;
             //Add the location of the scope in the instruction set.
-            inInstructions.push_back(inst);
-            inst.oper = massign;
-            inst.literal.fixed8 = thisVariable->distance;
+            inInstructions.push_back(push);
+            switch(allocationSize(thisVariable->type)){
+                case 1:
+                    assign.oper = Operation::massign1;
+                    break;
+                case 2:
+                    assign.oper = Operation::massign2;
+                    break;
+                case 4:
+                    assign.oper = Operation::massign4;
+                    break;
+                case 8:
+                    assign.oper = Operation::massign8;
+                    break;
+            }
+            assign.literal.fixed8[0] = thisVariable->stackBytePosition / 8;
             //Push back the assignment instruction.
-            inInstructions.push_back(inst);
+            inInstructions.push_back(assign);
+            return;
         }
         if(thisVariable->where == 2){
-            inst.oper = gassign;
-            inst.literal.fixed8 = thisVariable->distance;
-            inInstructions.push_back(inst);
+            switch(allocationSize(thisVariable->type)){
+                case 1:
+                    assign.oper = Operation::gassign1;
+                    break;
+                case 2:
+                    assign.oper = Operation::gassign2;
+                    break;
+                case 4:
+                    assign.oper = Operation::gassign4;
+                    break;
+                case 8:
+                    assign.oper = Operation::gassign8;
+                    break;
+            }
+            assign.literal.fixed8[0] = thisVariable->stackBytePosition / 8;
+            inInstructions.push_back(assign);
             return;
         }
         if(thisVariable->where == 3){
-            
+            switch(allocationSize(thisVariable->type)){
+                case 1:
+                    assign.oper = Operation::hassign1;
+                    break;
+                case 2:
+                    assign.oper = Operation::hassign2;
+                    break;
+                case 4:
+                    assign.oper = Operation::hassign4;
+                    break;
+                case 8:
+                    assign.oper = Operation::hassign8;
+                    break;
+            }
+            assign.literal.fixed8[0] = thisVariable->stackBytePosition / 8;
+            inInstructions.push_back(assign);
         }
     }
 
@@ -1769,7 +1830,7 @@ bool typeCheck(FloridaType inType){
             ifBody->FLVMCodeGen(inInstructions);
 
             //Adjust the conditional jump destination.
-            inInstructions[cjumpPosition].literal.fixed8 = inInstructions.size();
+            inInstructions[cjumpPosition].literal.fixed8[0] = inInstructions.size() - cjumpPosition;
         } else {
             //Generate the instructions for the if condition.
             condition->FLVMCodeGen(inInstructions);
@@ -1790,13 +1851,13 @@ bool typeCheck(FloridaType inType){
             int64_t endIfSize = inInstructions.size();
 
             //Adjust the conditional jump destination.
-            inInstructions[cjumpPosition].literal.fixed8 = endIfSize;
+            inInstructions[cjumpPosition].literal.fixed8[0] = endIfSize - cjumpPosition;
             
             //Generate the bytecode for the else statement.
             elseBody->FLVMCodeGen(inInstructions);
 
             //Adjust the unconditional jump destination.
-            inInstructions[endIfSize - 1].literal.fixed8 = inInstructions.size();
+            inInstructions[endIfSize - 1].literal.fixed8[0] = inInstructions.size();
         }
 
     }
@@ -1923,7 +1984,7 @@ bool typeCheck(FloridaType inType){
         inInstructions.push_back(Instruction(jump, jumpTo));
 
         //Adjust the position of the conditional jump to be outside of the loop
-        inInstructions[cjumpPosition].literal.fixed8 = inInstructions.size();
+        inInstructions[cjumpPosition].literal.fixed8[0] = inInstructions.size() - cjumpPosition;
 
         //End the existing scope.
         inInstructions.push_back(Instruction(Operation::deleteScope));
@@ -1996,7 +2057,7 @@ bool typeCheck(FloridaType inType){
     void WhileLoop::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         Instruction result = Instruction();
         result.oper = Operation::push;
-        result.literal.fixed8 = body->whichScope;
+        result.literal.fixed8[0] = body->whichScope;
         //Push the corresponding scope value to the instructions.
         inInstructions.push_back(result);
         //Start of the scope, granted while loops don't really need scopes.
@@ -2015,7 +2076,7 @@ bool typeCheck(FloridaType inType){
         //Place an unconditional jump to restart the loop.
         inInstructions.push_back(Instruction(Operation::jump, start));
         //Adjust where the unconditional jump will land.
-        inInstructions[here].literal.fixed8 = inInstructions.size();
+        inInstructions[here].literal.fixed8[0] = inInstructions.size() - here;
         //End the scope.
         inInstructions.push_back(Instruction(Operation::deleteScope));
     }
@@ -2130,7 +2191,7 @@ bool typeCheck(FloridaType inType){
 
     Node* Function::copy(StackAllocator& input){
         Function* thisptr = input.alloc<Function>();
-        Scope* theScope = input.currScope;
+        Scope* theScope = input.currentScope;
         Function* theFunction = nullptr;
 
         //Copy the function over.
@@ -2146,8 +2207,8 @@ bool typeCheck(FloridaType inType){
         //Assign the newly generated scope to the function.
         thisptr->code = newScope;
         //Adjust the current scope member to the newly made scope.
-        newScope->parent = input.currScope;
-        input.currScope = newScope;
+        newScope->parent = input.currentScope;
+        input.currentScope = newScope;
         //Directly copy the arguments over to the new scope.
         //Otherwise, they are never found and added in the correct order.
         Initialize* theirInitialize = code->allInitializations;
@@ -2183,7 +2244,7 @@ bool typeCheck(FloridaType inType){
         }
 
         //Move back to the previous scope.
-        input.currScope = input.currScope->parent;
+        input.currentScope = input.currentScope->parent;
         return thisptr;
     }
 
@@ -2221,9 +2282,11 @@ bool typeCheck(FloridaType inType){
     }
 
     void Call::FLVMCodeGen(std::vector<Instruction>& inInstructions){
+        //This will allow the user to access classes and variables from
+        //the most recently created version of this scope.
         Instruction uniqueScopeNumber;
         uniqueScopeNumber.oper = Operation::push;
-        uniqueScopeNumber.literal.fixed8 = function->code->whichScope;
+        uniqueScopeNumber.literal.fixed8[0] = function->code->whichScope;
         //Push the necessary scope reference onto the stack.
         inInstructions.push_back(uniqueScopeNumber);
         //Start the scope here.
@@ -2240,8 +2303,8 @@ bool typeCheck(FloridaType inType){
     Node* Call::copy(StackAllocator& input){
         Call* thisptr = input.alloc<Call>();
         //Get the list of currently existing functions in the scope
-        Scope* theScope = input.currScope;
-        Function* theFunction = input.currScope->functions;
+        Scope* theScope = input.currentScope;
+        Function* theFunction = input.currentScope->functions;
 
         //Traverse the linked lists to find the function.
         //It is guaranteed to exist, but may not be in the current scope.
@@ -2268,8 +2331,8 @@ bool typeCheck(FloridaType inType){
     Call* Call::pcopy(StackAllocator& input){
         Call* thisptr = input.alloc<Call>();
         //Get the list of currently existing functions in the scope
-        Scope* theScope = input.currScope;
-        Function* theFunction = input.currScope->functions;
+        Scope* theScope = input.currentScope;
+        Function* theFunction = input.currentScope->functions;
 
         //Traverse the linked lists to find the function.
         //It is guaranteed to exist, but may not be in the current scope.
@@ -2385,7 +2448,7 @@ bool typeCheck(FloridaType inType){
         Instruction result = Instruction();
         result.oper = Operation::ireturn;
         //This determines how many scopes to exit.
-        result.literal.fixed8 = returnCount;
+        result.literal.fixed8[0] = returnCount;
         inInstructions.push_back(result);
     }
 
@@ -2425,6 +2488,7 @@ bool typeCheck(FloridaType inType){
     }
 
     std::string ObjectClass::printAll(){
+        //There is nothing to print.
         return "";
     }
 
@@ -2434,11 +2498,11 @@ bool typeCheck(FloridaType inType){
 
     Node* ObjectClass::copy(StackAllocator& input){
         ObjectClass* result = input.alloc<ObjectClass>();
-        Scope* currScope = input.currScope;
+        Scope* currentScope = input.currentScope;
 
         result->name = name;
         result->code = code->pcopy(input);
-        currScope->push(result);
+        currentScope->push(result);
 
         return result;
     }

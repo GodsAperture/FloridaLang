@@ -102,6 +102,8 @@ class Scope : public Node{
         Body* body = nullptr;
         //This will be the initializations of the current scope.
         Initialize* allInitializations = nullptr;
+        //This will be the initializations sorted by memory size.
+        Initialize* sortedInitializations = nullptr;
         //This will contain all of the class definitions in the scope.
         ObjectClass* allObjects = nullptr;
         //A "linked list" of functions for the current scope.
@@ -109,7 +111,7 @@ class Scope : public Node{
         //The counter will determine which index to use in the `uniqueScopes` in the VM.
         int64_t whichScope = 0;
         //This will help with how many slots there are in the stack.
-        //This does not need to be divided by 8, that will be handled in the parser.
+        //This is measured in bytes.
         int64_t variableSlotSize = 0;
 
         //Find where in some given Scope a particular variable lies.

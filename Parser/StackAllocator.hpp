@@ -26,7 +26,7 @@ public:
     //The global scope...wasn't that obvious?
     Scope* globalScope = nullptr;
     //The currently active scope.
-    Scope* currScope = nullptr;
+    Scope* currentScope = nullptr;
     //The function/method being currently defined.
     Function* currentFunction = nullptr;
     //A linked list of all the functions in the program.

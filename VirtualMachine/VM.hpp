@@ -56,7 +56,7 @@ public:
     inline void push(types input);
     //Pop the current value from the computation vector.
     inline void pop();
-    //Get the current value from the computation vector.
+    //Get the topmost union from the computation vector.
     inline types top();
     //Make a copy of the topmost element.
     inline void copy();
