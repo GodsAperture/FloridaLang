@@ -53,15 +53,19 @@ public:
 ////Computation stack specific tools.
 
     //Push the given value to the computation vector.
-    inline void push(types input);
+    inline void push(types& input);
     //Pop the current value from the computation vector.
     inline void pop();
-    //Get the topmost union from the computation vector.
-    inline types top();
+    //Get the top most union from the computation vector.
+    inline types& top();
+    //Get the `types` union just before the top most union in the computation vector.
+    inline types& prior();
     //Make a copy of the topmost element.
     inline void copy();
-    //Edit the top of the stack.
+    //Edit the top of the computation stack.
     inline void edit(types input);
+    //Edit the prior to top most value of the computation stack.
+    inline void editPrior(types input);
 
     //Call stack related methods.
     //Add a new element in the BPStack.

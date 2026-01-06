@@ -294,28 +294,34 @@ enum Operation{
     inot
 };
 
+//A convenient 8 byte section of memory that can represent everything I need.
+//Arrays of `types` will be used to represent objects in the stack and heap.
 union types{
     //Booleans.
     bool boolean[8];
 
     //Floating point values;
-    double float8[1];
+    double float8;
     float float4[2];
 
     //Fixed point values;
-    int64_t fixed8[1];
+    int64_t fixed8;
     int32_t fixed4[2];
     int16_t fixed2[4];
     int8_t fixed1[8];
 
     //Unsigned fixed point values;
-    uint64_t ufixed8[1];
+    uint64_t ufixed8;
     uint32_t ufixed4[2];
     uint16_t ufixed2[4];
     uint8_t ufixed1[8];
 
     //Heap thrown objects.
-    void* object[1];
+    types* object;
+
+    types(){
+        object = nullptr;
+    }
 };  
 
 class Instruction{
@@ -334,7 +340,7 @@ public:
 
     Instruction(Operation inOper, int64_t inPosition){
         oper = inOper;
-        literal.fixed8[0] = inPosition;
+        literal.fixed8 = inPosition;
     }
 
     Instruction(FloridaType inType, Operation inOperation, types inLiteral){

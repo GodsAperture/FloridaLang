@@ -1,6 +1,6 @@
 #include "VM.hpp"
 
-inline void FloridaVM::push(types input){
+inline void FloridaVM::push(types& input){
     computationVector.push_back(input);
 }
 
@@ -8,8 +8,12 @@ inline void FloridaVM::pop(){
     computationVector.pop_back();
 }
 
-inline types FloridaVM::top(){
+inline types& FloridaVM::top(){
     return computationVector.back();
+}
+
+inline types& FloridaVM::prior(){
+    return computationVector[computationVector.size() - 2];
 }
 
 inline void FloridaVM::copy(){
@@ -117,6 +121,10 @@ bool FloridaVM::next(){
     int64_t byteOffset = 0;
     int64_t stackOffset = 0;
 
+    inline const int64_t bitmask4 = 1;
+    inline const int64_t bitmask2 = 3;
+    inline const int64_t bitmask1 = 7;
+
     //Check to see if all of instructions have been executed.
     if(instructionNumber >= programInstructions.size()){
         return false;
@@ -129,15 +137,15 @@ bool FloridaVM::next(){
             //Push the current Instruction number to the INStack.
             INPush(instructionNumber);            
             //Move the instruction to the start of its instruction set.
-            instructionNumber = programInstructions[instructionNumber].literal.fixed8[0];
+            instructionNumber = programInstructions[instructionNumber].literal.fixed8;
             return true;
         case Operation::newScope:
             //Use left to get the correct UniqueScope.
             left = top();
             //Move the CurrentInfo value to the BPStack.
-            BPPush(left.fixed8[0], CurrentBP[left.fixed8[0]]);
+            BPPush(left.fixed8, CurrentBP[left.fixed8]);
             //Adjust CurrentBP.
-            CurrentBP[left.fixed8[0]] = reference;
+            CurrentBP[left.fixed8] = reference;
             //Adjust the VM's current reference to be the new size of the vector.
             reference = computationVector.size() - 1;
             //Pop the information used to adjust the proper unique scope.
@@ -157,7 +165,7 @@ bool FloridaVM::next(){
             //Grab the resulting value that is to be returned from the scope.
             result = top();
             //The return instruction has to exit scope a particular number of times.
-            for(int i = 0; i < current.literal.fixed8[0]; i++){
+            for(int i = 0; i < current.literal.fixed8; i++){
                 //Readjust the reference to be the prior reference.
                 reference = CurrentBP[BPTopScope()];
                 //Readjust the most recent scope reference.
@@ -176,11 +184,15 @@ bool FloridaVM::next(){
             break;
         case Operation::cjump:
             //If it's true, then don't skip.
-            instructionNumber += !top().boolean * (current.literal.fixed8[0] - 1) + 1;
+            instructionNumber += !top().boolean * (current.literal.fixed8 - 1) + 1;
             pop();
             return true;
         case Operation::jump:
-            instructionNumber = current.literal.fixed8[0];
+            instructionNumber = current.literal.fixed8;
+            break;
+        case Operation::initialize:
+            left.fixed8 = 0;
+            push(left);
             break;
 
 
@@ -194,28 +206,30 @@ bool FloridaVM::next(){
             //Is it slower? Yes. Is it safer? Yes.
 
 //Global fetch operations
+        //Bitshifting an int64_t by N is equivalent to dividing an int64_t by 2^N.
+        //Bitmasking an int64_t using 2^N-1 is the equivalent to doing int64_t % 2^N.
+        //These hold true for when N is natural number.
         case Operation::gfetch1:
-            stackOffset = current.literal.fixed8[0] / 8;
-            byteOffset = current.literal.fixed8[0] % 8;
+            stackOffset = current.literal.fixed8 >> 3;
+            byteOffset = bitmask1 & current.literal.fixed8;
             result.fixed1[0] = computationVector[stackOffset].fixed1[byteOffset];
             push(result);
             break;
         case Operation::gfetch2:
-            stackOffset = current.literal.fixed8[0] / 8;
-            byteOffset = (current.literal.fixed8[0] % 8) / 2;
+            stackOffset = current.literal.fixed8 >> 3;
+            byteOffset = (bitmask2 & current.literal.fixed8) >> 2;
             result.fixed2[0] = computationVector[stackOffset].fixed2[byteOffset];
             push(result);
             break;
         case Operation::gfetch4:
-            stackOffset = current.literal.fixed8[0] / 8;
-            byteOffset = (current.literal.fixed8[0] % 8) / 4;
+            stackOffset = current.literal.fixed8 >> 3;
+            byteOffset = (bitmask4 & current.literal.fixed8) >> 1;
             result.fixed4[0] = computationVector[stackOffset].fixed4[byteOffset];
             push(result);
             break;
         case Operation::gfetch8:
-            stackOffset = current.literal.fixed8[0] / 8;
-            byteOffset = 0;//This is always 0, because the union is always 8 bytes in size.
-            result.fixed8[0] = computationVector[stackOffset].fixed8[byteOffset];
+            stackOffset = current.literal.fixed8 >> 3;
+            result.fixed8 = computationVector[stackOffset].fixed8;
             push(result);
             break;
 
@@ -223,54 +237,51 @@ bool FloridaVM::next(){
 
 //Middle fetch operations
         case Operation::mfetch1:
-            stackOffset = current.literal.fixed8[0] / 8;
-            byteOffset = current.literal.fixed8[0] % 8;
+            stackOffset = current.literal.fixed8 >> 3;
+            byteOffset = (bitmask1 & current.literal.fixed8);
             //Grab the prior value to index BPScope.
             //This is WhichScope.   
             left = top();
             //Get the proper scope in question and fetch its reference.
-            left.fixed8[0] = BPScope(left.fixed8[0]);
+            left.fixed8 = BPScope(left.fixed8);
             //Get the appropriate value from within the stack.
-            result.fixed1[0] = computationVector[left.fixed8[0] + stackOffset].fixed1[byteOffset];
+            result.fixed1[0] = computationVector[left.fixed8 + stackOffset].fixed1[byteOffset];
             //Overwrite the previous value that was used to get the scope.
             edit(result);
             break;
         case Operation::mfetch2:
-            stackOffset = current.literal.fixed8[0] / 8;
-            byteOffset = (current.literal.fixed8[0] % 8) / 2;
+            stackOffset = current.literal.fixed8 >> 3;
+            byteOffset = (bitmask2 & current.literal.fixed8) >> 1;
             //Grab the prior value to index BPScope.
             //This is WhichScope.   
             left = top();
             //Get the proper scope in question and fetch its reference.
-            left.fixed8[0] = BPScope(left.fixed8[0]);
+            left.fixed8 = BPScope(left.fixed8);
             //Get the appropriate value from within the stack.
-            result.fixed2[0] = computationVector[left.fixed8[0] + stackOffset].fixed2[byteOffset];
+            result.fixed2[0] = computationVector[left.fixed8 + stackOffset].fixed2[byteOffset];
             //Overwrite the previous value that was used to get the scope.
             edit(result);
             break;
         case Operation::mfetch4:
-            stackOffset = current.literal.fixed8[0] / 8;
-            byteOffset = (current.literal.fixed8[0] % 8) / 4;
+            stackOffset = current.literal.fixed8 >> 3;
+            byteOffset = (bitmask4 & current.literal.fixed8) >> 2;
             //Grab the prior value to index BPScope.
             //This is WhichScope.   
             left = top();
             //Get the proper scope in question and fetch its reference.
-            left.fixed8[0] = BPScope(left.fixed8[0]);
+            left.fixed8 = BPScope(left.fixed8);
             //Get the appropriate value from within the stack.
-            result.fixed4[0] = computationVector[left.fixed8[0] + stackOffset].fixed4[byteOffset];
+            result.fixed4[0] = computationVector[left.fixed8 + stackOffset].fixed4[byteOffset];
             //Overwrite the previous value that was used to get the scope.
             edit(result);
             break;
         case Operation::mfetch8:
-            stackOffset = current.literal.fixed8[0] / 8;
-            byteOffset = 0;//This is always 0, because the union is always 8 bytes in size.
-            //Grab the prior value to index BPScope.
-            //This is WhichScope.   
-            left = top();
+            stackOffset = current.literal.fixed8 >> 3;
+            //top() will return WhichScope.
             //Get the proper scope in question and fetch its reference.
-            left.fixed8[0] = BPScope(left.fixed8[0]);
+            left.fixed8 = BPScope(top().fixed8);
             //Get the appropriate value from within the stack.
-            result.fixed8[0] = computationVector[left.fixed8[0] + stackOffset].fixed8[byteOffset];
+            result.fixed8 = computationVector[left.fixed8 + stackOffset].fixed8;
             //Overwrite the previous value that was used to get the scope.
             edit(result);
             break;
@@ -279,51 +290,227 @@ bool FloridaVM::next(){
 
 //Local fetch operations
         case Operation::lfetch1:
-            stackOffset = current.literal.fixed8[0] / 8;
-            byteOffset = current.literal.fixed8[0] % 8;
+            stackOffset = current.literal.fixed8 >> 3;
+            byteOffset = bitmask1 & current.literal.fixed8;
             result.fixed1[0] = computationVector[reference + stackOffset].fixed1[byteOffset];
+            push(result);
             break;
         case Operation::lfetch2:
-            stackOffset = current.literal.fixed8[0] / 8;
-            byteOffset = (current.literal.fixed8[0] % 8) / 2;
+            stackOffset = current.literal.fixed8 >> 3;
+            byteOffset = (bitmask2 & current.literal.fixed8) >> 1;
             result.fixed2[0] = computationVector[reference + stackOffset].fixed2[byteOffset];
+            push(result);
             break;
         case Operation::lfetch4:
-            stackOffset = current.literal.fixed8[0] / 8;
-            byteOffset = (current.literal.fixed8[0] % 8) / 4;
+            stackOffset = current.literal.fixed8 >> 3;
+            byteOffset = (bitmask4 & current.literal.fixed8) >> 2;
             result.fixed4[0] = computationVector[reference + stackOffset].fixed4[byteOffset];
+            push(result);
             break;
         case Operation::lfetch8:
-            stackOffset = current.literal.fixed8[0] / 8;
-            byteOffset = 0;//This is always 0, because the union is always 8 bytes in size.
-            result.fixed8[0] = computationVector[reference + stackOffset].fixed8[byteOffset];
+            stackOffset = current.literal.fixed8 >> 3;
+            result.fixed8 = computationVector[reference + stackOffset].fixed8;
+            push(result);
             break;
 
 
 
 //Heap fetch operations
-        case Operation::initialize:
-            left.fixed8[0] = 0;
-            push(left);
+        case Operation::hfetch1:
+            stackOffset = current.literal.fixed8 >> 3;
+            byteOffset = bitmask1 & current.literal.fixed8;
+            //The top most entry will be the pointer to the object in the heap.
+            //Get the desired data from the heap, and only it.
+            //This also overwrites the pointer.
+            top().fixed1[0] = (top().object + byteOffset)->fixed1[byteOffset];
+            //Overwrite the pointer with the result.
             break;
-        case Operation::gassign:
-            computationVector[programInstructions[instructionNumber].literal.fixed8[0]] = top();
+        case Operation::hfetch2:
+            stackOffset = current.literal.fixed8 >> 3;
+            byteOffset = (bitmask2 & current.literal.fixed8) >> 1;
+            //The top most entry will be the pointer to the object in the heap.
+            //Get the desired data from the heap, and only it.
+            //This also overwrites the pointer.
+            top().fixed2[0] = (top().object + byteOffset)->fixed2[byteOffset];
+            break;
+        case Operation::hfetch4:
+            stackOffset = current.literal.fixed8 >> 3;
+            byteOffset = (bitmask4 & current.literal.fixed8) >> 2;
+            //The top most entry will be the pointer to the object in the heap.
+            //Get the desired data from the heap, and only it.
+            //This also overwrites the pointer.
+            top().fixed4[0] = (top().object + byteOffset)->fixed4[byteOffset];
+            break;
+        case Operation::hfetch8:
+            stackOffset = current.literal.fixed8 >> 3;
+            //The top most entry will be the pointer to the object in the heap.
+            //Get the desired data from the heap, and only it.
+            //This also overwrites the pointer.
+            top().fixed8 = (top().object + byteOffset)->fixed8;
+            break;
+
+
+
+//Global assignment operations
+        case Operation::gassign1:
+            stackOffset = current.literal.fixed8 >> 3;
+            byteOffset = bitmask1 & current.literal.fixed8;
+            //Assign the object at the top to the position in the stack...that's all.
+            computationVector[stackOffset].fixed1[byteOffset] = top().fixed1[0];
+            //Remove the result of the computation from the computation stack.
             pop();
             break;
-        case Operation::massign:
-            //This is the result for the variable.
-            result = computationVector[computationVector.size() - 2];
-            //Grab WhichScope.
-            left = computationVector[computationVector.size() - 1];
-            //Move the result to the place in the computation vector.
-            computationVector[BPReference(left.fixed8[0])] = result;
-            //Pop the result and the ExistingScope position.
-            pop();
+        case Operation::gassign2:
+            stackOffset = current.literal.fixed8 >> 3;
+            byteOffset = (bitmask2 & current.literal.fixed8) >> 1;
+            //Assign the object at the top to the position in the stack...that's all.
+            computationVector[stackOffset].fixed2[byteOffset] = top().fixed2[0];
+            //Remove the result of the computation from the computation stack.
             pop();
             break;
-        case Operation::lassign:
-            computationVector[reference + programInstructions[instructionNumber].literal.fixed8[0]] = top();
-            pop();            
+        case Operation::gassign4:
+            stackOffset = current.literal.fixed8 >> 3;
+            byteOffset = (bitmask4 & current.literal.fixed8) >> 2;
+            //Assign the object at the top to the position in the stack...that's all.
+            computationVector[stackOffset].fixed4[byteOffset] = top().fixed4[0];
+            //Remove the result of the computation from the computation stack.
+            pop();
+            break;
+        case Operation::gassign8:
+            stackOffset = current.literal.fixed8 >> 3;
+            //Assign the object at the top to the position in the stack...that's all.
+            computationVector[stackOffset].fixed8 = top().fixed8;
+            //Remove the result of the computation from the computation stack.
+            pop();
+            break;
+
+
+
+//Middle assignment operations
+        case Operation::massign1:
+            stackOffset = current.literal.fixed8 >> 3;
+            byteOffset = bitmask1 & current.literal.fixed8;
+            //This is WhichScope.
+            left = top();
+            //Get the result of the prior computation.
+            result = prior();
+            //Edit the variable.
+            computationVector[stackOffset + BPReference(left.fixed8)].fixed1[byteOffset] = result.fixed1[0];
+            //Remove the WhichScope value from the top of the stack.
+            pop();
+            //Remove the result of the computation from the computation stack.
+            pop();
+            break;
+        case Operation::massign2:
+            stackOffset = current.literal.fixed8 >> 3;
+            byteOffset = (bitmask2 & current.literal.fixed8) >> 1;
+            //This is WhichScope.
+            left = top();
+            //Get the result of the prior computation.
+            result = prior();
+            //Edit the variable.
+            computationVector[stackOffset + BPReference(left.fixed8)].fixed2[byteOffset] = result.fixed2[0];
+            //Remove the WhichScope value from the top of the stack.
+            pop();
+            //Remove the result of the computation from the computation stack.
+            pop();
+            break;
+        case Operation::massign4:
+            stackOffset = current.literal.fixed8 >> 3;
+            byteOffset = (bitmask2 & current.literal.fixed8) >> 2;
+            //This is WhichScope.
+            left = top();
+            //Get the result of the prior computation.
+            result = prior();
+            //Edit the variable.
+            computationVector[stackOffset + BPReference(left.fixed8)].fixed4[byteOffset] = result.fixed4[0];
+            //Remove the WhichScope value from the top of the stack.
+            pop();
+            //Remove the result of the computation from the computation stack.
+            pop();
+            break;
+        case Operation::massign8:
+            stackOffset = current.literal.fixed8 >> 3;
+            //This is WhichScope.
+            left = top();
+            //Get the result of the prior computation.
+            result = prior();
+            //Edit the variable.
+            computationVector[stackOffset + BPReference(left.fixed8)].fixed8 = result.fixed8;
+            //Remove the WhichScope value from the top of the stack.
+            pop();
+            //Remove the result of the computation from the computation stack.
+            pop();
+            break;
+        
+
+
+//Local assignment operations
+        case Operation::lassign1:
+            stackOffset = current.literal.fixed8 >> 3;
+            byteOffset = bitmask1 & current.literal.fixed8;
+            computationVector[reference + stackOffset].fixed1[byteOffset] = top().fixed1[0];
+            //Remove the result of the computation from the computation stack.
+            pop();
+            break;
+        case Operation::lassign2:
+            stackOffset = current.literal.fixed8 >> 3;
+            byteOffset = (bitmask2 & current.literal.fixed8) >> 1;
+            computationVector[reference + stackOffset].fixed2[byteOffset] = top().fixed2[0];
+            //Remove the result of the computation from the computation stack.
+            pop();
+            break;
+        case Operation::lassign4:
+            stackOffset = current.literal.fixed8 >> 3;
+            byteOffset = (bitmask4 & current.literal.fixed8) >> 2;
+            computationVector[reference + stackOffset].fixed4[byteOffset] = top().fixed4[0];
+            //Remove the result of the computation from the computation stack.
+            pop();
+            break;
+        case Operation::lassign8:
+            stackOffset = current.literal.fixed8 >> 3;
+            computationVector[reference + stackOffset].fixed2[byteOffset] = top().fixed2[0];
+            //Remove the result of the computation from the computation stack.
+            pop();
+            break;
+
+
+
+//Heap assignment operations
+        case Operation::hassign1:
+            stackOffset = current.literal.fixed8 >> 3;
+            byteOffset = bitmask1 & current.literal.fixed8;
+            (top().object + stackOffset)->fixed1[byteOffset] = prior().fixed1[0];
+            //Remove the pointer from the computation stack.
+            pop();
+            //Remove the result of the computation from the computation stack.
+            pop();
+            break;
+        case Operation::hassign2:
+            stackOffset = current.literal.fixed8 >> 3;
+            byteOffset = (bitmask2 & current.literal.fixed8) >> 1;
+            (top().object + stackOffset)->fixed2[byteOffset] = prior().fixed2[0];
+            //Remove the pointer from the computation stack.
+            pop();
+            //Remove the result of the computation from the computation stack.
+            pop();
+            break;
+        case Operation::hassign4:
+            stackOffset = current.literal.fixed8 >> 3;
+            byteOffset = (bitmask4 & current.literal.fixed8) >> 2;
+            (top().object + stackOffset)->fixed4[byteOffset] = prior().fixed4[0];
+            //Remove the pointer from the computation stack.
+            pop();
+            //Remove the result of the computation from the computation stack.
+            pop();
+            break;
+        case Operation::hassign8:
+            stackOffset = current.literal.fixed8 >> 3;
+            (top().object + stackOffset)->fixed8 = prior().fixed8;
+            //Remove the pointer from the computation stack.
+            pop();
+            //Remove the result of the computation from the computation stack.
+            pop();
             break;
 
 
@@ -351,7 +538,7 @@ bool FloridaVM::next(){
             edit(result);
             break;
         case Operation::ufixed8TOufixed1:
-            result.ufixed1[0] = (uint8_t) top().ufixed8[0];
+            result.ufixed1[0] = (uint8_t) top().ufixed8;
             edit(result);
             break;
         case Operation::fixed1TOufixed1:
@@ -367,7 +554,7 @@ bool FloridaVM::next(){
             edit(result);
             break;
         case Operation::fixed8TOufixed1:
-            result.ufixed1[0] = (uint8_t) top().fixed8[0];
+            result.ufixed1[0] = (uint8_t) top().fixed8;
             edit(result);
             break;
         case Operation::float4TOufixed1:
@@ -375,7 +562,7 @@ bool FloridaVM::next(){
             edit(result);
             break;
         case Operation::float8TOufixed1:
-            result.ufixed1[0] = (uint8_t) top().float8[0];
+            result.ufixed1[0] = (uint8_t) top().float8;
             edit(result);
             break;
 
@@ -391,7 +578,7 @@ bool FloridaVM::next(){
             edit(result);
             break;
         case Operation::ufixed8TOufixed2:
-            result.ufixed2[0] = (uint16_t) top().ufixed8[0];
+            result.ufixed2[0] = (uint16_t) top().ufixed8;
             edit(result);
             break;
         case Operation::fixed1TOufixed2:
@@ -407,7 +594,7 @@ bool FloridaVM::next(){
             edit(result);
             break;
         case Operation::fixed8TOufixed2:
-            result.ufixed2[0] = (uint16_t) top().fixed8[0];
+            result.ufixed2[0] = (uint16_t) top().fixed8;
             edit(result);
             break;
         case Operation::float4TOufixed2:
@@ -415,7 +602,7 @@ bool FloridaVM::next(){
             edit(result);
             break;
         case Operation::float8TOufixed2:
-            result.ufixed2[0] = (uint16_t) top().float8[0];
+            result.ufixed2[0] = (uint16_t) top().float8;
             edit(result);
             break;
 
@@ -432,7 +619,7 @@ bool FloridaVM::next(){
             //Redundant. Intentionally undefined.
             break;
         case Operation::ufixed8TOufixed4:
-            result.ufixed4[0] = (uint32_t) top().ufixed8[0];
+            result.ufixed4[0] = (uint32_t) top().ufixed8;
             edit(result);
             break;
         case Operation::fixed1TOufixed4:
@@ -448,7 +635,7 @@ bool FloridaVM::next(){
             edit(result);
             break;
         case Operation::fixed8TOufixed4:
-            result.ufixed4[0] = (uint32_t) top().fixed8[0];
+            result.ufixed4[0] = (uint32_t) top().fixed8;
             edit(result);
             break;
         case Operation::float4TOufixed4:
@@ -456,49 +643,49 @@ bool FloridaVM::next(){
             edit(result);
             break;
         case Operation::float8TOufixed4:
-            result.ufixed4[0] = (uint32_t) top().float8[0];
+            result.ufixed4[0] = (uint32_t) top().float8;
             edit(result);
             break;
 
         //TOufixed8 casts.
         case Operation::ufixed1TOufixed8:
-            result.ufixed8[0] = (uint64_t) top().ufixed1[0];
+            result.ufixed8 = (uint64_t) top().ufixed1[0];
             edit(result);
             break;
         case Operation::ufixed2TOufixed8:
-            result.ufixed8[0] = (uint64_t) top().ufixed2[0];
+            result.ufixed8 = (uint64_t) top().ufixed2[0];
             edit(result);
             break;
         case Operation::ufixed4TOufixed8:
-            result.ufixed8[0] = (uint64_t) top().fixed4[0];
+            result.ufixed8 = (uint64_t) top().fixed4[0];
             edit(result);
             break;
         case Operation::ufixed8TOufixed8:
-            result.ufixed8[0] = (uint64_t) top().ufixed8[0];
+            result.ufixed8 = (uint64_t) top().ufixed8;
             edit(result);
             break;
         case Operation::fixed1TOufixed8:
-            result.ufixed8[0] = (uint64_t) top().fixed1[0];
+            result.ufixed8 = (uint64_t) top().fixed1[0];
             edit(result);
             break;
         case Operation::fixed2TOufixed8:
-            result.ufixed8[0] = (uint64_t) top().fixed2[0];
+            result.ufixed8 = (uint64_t) top().fixed2[0];
             edit(result);
             break;
         case Operation::fixed4TOufixed8:
-            result.ufixed8[0] = (uint64_t) top().fixed4[0];
+            result.ufixed8 = (uint64_t) top().fixed4[0];
             edit(result);
             break;
         case Operation::fixed8TOufixed8:
-            result.ufixed8[0] = (uint64_t) top().fixed8[0];
+            result.ufixed8 = (uint64_t) top().fixed8;
             edit(result);
             break;
         case Operation::float4TOufixed8:
-            result.ufixed8[0] = (uint64_t) top().float4[0];
+            result.ufixed8 = (uint64_t) top().float4[0];
             edit(result);
             break;
         case Operation::float8TOufixed8:
-            result.ufixed8[0] = (uint64_t) top().float8[0];
+            result.ufixed8 = (uint64_t) top().float8;
             edit(result);
             break;
 
@@ -516,7 +703,7 @@ bool FloridaVM::next(){
             edit(result);
             break;
         case Operation::ufixed8TOfixed1:
-            result.fixed1[0] = (int8_t) top().ufixed8[0];
+            result.fixed1[0] = (int8_t) top().ufixed8;
             edit(result);
             break;
         case Operation::fixed1TOfixed1:
@@ -531,7 +718,7 @@ bool FloridaVM::next(){
             edit(result);
             break;
         case Operation::fixed8TOfixed1:
-            result.fixed1[0] = (int8_t) top().fixed8[0];
+            result.fixed1[0] = (int8_t) top().fixed8;
             edit(result);
             break;
         case Operation::float4TOfixed1:
@@ -539,7 +726,7 @@ bool FloridaVM::next(){
             edit(result);
             break;
         case Operation::float8TOfixed1:
-            result.fixed1[0] = (int8_t) top().float8[0];
+            result.fixed1[0] = (int8_t) top().float8;
             edit(result);
             break;
 
@@ -557,7 +744,7 @@ bool FloridaVM::next(){
             edit(result);
             break;
         case Operation::ufixed8TOfixed2:
-            result.ufixed8[0] = (int16_t) top().fixed2[0];
+            result.ufixed8 = (int16_t) top().fixed2[0];
             edit(result);
             break;
         case Operation::fixed1TOfixed2:
@@ -572,7 +759,7 @@ bool FloridaVM::next(){
             edit(result);
             break;
         case Operation::fixed8TOfixed2:
-            result.fixed2[0] = (int16_t) top().fixed8[0];
+            result.fixed2[0] = (int16_t) top().fixed8;
             edit(result);
             break;
         case Operation::float4TOfixed2:
@@ -580,7 +767,7 @@ bool FloridaVM::next(){
             edit(result);
             break;
         case Operation::float8TOfixed2:
-            result.fixed2[0] = (int16_t) top().float8[0];
+            result.fixed2[0] = (int16_t) top().float8;
             edit(result);
             break;
 
@@ -598,7 +785,7 @@ bool FloridaVM::next(){
             edit(result);
             break;
         case Operation::ufixed8TOfixed4:
-            result.fixed4[0] = (int32_t) top().ufixed8[0];
+            result.fixed4[0] = (int32_t) top().ufixed8;
             edit(result);
             break;
         case Operation::fixed1TOfixed4:
@@ -613,7 +800,7 @@ bool FloridaVM::next(){
             //Redundant. Intentionally undefined.
             break;
         case Operation::fixed8TOfixed4:
-            result.fixed4[0] = (int32_t) top().fixed8[0];
+            result.fixed4[0] = (int32_t) top().fixed8;
             edit(result);
             break;
         case Operation::float4TOfixed4:
@@ -621,48 +808,48 @@ bool FloridaVM::next(){
             edit(result);
             break;
         case Operation::float8TOfixed4:
-            result.fixed4[0] = (int32_t) top().float8[0];
+            result.fixed4[0] = (int32_t) top().float8;
             edit(result);
             break;
 
         //TOfixed8 casts.
         case Operation::ufixed1TOfixed8:
-            result.fixed8[0] = (int64_t) top().ufixed1[0];
+            result.fixed8 = (int64_t) top().ufixed1[0];
             edit(result);
             break;
         case Operation::ufixed2TOfixed8:
-            result.fixed8[0] = (int64_t) top().ufixed2[0];
+            result.fixed8 = (int64_t) top().ufixed2[0];
             edit(result);
             break;
         case Operation::ufixed4TOfixed8:
-            result.fixed8[0] = (int64_t) top().fixed4[0];
+            result.fixed8 = (int64_t) top().fixed4[0];
             edit(result);
             break;
         case Operation::ufixed8TOfixed8:
-            result.fixed8[0] = (int64_t) top().ufixed8[0];
+            result.fixed8 = (int64_t) top().ufixed8;
             edit(result);
             break;
         case Operation::fixed1TOfixed8:
-            result.fixed8[0] = (int64_t) top().fixed1[0];
+            result.fixed8 = (int64_t) top().fixed1[0];
             edit(result);
             break;
         case Operation::fixed2TOfixed8:
-            result.fixed8[0] = (int64_t) top().fixed2[0];
+            result.fixed8 = (int64_t) top().fixed2[0];
             edit(result);
             break;
         case Operation::fixed4TOfixed8:
-            result.fixed8[0] = (int64_t) top().fixed4[0];
+            result.fixed8 = (int64_t) top().fixed4[0];
             edit(result);
             break;
         case Operation::fixed8TOfixed8:
             //Redundant. Intentionally undefined.
             break;
         case Operation::float4TOfixed8:
-            result.fixed8[0] = (int64_t) top().float4[0];
+            result.fixed8 = (int64_t) top().float4[0];
             edit(result);
             break;
         case Operation::float8TOfixed8:
-            result.fixed8[0] = (int64_t) top().float8[0];
+            result.fixed8 = (int64_t) top().float8;
             edit(result);
             break;
 
@@ -680,7 +867,7 @@ bool FloridaVM::next(){
             edit(result);
             break;
         case Operation::ufixed8TOfloat4:
-            result.float4[0] = (_Float32) top().ufixed8[0];
+            result.float4[0] = (_Float32) top().ufixed8;
             edit(result);
             break;
         case Operation::fixed1TOfloat4:
@@ -696,60 +883,62 @@ bool FloridaVM::next(){
             edit(result);
             break;
         case Operation::fixed8TOfloat4:
-            result.float4[0] = (_Float32) top().fixed8[0];
+            result.float4[0] = (_Float32) top().fixed8;
             edit(result);
             break;
         case Operation::float4TOfloat4:
             //Redundant. Intentionally undefined.
             break;
         case Operation::float8TOfloat4:
-            result.float4[0] = (_Float32) top().float8[0];
+            result.float4[0] = (_Float32) top().float8;
             edit(result);
             break;
 
         //TOfloat8 casts.
         case Operation::ufixed1TOfloat8:
-            result.float8[0] = (uint64_t) top().ufixed1[0];
+            result.float8 = (uint64_t) top().ufixed1[0];
             edit(result);
             break;
         case Operation::ufixed2TOfloat8:
-            result.float8[0] = (uint64_t) top().ufixed2[0];
+            result.float8 = (uint64_t) top().ufixed2[0];
             edit(result);
             break;
         case Operation::ufixed4TOfloat8:
-            result.float8[0] = (uint64_t) top().fixed4[0];
+            result.float8 = (uint64_t) top().fixed4[0];
             edit(result);
             break;
         case Operation::ufixed8TOfloat8:
-            result.float8[0] = (uint64_t) top().ufixed8[0];
+            result.float8 = (uint64_t) top().ufixed8;
             edit(result);
             break;
         case Operation::fixed1TOfloat8:
-            result.float8[0] = (uint64_t) top().fixed1[0];
+            result.float8 = (uint64_t) top().fixed1[0];
             edit(result);
             break;
         case Operation::fixed2TOfloat8:
-            result.float8[0] = (uint64_t) top().fixed2[0];
+            result.float8 = (uint64_t) top().fixed2[0];
             edit(result);
             break;
         case Operation::fixed4TOfloat8:
-            result.float8[0] = (uint64_t) top().fixed4[0];
+            result.float8 = (uint64_t) top().fixed4[0];
             edit(result);
             break;
         case Operation::fixed8TOfloat8:
-            result.float8[0] = (uint64_t) top().fixed8[0];
+            result.float8 = (uint64_t) top().fixed8;
             edit(result);
             break;
         case Operation::float4TOfloat8:
-            result.float8[0] = (uint64_t) top().float4[0];
+            result.float8 = (uint64_t) top().float4[0];
             edit(result);
             break;
         case Operation::float8TOfloat8:
-            result.float8[0] = (uint64_t) top().float8[0];
+            result.float8 = (uint64_t) top().float8;
             edit(result);
             break;
 
-////fixed8[0] mathematical instructions.
+
+
+////fixed8 mathematical instructions.
         case Operation::fixed8add:
             //Get the right operand;
             right = top();
@@ -757,7 +946,7 @@ bool FloridaVM::next(){
             //Get the left operand;
             left = top();
             //Operate and edit;
-            result.fixed8[0] = left.fixed8[0] + right.fixed8[0];
+            result.fixed8 = left.fixed8 + right.fixed8;
             edit(result);
             break;
         case Operation::fixed8subtract:
@@ -767,12 +956,12 @@ bool FloridaVM::next(){
             //Get the left operand;
             left = top();
             //Operate and edit;
-            result.fixed8[0] = left.fixed8[0] - right.fixed8[0];
+            result.fixed8 = left.fixed8 - right.fixed8;
             edit(result);
             break;
         case Operation::fixed8negate:
             //Negate the value;
-            computationVector[computationVector.size() - 1].fixed8[0] = -computationVector[computationVector.size() - 1].fixed8[0];
+            computationVector[computationVector.size() - 1].fixed8 = -computationVector[computationVector.size() - 1].fixed8;
             break;
         case Operation::fixed8multiply:
             //Get the right operand;
@@ -781,7 +970,7 @@ bool FloridaVM::next(){
             //Get the left operand;
             left = top();
             //Operate and push;
-            result.fixed8[0] = left.fixed8[0] * right.fixed8[0];
+            result.fixed8 = left.fixed8 * right.fixed8;
             edit(result);
             break;
         case Operation::fixed8divide:
@@ -791,13 +980,13 @@ bool FloridaVM::next(){
             //Get the left operand;
             left = top();
             //Operate and push;
-            result.fixed8[0] = left.fixed8[0] / right.fixed8[0];
+            result.fixed8 = left.fixed8 / right.fixed8;
             edit(result);
             break;
 
 
 
-////float8[0] mathematical operations
+////float8 mathematical operations
             case Operation::float8add:
             //Get the right operand;
             right = top();
@@ -806,7 +995,7 @@ bool FloridaVM::next(){
             left = top();
             pop();
             //Operate and push;
-            result.float8[0] = left.float8[0] + right.float8[0];
+            result.float8 = left.float8 + right.float8;
             push(result);
             break;
         case Operation::float8subtract:
@@ -817,12 +1006,12 @@ bool FloridaVM::next(){
             left = top();
             pop();
             //Operate and push;
-            result.float8[0] = left.float8[0] - right.float8[0];
+            result.float8 = left.float8 - right.float8;
             push(result);
             break;
         case Operation::float8negate:
             //Negate the value;
-            computationVector[computationVector.size() - 1].float8[0] = -computationVector[computationVector.size() - 1].float8[0];
+            computationVector[computationVector.size() - 1].float8 = -computationVector[computationVector.size() - 1].float8;
             break;
         case Operation::float8multiply:
             //Get the right operand;
@@ -832,7 +1021,7 @@ bool FloridaVM::next(){
             left = top();
             pop();
             //Operate and push;
-            result.float8[0] = left.float8[0] * right.float8[0];
+            result.float8 = left.float8 * right.float8;
             push(result);
             break;
         case Operation::float8divide:
@@ -843,7 +1032,7 @@ bool FloridaVM::next(){
             left = top();
             pop();
             //Operate and push;
-            result.float8[0] = left.float8[0] / right.float8[0];
+            result.float8 = left.float8 / right.float8;
             push(result);
             break;
 
@@ -858,7 +1047,7 @@ bool FloridaVM::next(){
             left = top();
             pop();
             //Operate and push;
-            result.boolean[0] = left.fixed8[0] == right.fixed8[0];
+            result.boolean[0] = left.fixed8 == right.fixed8;
             push(result);
             break;
         case nequals:
@@ -869,7 +1058,7 @@ bool FloridaVM::next(){
             left = top();
             pop();
             //Operate and push;
-            result.boolean[0] = left.fixed8[0] != right.fixed8[0];
+            result.boolean[0] = left.fixed8 != right.fixed8;
             push(result);
             break;
         case greater:
@@ -880,7 +1069,7 @@ bool FloridaVM::next(){
             left = top();
             pop();
             //Operate and push;
-            result.boolean[0] = left.fixed8[0] > right.fixed8[0];
+            result.boolean[0] = left.fixed8 > right.fixed8;
             push(result);
             break;
         case greateror:
@@ -891,7 +1080,7 @@ bool FloridaVM::next(){
             left = top();
             pop();
             //Operate and push;
-            result.boolean[0] = left.fixed8[0] >= right.fixed8[0];
+            result.boolean[0] = left.fixed8 >= right.fixed8;
             push(result);
             break;
         case lesser:
@@ -902,7 +1091,7 @@ bool FloridaVM::next(){
             left = top();
             pop();
             //Operate and push;
-            result.boolean[0] = left.fixed8[0] < right.fixed8[0];
+            result.boolean[0] = left.fixed8 < right.fixed8;
             push(result);
             break;
         case lesseror:
@@ -913,7 +1102,7 @@ bool FloridaVM::next(){
             left = top();
             pop();
             //Operate and push;
-            result.boolean[0] = left.fixed8[0] <= right.fixed8[0];
+            result.boolean[0] = left.fixed8 <= right.fixed8;
             push(result);
             break;
         case ior:
