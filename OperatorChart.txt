@@ -1,0 +1,28 @@
+This chart is used to keep track of operators and operator precedence.
+Top most operators are of highest precedence.
+Operators on the same line are always of equal precedence to each other.
+Operators on the same line are always of the same associativity.
+Binary operators take the form `returnType leftType OperatorName rightType (Associativity)`.
+Binary operators that do not specify an associativity do not have associativity.
+Associativity is exclusively LtR (left to right) or RtL (Right to Left).
+Unary operators take the form `returnType leftType OperatorName NULL` or `returnType NULL OperatorName rightType`.
+Instances where INumber1 or INumber2 appear means these can take any of the forms:
+ufixed8, ufixed4, ufixed2, ufixed1, fixed8, fixed4, fixed2, fixed1, float8, float4.
+Instances where INumberMax appears will be the value that is of higher importance.
+For example, INumberMax ufixed1 + ufixed2 would be the same as ufixed2 ufixed1 + ufixed2.
+These will be the operators in the standard library.
+
+The () and [] operators will always be the highest precedence.
+
+rightType leftType . rightType (LtR), rightType leftType -> rightType (LtR)
+INumber1 INumber1 ! NULL
+INumberMax INumber1 ^ INumber2 (RtL)
+INumberMax INumber1 * INumber2 (LtR), INumberMax INumber1 / INumber2 (LtR)
+INumberMax INumber1 + INumber2 (LtR), INumberMax INumber1 - INumber2 (LtR)
+string INumber1 + string (LtR), string string + INumber1 (LtR)
+boolean INumber1 > INumber2, boolean INumber1 < INumber2, boolean INumber1 <= INumber2, boolean INumber1 >= INumber2
+boolean NULL ! boolean
+boolean boolean XOR boolean (LtR)
+boolean boolean AND boolean (LtR)
+boolean boolean OR boolean (LtR)
+right variable = right (RtL)

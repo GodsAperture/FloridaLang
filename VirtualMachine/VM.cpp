@@ -121,9 +121,9 @@ bool FloridaVM::next(){
     int64_t byteOffset = 0;
     int64_t stackOffset = 0;
 
-    inline const int64_t bitmask4 = 1;
-    inline const int64_t bitmask2 = 3;
-    inline const int64_t bitmask1 = 7;
+    const int64_t bitmask4 = 1;
+    const int64_t bitmask2 = 3;
+    const int64_t bitmask1 = 7;
 
     //Check to see if all of instructions have been executed.
     if(instructionNumber >= programInstructions.size()){
@@ -184,7 +184,7 @@ bool FloridaVM::next(){
             break;
         case Operation::cjump:
             //If it's true, then don't skip.
-            instructionNumber += !top().boolean * (current.literal.fixed8 - 1) + 1;
+            instructionNumber += !top().boolean[0] * (current.literal.fixed8 - 1) + 1;
             pop();
             return true;
         case Operation::jump:
@@ -1113,7 +1113,7 @@ bool FloridaVM::next(){
             left = top();
             pop();
             //Operate and push;
-            result.boolean[0] = left.boolean or right.boolean;
+            result.boolean[0] = left.boolean[0] or right.boolean[0];
             push(result);
             break;
 

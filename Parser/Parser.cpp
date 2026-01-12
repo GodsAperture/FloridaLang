@@ -33,170 +33,6 @@ uint64_t Parser::allocationSize(FloridaType input){
     }
 }
 
-//This is not a standard sort method.
-//This is for allocating objects into whole 8 byte sections of memory.
-//Then the rest will be sorted by size from largest to smallest.
-Initialize* Parser::InitializeSort(Initialize* input){
-    if(input == nullptr){
-        return nullptr;
-    }
-
-    Initialize* result = nullptr;
-    Initialize* sortList = nullptr;
-    Initialize* sortedList = nullptr;
-    Initialize* current = input;
-    Initialize* next = input->next;
-
-    class DLL{
-    public:
-        DLL* previous = nullptr;
-        Initialize* current = nullptr;
-        DLL* next = nullptr;
-
-        DLL(Initialize* input){
-            current = input;
-            if(input->next != nullptr){
-                next = new DLL(input->next);
-                next->previous = this;
-            }
-            input->next = nullptr;
-        }
-
-        //Returns the next part of the chain if there is one.
-        DLL* remove(){
-            DLL* result;
-            if((previous == nullptr) && (next != nullptr)){
-                next->previous = nullptr;
-                result = next;
-            }
-            if((previous != nullptr) && (next == nullptr)){
-                previous->next = nullptr;
-                result = previous;
-            }
-            if((previous != nullptr) && (next != nullptr)){
-                previous->next = next;
-                next->previous = previous;
-                result = next;
-            }
-            if((previous == nullptr) && (next == nullptr)){
-                result = nullptr;
-            }
-            delete this;
-            return result;
-        }
-
-        DLL* getNext(){
-            if(next != nullptr){
-                return next;
-            } else {
-                return this;
-            }
-        }
-
-        DLL* rewind(){
-            DLL* result = this;
-            while(result->previous != nullptr){
-                result = result->previous;
-            }
-
-            return result;
-        }
-
-    };
-
-    //First loop puts all objects that are multiples of 8 to result.
-    while(true){
-        //Check to see if the variable uses an allocation whose size is a multiple of 8 bytes.
-        //Otherwise, push it to the sort list.
-        if(allocationSize(current->thisVariable->type) % 8 == 0){
-            //Append the allocation to result.
-            if(result != nullptr){
-                result->memoryAppend(current);
-            } else {
-                result = current;
-            }
-        } else {
-            if(sortList != nullptr){
-                sortList->memoryAppend(current);
-            } else {
-                sortList = current;
-            }
-        }
-        if(next == nullptr){
-            break;
-        } else {
-            //Move to the next part of this linked list.
-            current = next;
-            next = next->next;
-        }
-        
-    }
-
-    //If there are any members to be sorted, then sort them manually.
-    if(sortList != nullptr){
-        //This loop sorts the SortList from largest to smallest.
-        //This is a more hard coded solution that lets me think a little less.
-        //Sort out all 4 byte primitives.
-        DLL* currentDLL = new DLL(sortList);
-        DLL* previous = nullptr;
-        while(true){
-            previous = currentDLL;
-            if(allocationSize(currentDLL->current->thisVariable->type) == 4){
-                if(sortedList != nullptr){
-                    sortedList->memoryAppend(currentDLL->current);
-                } else {
-                    sortedList = currentDLL->current;
-                }
-                currentDLL = currentDLL->remove();
-            } else {
-                currentDLL = currentDLL->getNext();
-            }
-            if(previous == currentDLL->getNext()){
-                break;
-            }
-        }
-
-
-        if(currentDLL != nullptr){
-            currentDLL = currentDLL->rewind();
-            previous = nullptr;
-
-            //Get all 2 byte allocations and append them.
-            while(true){
-                previous = currentDLL;
-                if(allocationSize(currentDLL->current->thisVariable->type) == 2){
-                    if(sortedList != nullptr){
-                        sortedList->memoryAppend(currentDLL->current);
-                    } else {
-                        sortedList = currentDLL->current;
-                    }
-                    currentDLL = currentDLL->remove();
-                } else {
-                    currentDLL = currentDLL->getNext();
-                }
-                if(previous == currentDLL->getNext()){
-                    break;
-                }
-            }
-        }
-
-        if(currentDLL != nullptr){
-            currentDLL = currentDLL->rewind();
-            //Get all 1 byte allocations and append them.
-            //All that can remain are 1 byte allocations.
-            while(currentDLL != nullptr){
-                sortedList->memoryAppend(currentDLL->current);
-                currentDLL = currentDLL->remove();
-            }
-        }
-
-        result->memoryAppend(sortedList);
-    }
-
-    return result;
-
-}
-
 void Parser::parse(){
     //The entire program is essentially a scope.
     stack->AST = scope();
@@ -271,7 +107,6 @@ Node* Parser::AddSub(){
 
     std::string current = given[iter].getName();
     while(check("+") or check("-")){
-        std::cout << "Sum or difference found!\n";
         //Check for a product/division subexpression.
         right = MulDiv();
         if(right == nullptr){
@@ -424,7 +259,7 @@ Node* Parser::primitive(){
     //Check for numbers.
     if((given[iter].type == FloridaType::ufixed8) and (given[iter].getName() != "ufixed8")){
         Primitive* number = stack->alloc<Primitive>();
-        number->value.ufixed8[0] = std::stod(given[iter].getName());
+        number->value.ufixed8 = std::stod(given[iter].getName());
         number->type = FloridaType::ufixed8;
         iter++;
 
@@ -456,7 +291,7 @@ Node* Parser::primitive(){
     }
     if((given[iter].type == FloridaType::fixed8) and (given[iter].getName() != "fixed8")){
         Primitive* number = stack->alloc<Primitive>();
-        number->value.fixed8[0] = std::stod(given[iter].getName());
+        number->value.fixed8 = std::stod(given[iter].getName());
         number->type = FloridaType::fixed8;
         iter++;
 
@@ -488,7 +323,7 @@ Node* Parser::primitive(){
     }
     if((given[iter].type == FloridaType::float8) and (given[iter].getName() != "float8")){
         Primitive* number = stack->alloc<Primitive>();
-        number->value.float8[0] = std::stod(given[iter].getName());
+        number->value.float8 = std::stod(given[iter].getName());
         number->type = FloridaType::float8;
         iter++;
 
@@ -1112,6 +947,8 @@ Node* Parser::IF(){
         if((condition != nullptr) & check(")") & check("{")){
             ifScope = scope();
             ifScope->name = given[ifPosition].name;
+            //Assign each variable a placement in the pack.
+            ifScope->byteAssign();
         } else {
             error = true;
             //Error here
@@ -1129,6 +966,8 @@ Node* Parser::IF(){
             uint64_t elsePosition = iter - 2;
             elseScope = scope();
             elseScope->name = given[elsePosition].name;
+            //Assign each variable a placement on the stack.
+            elseScope->byteAssign();
         } else {
             result = stack->alloc<IfClass>();
             result->condition = condition;
@@ -1232,6 +1071,9 @@ Node* Parser::FOR(){
         //Return to the outer scope.
         stack->currentScope = stack->currentScope->parent;
 
+        //Assign each variable a placement in the pack.
+        result->body->byteAssign();
+
         return result;
 
     }
@@ -1275,6 +1117,9 @@ Node* Parser::WHILE(){
         result->condition = condition;
         result->body = theScope;
         theScope->name = name;
+
+        //Assign each variable a placement in the pack.
+        result->body->byteAssign();
 
         return result;
 
@@ -1426,33 +1271,7 @@ ObjectClass* Parser::object(){
             //TO DO, debugging.
         }
 
-        //Sort the initializations to be packed in memory.
-        result->memoryLayout = InitializeSort(result->code->allInitializations);
-
-        //Now I'm going to make a default object from the initializations.
-        if(result->memoryLayout != nullptr){
-            Initialize* currInit = result->memoryLayout;
-            void* pointer = stack->current;
-            //This way you know what the default object looks like.
-            result->defaultConstruction = pointer;
-            //Determine the size of the region in memory.
-            while(currInit != nullptr){
-                //Check to see if there's a simple initialization.
-                //If so, then make it part of the default object.
-                uint64_t memSize = allocationSize(currInit->thisVariable->type);
-                //TO DO: Adjust for when an object is passed here instead of a primitive.
-                if(currInit->code != nullptr){
-                    //TO DO: support default initializations.
-                }
-                result->memorySize += memSize;
-                currInit = currInit->memoryOrder;
-                pointer = (void*) (((char*) pointer) + memSize);
-                result->variableCount++;
-            }
-            uint64_t resultingMemorySize = result->memorySize + (8 - (result->memorySize % 8)) % 8;
-            result->memorySize = resultingMemorySize;
-            stack->current = (void*) (((char*) stack->current) + resultingMemorySize);
-        }
+        result->code->byteAssign();
 
         return result;
         
@@ -1462,6 +1281,64 @@ ObjectClass* Parser::object(){
 
 }
 
+Node* Parser::access(){
+    if(!hasTokens(3)){
+        return nullptr;
+    }
+
+    //Determine if the code takes the shape variable.variable or
+    //variable->variable.
+    bool bool1 = given[iter].type == FloridaType::Identifier;
+    std::string_view name = given[iter + 1].name;
+    bool bool2 = (name == ".") or (name == "->");
+    bool bool3 = given[iter + 2].type == FloridaType::Identifier;
+
+    if(bool1 and bool2 and bool3){
+        //Get the variable
+        Node* left = variable();
+        if(name == "."){
+            //Iterate for the .
+            iter++;
+            MemberAccess* result = stack->alloc<MemberAccess>();
+            result->left = left;
+            result->right = variable();
+            left = result;
+        } else {
+            //Iterate for the ->
+            iter++;
+            Dereference* result = stack->alloc<Dereference>();
+            result->left = left;
+            result->right = variable();
+            left = result;
+        }
+
+        name = given[iter].name;
+        while((name == ".") or (name == "->")){
+            if(name == "."){
+                //Iterate for the .
+                iter++;
+                MemberAccess* result = stack->alloc<MemberAccess>();
+                result->left = left;
+                result->right = variable();
+                left = result;
+            } else {
+                //Iterate for the ->
+                iter++;
+                Dereference* result = stack->alloc<Dereference>();
+                result->left = left;
+                result->right = variable();
+                left = result;
+            }
+
+            name = given[iter].name;
+        }
+
+        return left;
+    }
+
+    return nullptr;
+
+}
 
 
 //Function stuff
@@ -1542,6 +1419,9 @@ Node* Parser::function(){
         stack->currentScope = newScope->parent;
 
         //std::cout << "Function " << name << " of number: " << result->code->whichScope << "\n";
+
+        //Assign each variable a placement in the pack.
+        result->code->byteAssign();
 
         return result;
 

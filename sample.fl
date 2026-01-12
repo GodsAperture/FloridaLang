@@ -4,3 +4,7 @@ object thisThing{
     boolean theBool = true;
     fixed4 secondInteger = 0;
 }
+
+thisThing x;
+
+x.theDouble;

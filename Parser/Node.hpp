@@ -42,6 +42,7 @@ public:
     virtual std::string printAll() = 0;
     virtual void FLVMCodeGen(std::vector<Instruction>& inInstructions) = 0;
     virtual Node* copy(StackAllocator& input) = 0;
+    //virtual Node* differentiate(int64_t input) = 0;
 
     virtual ~Node(){};
 };
@@ -75,6 +76,8 @@ public:
     int64_t stackBytePosition = -1;
     types value;
     Variable* next = nullptr;
+    //Applicable only if the variable is not a primitive type.
+    ObjectClass* objectType = nullptr;
 
     Variable();
     void operator=(Variable* input){
@@ -131,6 +134,9 @@ class Scope : public Node{
         //funPop isn't needed because they don't disappear in pseudoscopes.
         size_t varCount();
         size_t funCount();
+        //Assigns each variable a byte value that will be used to
+        //determine where in the stack or heap a packed variable is.
+        void byteAssign();
 
         //Standard methods.
         Scope();
@@ -146,7 +152,7 @@ public:
     Variable* thisVariable = nullptr;
     //Only useful for function, method, class, constructor, etc. defintions.
     Initialize* next = nullptr;
-    //This will be the order it is placed in memory to pack it tightly.
+    //This will be the order the variable is placed in memory to pack it tightly.
     Initialize* memoryOrder = nullptr;
     Node* code = nullptr;
 
@@ -660,6 +666,34 @@ public:
     //Given some variable name, get the offset in memory for it.
     //This will be useful for objects in the heap.
     char* variableOffset(std::string input);
+};
+
+class MemberAccess : public Node{
+public:
+    //Left can be a `Variable`, `MemberAccess`, or `Dereference`.
+    Node* left = nullptr;
+    Variable* right = nullptr;
+    
+    MemberAccess();
+    std::string ToString(std::string inLeft, std::string inRight) override;
+    std::string printAll() override;
+    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
+    Node* copy(StackAllocator& input) override;
+    MemberAccess* pcopy(StackAllocator& input);
+};
+
+class Dereference : public Node{
+public:
+    //Left can be a `Variable`, `MemberAccess`, or `Dereference`.
+    Node* left = nullptr;
+    Variable* right = nullptr;
+    
+    Dereference();
+    std::string ToString(std::string inLeft, std::string inRight) override;
+    std::string printAll() override;
+    void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
+    Node* copy(StackAllocator& input) override;
+    Dereference* pcopy(StackAllocator& input);
 };
 
 #endif

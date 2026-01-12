@@ -67,7 +67,8 @@ public:
     void dealloc(T* ptr){
         if(ptr != head){
             std::size_t bytes_needed = sizeof(T);
-            bytes_needed += (8 - (bytes_needed % 8)) % 8;
+            const int64_t bitmask = 7;
+            bytes_needed += bitmask & (8 - (bitmask & bytes_needed));
             current = (void*) ((std::size_t) current - bytes_needed);
             ptr->~T(); // Call the destructor explicitly
         }

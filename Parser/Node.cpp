@@ -1,40 +1,11 @@
 /*If you're wanting to find a particular class, just Ctrl + F and then type // followed by the class name.
-an example would be searching for //Typecast
+an example would be searching for //TypecastClass
 */
 
 #include "Node.hpp"
 #include <math.h>
 #include <stack>
 #include <iostream>
-
-uint64_t allocationSize(FloridaType input){
-    switch(input){
-        case FloridaType::Bool:
-            return 1;
-        case FloridaType::ufixed8:
-            return 8;
-        case FloridaType::ufixed4:
-            return 4;
-        case FloridaType::ufixed2:
-            return 2;
-        case FloridaType::ufixed1:
-            return 1;
-        case FloridaType::fixed8:
-            return 8;
-        case FloridaType::fixed4:
-            return 4;
-        case FloridaType::fixed2:
-            return 2;
-        case FloridaType::fixed1:
-            return 1;
-        case FloridaType::float8:
-            return 8;
-        case FloridaType::float4:
-            return 4;
-        default:
-            return 0;
-    }
-}
 
 inline std::string padding(std::string input){
     for(size_t i = input.size(); i < 12; i++){
@@ -141,8 +112,38 @@ bool typeCheck(FloridaType inType){
     }
 }
 
+int64_t allocationSize(FloridaType input){
+        switch(input){
+            case FloridaType::Bool:
+                return 1;
+            case FloridaType::ufixed8:
+                return 8;
+            case FloridaType::ufixed4:
+                return 4;
+            case FloridaType::ufixed2:
+                return 2;
+            case FloridaType::ufixed1:
+                return 1;
+            case FloridaType::fixed8:
+                return 8;
+            case FloridaType::fixed4:
+                return 4;
+            case FloridaType::fixed2:
+                return 2;
+            case FloridaType::fixed1:
+                return 1;
+            case FloridaType::float8:
+                return 8;
+            case FloridaType::float4:
+                return 4;
+            default:
+                return 0;
+        }
+    }
 
-//TypecastClassz
+
+
+//TypecastClass
     TypecastClass::TypecastClass(){
         //This is just a placeholder. It will be changed later.
         type = FloridaType::Typecast;
@@ -296,7 +297,8 @@ bool typeCheck(FloridaType inType){
     //Add the Initialization to the two linked lists that sort
     //them by order found and size in bytes.
     void Scope::push(Initialize* input){
-        uint64_t byteSize = allocationSize(input->thisVariable->type);
+        int64_t byteSize = allocationSize(input->thisVariable->type);
+        int64_t theirSize = 0;
         //If there are no initializations, then just slap the variable onto the list.
         if(allInitializations == nullptr){
             allInitializations = input;
@@ -313,18 +315,33 @@ bool typeCheck(FloridaType inType){
         //Append the initialization to the tail end of the "linked list."
         currentInitialize->next = input;
 
+        //If the input is some object, prepend it.
+        //These are always whole multiples of 8, so
+        //order doesn't particularly matter for these.
+        if(input->thisVariable->objectType != nullptr){
+            input->memoryOrder = sortedInitializations;
+            sortedInitializations = input;
+        }
+
         currentInitialize = sortedInitializations;
-        //This will append it in order based on size in the memory
-        while(byteSize < allocationSize(currentInitialize->thisVariable->type)){
-            previousInitialize = currentInitialize;
-            currentInitialize = currentInitialize->memoryOrder;
+        //This will place input in a sorted place based on size in the linked list.
+        while(currentInitialize != nullptr){
+            theirSize = allocationSize(currentInitialize->thisVariable->type);
+            if(byteSize < theirSize){
+                previousInitialize = currentInitialize;
+                currentInitialize = currentInitialize->memoryOrder;
+                continue;
+            } else {
+                break;
+            }
         }
 
         if(previousInitialize == nullptr){
             input->memoryOrder = sortedInitializations;
+            sortedInitializations = input;
         } else {
             previousInitialize->memoryOrder = input;
-            input->next = currentInitialize;
+            input->memoryOrder = currentInitialize;
         }
     }
 
@@ -382,6 +399,31 @@ bool typeCheck(FloridaType inType){
         return count;
     }
 
+    void Scope::byteAssign(){
+        if(allInitializations == nullptr){
+            return;
+        }
+        Initialize* currentInitialization = sortedInitializations;
+        int64_t byteSize;
+        const int64_t bitmask = 7;
+        while(currentInitialization != nullptr){
+            //Determine the size of the variable's allocation.
+            if(currentInitialization->thisVariable->objectType == nullptr){
+                byteSize = allocationSize(currentInitialization->thisVariable->type);
+            } else {
+                byteSize = currentInitialization->thisVariable->objectType->memorySize;
+            }
+            std::cout << byteSize << "\n";
+            //Assign the current size to the variable's position in memory.
+            currentInitialization->thisVariable->stackBytePosition = variableSlotSize;
+            //Increase the size of the stack for the next variable's placement.
+            variableSlotSize += byteSize;
+            currentInitialization = currentInitialization->memoryOrder;
+        }
+        //In case the memory used isn't an exact multiple of 8, pad it.
+        variableSlotSize += bitmask & (8 - (bitmask & variableSlotSize));
+    }
+
     std::string Scope::ToString(std::string inLeft, std::string inRight){
         if(body != nullptr){
             return body->ToString(inLeft, ";");
@@ -397,14 +439,14 @@ bool typeCheck(FloridaType inType){
     void Scope::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         Instruction result = Instruction();
         result.oper = Operation::push;
-        result.literal.fixed8[0] = whichScope;
+        result.literal.fixed8 = whichScope;
         //Be sure to add this otherwise I can never adjust the unique scopes.
         inInstructions.push_back(result);
         //The new scope will use the last value to pick the proper scope and adjust its value.
         inInstructions.push_back(Instruction(newScope));
         //This is so I can preemptively allocate slots for the scope's variables.
         Instruction initializeCount = Instruction();
-        initializeCount.literal.fixed8[0] = variableSlotSize;
+        initializeCount.literal.fixed8 = variableSlotSize;
         inInstructions.push_back(initializeCount);
         if(body != nullptr){
             body->FLVMCodeGen(inInstructions);
@@ -460,7 +502,7 @@ bool typeCheck(FloridaType inType){
 
 //Primitive
     Primitive::Primitive(){
-        value.object[0] = nullptr;
+        value.object = nullptr;
         //The type will be determined after a Primitive is created.
     }
 
@@ -477,7 +519,7 @@ bool typeCheck(FloridaType inType){
                 result = std::to_string(value.ufixed4[0]);
                 break;
             case ufixed8:
-                result = std::to_string(value.ufixed8[0]);
+                result = std::to_string(value.ufixed8);
                 break;
             case fixed1:
                 result = std::to_string(value.fixed1[0]);
@@ -489,13 +531,13 @@ bool typeCheck(FloridaType inType){
                 result = std::to_string(value.fixed4[0]);
                 break;
             case fixed8:
-                result = std::to_string(value.fixed8[0]);
+                result = std::to_string(value.fixed8);
                 break;
             case float4:
                 result = std::to_string(value.float4[0]);
                 break;
             case float8:
-                result = std::to_string(value.float8[0]);
+                result = std::to_string(value.float8);
                 break;
             case Bool:
                 if(value.boolean[0]){
@@ -525,7 +567,7 @@ bool typeCheck(FloridaType inType){
                 result = std::to_string(value.ufixed4[0]);
                 break;
             case ufixed8:
-                result = std::to_string(value.ufixed8[0]);
+                result = std::to_string(value.ufixed8);
                 break;
             case fixed1:
                 result = std::to_string(value.fixed1[0]);
@@ -537,13 +579,13 @@ bool typeCheck(FloridaType inType){
                 result = std::to_string(value.fixed4[0]);
                 break;
             case fixed8:
-                result = std::to_string(value.fixed8[0]);
+                result = std::to_string(value.fixed8);
                 break;
             case float4:
                 result = std::to_string(value.float4[0]);
                 break;
             case float8:
-                result = std::to_string(value.float8[0]);
+                result = std::to_string(value.float8);
                 break;
             case Bool:
                 if(value.boolean[0]){
@@ -736,14 +778,14 @@ bool typeCheck(FloridaType inType){
                 case 8:
                     instruction.oper = gfetch8;
             }
-            instruction.literal.fixed8[0] = stackBytePosition;
+            instruction.literal.fixed8 = stackBytePosition;
             //Push back the instruction for local variable.
             inInstructions.push_back(instruction);
             return;
         }
         if(where == 1){
             instruction.oper = Operation::push;
-            instruction.literal.fixed8[0] = owner->whichScope;
+            instruction.literal.fixed8 = owner->whichScope;
             //Push the push instruction onto the stack.
             inInstructions.push_back(instruction);
             switch(allocationSize(type)){
@@ -759,7 +801,7 @@ bool typeCheck(FloridaType inType){
                 case 8:
                     instruction.oper = mfetch8;
             }            
-            instruction.literal.fixed8[0] = stackBytePosition;
+            instruction.literal.fixed8 = stackBytePosition;
             //Push the mfetch instruction onto the stack.
             inInstructions.push_back(instruction);
             return;
@@ -778,7 +820,7 @@ bool typeCheck(FloridaType inType){
                 case 8:
                     instruction.oper = lfetch8;
             }
-            instruction.literal.fixed8[0] = stackBytePosition;
+            instruction.literal.fixed8 = stackBytePosition;
             //Push back the instruction for the global variable.
             inInstructions.push_back(instruction);
             return;
@@ -797,7 +839,7 @@ bool typeCheck(FloridaType inType){
                 case 8:
                     instruction.oper = hfetch8;
             }
-            instruction.literal.fixed8[0] = stackBytePosition;
+            instruction.literal.fixed8 = stackBytePosition;
             //Push back the instruction for the global variable.
             inInstructions.push_back(instruction);
             return;
@@ -853,7 +895,7 @@ bool typeCheck(FloridaType inType){
             Instruction push = Instruction();
             push.oper = Operation::push;
             //Get the byte index and push it.
-            push.literal.fixed8[0] = thisVariable->stackBytePosition % 8;
+            push.literal.fixed8 = thisVariable->stackBytePosition % 8;
             inInstructions.push_back(push);
 
             //Get the correct byte size.
@@ -873,7 +915,7 @@ bool typeCheck(FloridaType inType){
                     break;
             }
             //Get the stack index.
-            assign.literal.fixed8[0] = thisVariable->stackBytePosition / 8;
+            assign.literal.fixed8 = thisVariable->stackBytePosition / 8;
             //Push an assignment instruction.
             inInstructions.push_back(assign);
         }
@@ -953,7 +995,7 @@ bool typeCheck(FloridaType inType){
             padding("push") + byteOffset + "\n" +
             padding2(padding("gassign" + byteSize) + stackOffset) + "(*Variable " + thisVariable->thisToken.getName() + "*)\n";
         }
-        if(thisVariable->where = 3){
+        if(thisVariable->where == 3){
             return code->printAll() + 
             padding2(padding("push") + "HEAP_ADDRESS") + "(*Given at run time*)" + "\n" +
             padding("push") + byteOffset +
@@ -966,7 +1008,7 @@ bool typeCheck(FloridaType inType){
     void Assignment::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         Instruction assign;
         Instruction push;
-        push.literal.fixed8[0] = thisVariable->stackBytePosition % 8;
+        push.literal.fixed8 = thisVariable->stackBytePosition % 8;
         //Generate code for the assignment.
         code->FLVMCodeGen(inInstructions);
         //Push back the instruction for assignment.
@@ -985,14 +1027,14 @@ bool typeCheck(FloridaType inType){
                     assign.oper = Operation::lassign8;
                     break;
             }
-            assign.literal.fixed8[0] = thisVariable->stackBytePosition / 8;
+            assign.literal.fixed8 = thisVariable->stackBytePosition / 8;
             inInstructions.push_back(push);
             inInstructions.push_back(assign);
             return;
         }
         if(thisVariable->where == 1){
             push.oper = Operation::push;
-            push.literal.fixed8[0] = thisVariable->owner->whichScope;
+            push.literal.fixed8 = thisVariable->owner->whichScope;
             //Add the location of the scope in the instruction set.
             inInstructions.push_back(push);
             switch(allocationSize(thisVariable->type)){
@@ -1009,7 +1051,7 @@ bool typeCheck(FloridaType inType){
                     assign.oper = Operation::massign8;
                     break;
             }
-            assign.literal.fixed8[0] = thisVariable->stackBytePosition / 8;
+            assign.literal.fixed8 = thisVariable->stackBytePosition / 8;
             //Push back the assignment instruction.
             inInstructions.push_back(assign);
             return;
@@ -1029,7 +1071,7 @@ bool typeCheck(FloridaType inType){
                     assign.oper = Operation::gassign8;
                     break;
             }
-            assign.literal.fixed8[0] = thisVariable->stackBytePosition / 8;
+            assign.literal.fixed8 = thisVariable->stackBytePosition / 8;
             inInstructions.push_back(assign);
             return;
         }
@@ -1048,7 +1090,7 @@ bool typeCheck(FloridaType inType){
                     assign.oper = Operation::hassign8;
                     break;
             }
-            assign.literal.fixed8[0] = thisVariable->stackBytePosition / 8;
+            assign.literal.fixed8 = thisVariable->stackBytePosition / 8;
             inInstructions.push_back(assign);
         }
     }
@@ -1830,7 +1872,7 @@ bool typeCheck(FloridaType inType){
             ifBody->FLVMCodeGen(inInstructions);
 
             //Adjust the conditional jump destination.
-            inInstructions[cjumpPosition].literal.fixed8[0] = inInstructions.size() - cjumpPosition;
+            inInstructions[cjumpPosition].literal.fixed8 = inInstructions.size() - cjumpPosition;
         } else {
             //Generate the instructions for the if condition.
             condition->FLVMCodeGen(inInstructions);
@@ -1851,13 +1893,13 @@ bool typeCheck(FloridaType inType){
             int64_t endIfSize = inInstructions.size();
 
             //Adjust the conditional jump destination.
-            inInstructions[cjumpPosition].literal.fixed8[0] = endIfSize - cjumpPosition;
+            inInstructions[cjumpPosition].literal.fixed8 = endIfSize - cjumpPosition;
             
             //Generate the bytecode for the else statement.
             elseBody->FLVMCodeGen(inInstructions);
 
             //Adjust the unconditional jump destination.
-            inInstructions[endIfSize - 1].literal.fixed8[0] = inInstructions.size();
+            inInstructions[endIfSize - 1].literal.fixed8 = inInstructions.size();
         }
 
     }
@@ -1984,7 +2026,7 @@ bool typeCheck(FloridaType inType){
         inInstructions.push_back(Instruction(jump, jumpTo));
 
         //Adjust the position of the conditional jump to be outside of the loop
-        inInstructions[cjumpPosition].literal.fixed8[0] = inInstructions.size() - cjumpPosition;
+        inInstructions[cjumpPosition].literal.fixed8 = inInstructions.size() - cjumpPosition;
 
         //End the existing scope.
         inInstructions.push_back(Instruction(Operation::deleteScope));
@@ -2057,7 +2099,7 @@ bool typeCheck(FloridaType inType){
     void WhileLoop::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         Instruction result = Instruction();
         result.oper = Operation::push;
-        result.literal.fixed8[0] = body->whichScope;
+        result.literal.fixed8 = body->whichScope;
         //Push the corresponding scope value to the instructions.
         inInstructions.push_back(result);
         //Start of the scope, granted while loops don't really need scopes.
@@ -2076,7 +2118,7 @@ bool typeCheck(FloridaType inType){
         //Place an unconditional jump to restart the loop.
         inInstructions.push_back(Instruction(Operation::jump, start));
         //Adjust where the unconditional jump will land.
-        inInstructions[here].literal.fixed8[0] = inInstructions.size() - here;
+        inInstructions[here].literal.fixed8 = inInstructions.size() - here;
         //End the scope.
         inInstructions.push_back(Instruction(Operation::deleteScope));
     }
@@ -2286,7 +2328,7 @@ bool typeCheck(FloridaType inType){
         //the most recently created version of this scope.
         Instruction uniqueScopeNumber;
         uniqueScopeNumber.oper = Operation::push;
-        uniqueScopeNumber.literal.fixed8[0] = function->code->whichScope;
+        uniqueScopeNumber.literal.fixed8 = function->code->whichScope;
         //Push the necessary scope reference onto the stack.
         inInstructions.push_back(uniqueScopeNumber);
         //Start the scope here.
@@ -2448,7 +2490,7 @@ bool typeCheck(FloridaType inType){
         Instruction result = Instruction();
         result.oper = Operation::ireturn;
         //This determines how many scopes to exit.
-        result.literal.fixed8[0] = returnCount;
+        result.literal.fixed8 = returnCount;
         inInstructions.push_back(result);
     }
 
@@ -2503,6 +2545,55 @@ bool typeCheck(FloridaType inType){
         result->name = name;
         result->code = code->pcopy(input);
         currentScope->push(result);
+
+        return result;
+    }
+
+    ObjectClass* ObjectClass::pcopy(StackAllocator& input){
+        ObjectClass* result = input.alloc<ObjectClass>();
+        Scope* currentScope = input.currentScope;
+
+        result->name = name;
+        result->code = code->pcopy(input);
+        currentScope->push(result);
+
+        return result;
+    }
+
+
+
+//MemberAccess
+    MemberAccess::MemberAccess(){
+        //Do nothing
+    }
+
+    std::string MemberAccess::ToString(std::string inLeft, std::string inRight){
+        return left->ToString(inLeft, inRight) + "." + right->ToString(inLeft, inRight);
+    }
+
+    std::string MemberAccess::printAll(){
+        //TO DO
+        return "";
+    }
+
+    void MemberAccess::FLVMCodeGen(std::vector<Instruction>& inInstructions){
+        //TO DO
+    }
+
+    Node* MemberAccess::copy(StackAllocator& input){
+        MemberAccess* result = input.alloc<MemberAccess>();
+
+        result->left = left->copy(input);
+        result->right = right->pcopy(input);
+
+        return result;
+    }
+
+    MemberAccess* MemberAccess::pcopy(StackAllocator& input){
+        MemberAccess* result = input.alloc<MemberAccess>();
+
+        result->left = left->copy(input);
+        result->right = right->pcopy(input);
 
         return result;
     }

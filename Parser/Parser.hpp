@@ -71,8 +71,9 @@ public:
     ObjectClass* object();
     //Determine the size of an object.
     uint64_t allocationSize(FloridaType input);
-    //Sort the initialiations to pack memory more efficiently.
-    Initialize* InitializeSort(Initialize* input);
+    //Access a member of an object.
+    //This can be a `MemberAccess` or a `Dereference`.
+    Node* access();
 
 //Tree related functions.
 
@@ -163,7 +164,7 @@ public:
     Parser(std::vector<Token> inTokens, long size){
         stack = new StackAllocator(size);
         //This is the Global scope.
-        stack->currScope = nullptr;
+        stack->currentScope = nullptr;
         given = inTokens;
         errorStack = std::vector<std::string>();
     }

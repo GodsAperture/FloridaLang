@@ -73,8 +73,11 @@ enum Operation{
     lassign8,
     hassign8,
 
+    //`Initialize` will have a value to determine how many slots to open.
     initialize,
+    //`Push` will contain the literal to be pushed.
     push,
+    //`Pop` will have a value to determine how many slots to move back.
     pop,
 
     //All type casts
