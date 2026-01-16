@@ -1133,9 +1133,10 @@ Variable* Parser::variable(){
     if(!hasTokens(2)){
         return nullptr;
     }
-    //Check to see if the variable is a valid token.
-    if((given[iter].getType() == FloridaType::Identifier) & (given[iter + 1].getName() != "(")){
-        //Where is the way to describe if a variable is local, middle, or global.
+
+    //Check to see if the variable is accessible from the current scope.
+    if(stack->currentScope->hasVariable(given[iter].name)){
+        //Where is the way to describe if a variable is local, middle, global, or in the heap.
         char where = 3;
         Scope* thisScope = stack->currentScope;
         int64_t stackBytePosition = -1;
@@ -1156,9 +1157,9 @@ Variable* Parser::variable(){
             }
         }
         
-        FloridaType theType = thisScope->getInit(given[iter].getName())->type;
+        FloridaType theType = thisScope->getInit(given[iter].getName())->thisVariable->type;
         
-        //Determine if lfetch, mfetch, or gfetch is needed.
+        //Determine if lfetch, mfetch, gfetch, or hfetch is needed.
         //This is for lfetch
         if(thisScope == stack->currentScope){
             where = 0;
@@ -1171,7 +1172,10 @@ Variable* Parser::variable(){
         if(thisScope->parent == nullptr){
             where = 2;
         }
-
+        //Something something, have to figure out how to handle heap stuff.
+        if(false){
+            where = 3;
+        }
         //Assign the location of the variable in the scope.
         Variable* newVariable = stack->alloc<Variable>();
         newVariable->thisToken = given[iter];
@@ -1179,6 +1183,9 @@ Variable* Parser::variable(){
         newVariable->where = where;
         newVariable->owner = thisScope;
         newVariable->type = theType;
+        if(theType == FloridaType::Null){
+            newVariable->objectType = stack->currentScope->getVariable(given[iter].name)->objectType;
+        }
 
         iter++;
         return newVariable;
@@ -1192,8 +1199,10 @@ Initialize* Parser::initialize(){
     if(!hasTokens(3)){
         return nullptr;
     }
-    //Check to see if the variable is a valid token.
-    bool bool1 = typeCheck(given[iter].getType());
+    
+    //Check to see if this matches a valid initialization.
+    bool bool1 = typeCheck(given[iter].getType()) or stack->currentScope->hasObject(given[iter].name);
+    std::string_view typeName = given[iter].name;
     FloridaType theType = typeReturn(given[iter].getName());
     bool bool2 = given[iter + 1].getType() == FloridaType::Identifier;
     Token theToken = given[iter + 1];
@@ -1216,6 +1225,12 @@ Initialize* Parser::initialize(){
         //Add the variable to `allInitializations` and `sortedInitalizations`.
         stack->currentScope->push(result);
 
+        //Check if it is a user defined object. If so, assign its object type.
+        if(theType == FloridaType::Null){
+            result->thisVariable->objectType = stack->currentScope->getObject(typeName);
+        }
+
+        //If there's an assignment operator, then there should be a statement that follows.
         if(bool3){
             iter++;
             result->code = commonStatements();
@@ -1230,22 +1245,24 @@ Initialize* Parser::initialize(){
 
 Assignment* Parser::assignment(){
     Start start = currInfo();
+    Node* left = accessChain();
+    Assignment* result = nullptr;
 
-    Variable* thisVariable = variable();
-    if((thisVariable != nullptr) and check("=")){
-        Node* thisStatement = commonExpressions();
-        if(thisStatement != nullptr){
-            return stack->alloc<Assignment>(thisVariable, thisStatement);
+    if((left != nullptr) and check("=")){
+        Node* right = commonExpressions();
+        if(right != nullptr){
+            result = stack->alloc<Assignment>();
+            result->left = left;
+            result->right = right;
+            return result;
         }
 
+        reset(start);
         return nullptr;
         
     }
 
-    if(thisVariable != nullptr){
-        reset(start);
-    }
-    //This isn't an error, just that an assignment wasn't found.
+    reset(start);
     return nullptr;
 }
 
@@ -1272,72 +1289,111 @@ ObjectClass* Parser::object(){
         }
 
         result->code->byteAssign();
+        stack->currentScope->push(result);
 
         return result;
-        
     }
 
     return nullptr;
 
 }
 
-Node* Parser::access(){
-    if(!hasTokens(3)){
+Node* Parser::accessChain(){
+    //Even if there is only the variable, it will return that variable alone.
+    Variable* left = variable();
+    if(left == nullptr){
+        return nullptr;
+    }
+    MemberAccess* theAccess = nullptr;
+    Dereference* theDereference = nullptr;
+    Node* result = left;
+    int64_t byteOffset = left->stackBytePosition;
+
+    //Determine if there are any chained accesses.
+    do{
+        theAccess = memberAccess();
+        if(theAccess != nullptr){
+            byteOffset += theAccess->right->stackBytePosition;
+            theAccess->left = result;
+            result = theAccess;
+            continue;
+        }
+
+        theDereference = dereference();
+        if(theDereference != nullptr){
+            theDereference->left = result;
+            result = theDereference;
+            byteOffset = 0;
+            continue;
+        }
+        //If neither condition is met, then the chain ends.
+        return result;
+    }while(true);
+}
+
+MemberAccess* Parser::memberAccess(){
+    if(!hasTokens(2)){
+        return nullptr;
+    }
+
+    //Determine if the code takes the shape `variable.variable`.
+    std::string_view name = given[iter].name;
+    bool bool1 = name == ".";
+    if(!bool1){
+        return nullptr;
+    }
+    bool bool2 = stack->currentScope->getVariable(given[iter - 1].name)->objectType->code->hasVariable(given[iter + 1].name);
+
+    //If this is not satisfied, then it is a not an access.
+    if(bool2){
+        iter++;
+        MemberAccess* result = stack->alloc<MemberAccess>();
+        Variable* right = stack->alloc<Variable>();
+        //We need to find the object class in question.
+        ObjectClass* theObject = stack->currentScope->getVariable(given[iter - 2].name)->objectType;
+        //Then we find its member variable.
+        Variable* theVariable = theObject->code->getVariable(given[iter].name);
+        right->objectType = theVariable->objectType;
+        right->owner = theVariable->owner;
+        right->thisToken = theVariable->thisToken;
+        //This currently doesn't support the heap.
+        right->where = theObject->code->whereVariable(theVariable->thisToken.name);
+        right->stackBytePosition = theVariable->stackBytePosition;
+
+
+        //The `stackBytePosition` of `result` will be determined after returning.
+        result->right = right;
+        iter++;
+        return result;
+    }
+
+    return nullptr;
+
+}
+
+Dereference* Parser::dereference(){
+    if(!hasTokens(2)){
         return nullptr;
     }
 
     //Determine if the code takes the shape variable.variable or
     //variable->variable.
-    bool bool1 = given[iter].type == FloridaType::Identifier;
-    std::string_view name = given[iter + 1].name;
-    bool bool2 = (name == ".") or (name == "->");
-    bool bool3 = given[iter + 2].type == FloridaType::Identifier;
+    std::string_view name = given[iter].name;
+    bool bool1 = name == "->";
+    bool bool2 = given[iter + 1].type == FloridaType::Identifier;
 
-    if(bool1 and bool2 and bool3){
-        //Get the variable
-        Node* left = variable();
-        if(name == "."){
-            //Iterate for the .
-            iter++;
-            MemberAccess* result = stack->alloc<MemberAccess>();
-            result->left = left;
-            result->right = variable();
-            left = result;
-        } else {
-            //Iterate for the ->
-            iter++;
-            Dereference* result = stack->alloc<Dereference>();
-            result->left = left;
-            result->right = variable();
-            left = result;
-        }
+    //If this is not satisfied, then it is a not an access.
+    if(bool1 and bool2){
+        iter++;
+        Dereference* result = stack->alloc<Dereference>();
+        Variable* right = variable();
+        result->right = right;
 
-        name = given[iter].name;
-        while((name == ".") or (name == "->")){
-            if(name == "."){
-                //Iterate for the .
-                iter++;
-                MemberAccess* result = stack->alloc<MemberAccess>();
-                result->left = left;
-                result->right = variable();
-                left = result;
-            } else {
-                //Iterate for the ->
-                iter++;
-                Dereference* result = stack->alloc<Dereference>();
-                result->left = left;
-                result->right = variable();
-                left = result;
-            }
-
-            name = given[iter].name;
-        }
-
-        return left;
+        iter++;
+        return result;
     }
 
     return nullptr;
-
 }
 
 

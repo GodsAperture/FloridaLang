@@ -36,7 +36,6 @@ public:
     Node& operator=(const Node&&) = delete;
 
     //Prints the program back to the user in a proper format.
-
     virtual std::string ToString(std::string inLeft, std::string inRight) = 0;
     //Prints out the program as its bytecode.
     virtual std::string printAll() = 0;
@@ -66,7 +65,7 @@ class Variable : public Node{
 public:
     Token thisToken;//There exists a default Token() constructor.
     //0 = local, 1 = middle, 2 = global, 3 = heap, 4 = error. 
-    char where = 3;
+    char where = 4;
     Scope* owner = nullptr;
     //The `byte index` will be pushed onto the stack and then the
     //`stack index` will be put into the instruction.
@@ -80,12 +79,15 @@ public:
     ObjectClass* objectType = nullptr;
 
     Variable();
+    //I get this comes off as really janky, but whatever, it's convenient.
     void operator=(Variable* input){
         this->thisToken = input->thisToken;
         this->owner = input->owner;
         this->where = input->where;
         this->stackBytePosition = input->stackBytePosition;
+        this->value = input->value;
         this->next = input->next;
+        this->objectType = input->objectType;
     };
     void append(Variable* input);
     std::string ToString(std::string inLeft, std::string inRight) override;
@@ -137,6 +139,20 @@ class Scope : public Node{
         //Assigns each variable a byte value that will be used to
         //determine where in the stack or heap a packed variable is.
         void byteAssign();
+        //Checks if a variable is accessible in the current scope.
+        bool hasVariable(std::string_view input);
+        //Checks if an object is accessible in the current scope.
+        bool hasObject(std::string_view input);
+        //Checks if a function is accessible in the current scope.
+        bool hasFunction(std::string_view input);
+        //Gets the pointer to the variable in question.
+        Variable* getVariable(std::string_view input);
+        //Gets the pointer to the object in question.
+        ObjectClass* getObject(std::string_view input);
+        //Gets the pointer to the function in question.
+        Function* getFunction(std::string_view input);
+        //Determine if the variable in question is global, middle, local, or in the heap.
+        char whereVariable(std::string_view input);
 
         //Standard methods.
         Scope();
@@ -154,6 +170,7 @@ public:
     Initialize* next = nullptr;
     //This will be the order the variable is placed in memory to pack it tightly.
     Initialize* memoryOrder = nullptr;
+    //If there is an assignment, this will hold it.
     Node* code = nullptr;
 
     Initialize();
@@ -171,11 +188,11 @@ public:
 
 class Assignment : public Node{
 public:
-    Variable* thisVariable = nullptr;
-    Node* code = nullptr;
+    //This can either be a `MemberAccess*` or a `Variable*`.
+    Node* left = nullptr;
+    Node* right = nullptr;
 
     Assignment();
-    Assignment(Variable* inVariable, Node* inCode);
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
@@ -648,11 +665,12 @@ public:
     ObjectClass* next = nullptr;
     //Memory size is also useful for determining the compressed stack size.
     uint64_t memorySize = 0;
-    Initialize* memoryLayout = nullptr;
     int64_t variableCount = 0;
     ////TO DO
     void* defaultConstruction = nullptr;
     //Method* allMethods = nullptr;
+    ObjectClass* heapPrevious = nullptr;
+    ObjectClass* heapNext = nullptr;
 
     ObjectClass();
     std::string ToString(std::string inLeft, std::string inRight) override;
@@ -670,9 +688,11 @@ public:
 
 class MemberAccess : public Node{
 public:
-    //Left can be a `Variable`, `MemberAccess`, or `Dereference`.
+    //`left` will only be a `Variable`, `MemberAccess`, or a `Dereference`.
     Node* left = nullptr;
     Variable* right = nullptr;
+    //Only the outermost `MemberAccess` will have a `stackBytePosition` != -1.
+    int64_t stackBytePosition = -1;
     
     MemberAccess();
     std::string ToString(std::string inLeft, std::string inRight) override;
@@ -684,7 +704,7 @@ public:
 
 class Dereference : public Node{
 public:
-    //Left can be a `Variable`, `MemberAccess`, or `Dereference`.
+    //`left` will only be a `Variable`, `MemberAccess`, or a `Dereference`.
     Node* left = nullptr;
     Variable* right = nullptr;
     

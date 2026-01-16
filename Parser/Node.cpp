@@ -63,6 +63,19 @@ FloridaType typeReturn(std::string inString){
     if(inString == "boolean"){
         return FloridaType::Bool;
     }
+    //Ufixed pointer number
+    if(inString == "ufixed1"){
+        return FloridaType::ufixed1;
+    }
+    if(inString == "ufixed2"){
+        return FloridaType::ufixed2;
+    }
+    if(inString == "ufixed4"){
+        return FloridaType::ufixed4;
+    }
+    if(inString == "ufixed8"){
+        return FloridaType::ufixed8;
+    }
     //Fixed point numbers.
     if(inString == "fixed1"){
         return FloridaType::fixed1;
@@ -413,7 +426,6 @@ int64_t allocationSize(FloridaType input){
             } else {
                 byteSize = currentInitialization->thisVariable->objectType->memorySize;
             }
-            std::cout << byteSize << "\n";
             //Assign the current size to the variable's position in memory.
             currentInitialization->thisVariable->stackBytePosition = variableSlotSize;
             //Increase the size of the stack for the next variable's placement.
@@ -498,6 +510,170 @@ int64_t allocationSize(FloridaType input){
         return thisptr;
     }
 
+    bool Scope::hasVariable(std::string_view input){
+        //Go through all scopes as needed.
+        Scope* currentScope = this;
+        Initialize* currentInitialize = nullptr;
+        while(currentScope != nullptr){
+            currentInitialize = currentScope->allInitializations;
+            //Check all of the initializations in the scope.
+            while(currentInitialize != nullptr){
+                if(currentInitialize->thisVariable->thisToken.name == input){
+                    return true;
+                } else {
+                    currentInitialize = currentInitialize->next;
+                }
+            }
+            currentScope = currentScope->parent;
+        }
+
+        return false;
+    }
+
+    bool Scope::hasObject(std::string_view input){
+        //Go through all scopes as needed.
+        Scope* currentScope = this;
+        ObjectClass* currentObject = nullptr;
+        while(currentScope != nullptr){
+            currentObject = currentScope->allObjects;
+            //Check all of the objects in the scope.
+            while(currentObject != nullptr){
+                if(currentObject->name == input){
+                    return true;
+                } else {
+                    currentObject = currentObject->next;
+                }
+            }
+            currentScope = currentScope->parent;
+        }
+
+        return false;
+    }
+
+    bool Scope::hasFunction(std::string_view input){
+        //Go through all scopes as needed.
+        Scope* currentScope = this;
+        Function* currentFunction = nullptr;
+        while(currentScope != nullptr){
+            currentFunction = currentScope->functions;
+            //Check all of the initializations in the scope.
+            while(currentFunction != nullptr){
+                if(currentFunction->name == input){
+                    return true;
+                } else {
+                    currentFunction = currentFunction->next;
+                }
+            }
+            currentScope = currentScope->parent;
+        }
+
+        return false;
+    }
+
+    Variable* Scope::getVariable(std::string_view input){
+        //Go through all scopes as needed.
+        Scope* currentScope = this;
+        Initialize* currentInitialize = nullptr;
+        while(currentScope != nullptr){
+            currentInitialize = currentScope->allInitializations;
+            //Check all of the initializations in the scope.
+            while(currentInitialize != nullptr){
+                if(currentInitialize->thisVariable->thisToken.name == input){
+                    return currentInitialize->thisVariable;
+                } else {
+                    currentInitialize = currentInitialize->next;
+                }
+            }
+            currentScope = currentScope->parent;
+        }
+
+        return nullptr;
+    }
+
+    ObjectClass* Scope::getObject(std::string_view input){
+        //Go through all scopes as needed.
+        Scope* currentScope = this;
+        ObjectClass* currentObject = nullptr;
+        while(currentScope != nullptr){
+            currentObject = currentScope->allObjects;
+            //Check all of the objects in the scope.
+            while(currentObject != nullptr){
+                if(currentObject->name == input){
+                    return currentObject;
+                } else {
+                    currentObject = currentObject->next;
+                }
+            }
+            currentScope = currentScope->parent;
+        }
+
+        return nullptr;
+    }
+
+    Function* Scope::getFunction(std::string_view input){
+        //Go through all scopes as needed.
+        Scope* currentScope = this;
+        Function* currentFunction = nullptr;
+        while(currentScope != nullptr){
+            currentFunction = currentScope->functions;
+            //Check all of the initializations in the scope.
+            while(currentFunction != nullptr){
+                if(currentFunction->name == input){
+                    return currentFunction;
+                } else {
+                    currentFunction = currentFunction->next;
+                }
+            }
+            currentScope = currentScope->parent;
+        }
+
+        return nullptr;
+    }
+
+    char Scope::whereVariable(std::string_view input){
+        Scope* currentScope = this;
+        Variable* currentVariable = nullptr;
+        bool found = false;
+        while(currentScope != nullptr){
+            currentVariable = currentScope->allInitializations->thisVariable;
+            while(currentVariable != nullptr){
+                if(currentVariable->thisToken.name == input){
+                    found = true;
+                    break;
+                } else {
+                    currentVariable = currentVariable->next;
+                }
+            }
+            if(found){
+                break;
+            }
+            currentScope = currentScope->parent;
+        }
+
+        if(currentScope == nullptr){
+            std::cout << "Error: Where could not be determined.\n";
+            return -1;
+        }
+
+        //Local scope
+        if(currentScope->parent == nullptr){
+            return 0;
+        }
+
+        //Middle scope
+        if((currentScope->parent != nullptr) and (currentScope != this)){
+            return 1;
+        }
+
+        //Global scope
+        if(currentScope == this){
+            return 2;
+        }
+
+        //Not sure how to determine heap yet.
+
+        return 4;
+    }
 
 
 //Primitive
@@ -878,6 +1054,15 @@ int64_t allocationSize(FloridaType input){
     };
 
     std::string Initialize::ToString(std::string inLeft, std::string inRight){
+        if(thisVariable->objectType != nullptr){
+            if(code != nullptr){
+                return inLeft + std::string(thisVariable->objectType->name) + " " + thisVariable->thisToken.getName() + " = " + code->ToString(inLeft, inRight) + inRight;
+            }
+            return inLeft + std::string(thisVariable->objectType->name) + " " + thisVariable->thisToken.getName() + inRight;
+        }
+        if(code != nullptr){
+            return inLeft + typeString(thisVariable->thisToken.type) + " " + thisVariable->thisToken.getName() + " = " +  code->ToString(inLeft, inRight) + inRight;
+        }
         return inLeft + typeString(thisVariable->thisToken.type) + " " + thisVariable->thisToken.getName() + inRight;
     }
 
@@ -966,140 +1151,143 @@ int64_t allocationSize(FloridaType input){
         //Do nothing
     };
 
-    Assignment::Assignment(Variable* inVariable, Node* inCode){
-        thisVariable = inVariable;
-        code = inCode;
-    }
-
     std::string Assignment::ToString(std::string inLeft, std::string inRight){
-        return inLeft + thisVariable->ToString(inLeft, inRight) + " = " + code->ToString(inLeft, inRight) + inRight;
+        return inLeft + left->ToString(inLeft, inRight) + " = " + right->ToString(inLeft, inRight) + inRight;
     }
 
     std::string Assignment::printAll(){
-        std::string stackOffset = std::to_string(thisVariable->stackBytePosition / 8);
-        std::string byteOffset = std::to_string(thisVariable->stackBytePosition % 8);
-        std::string byteSize = std::to_string(allocationSize(thisVariable->type));
-        if(thisVariable->where == 0){
-            return code->printAll() + 
-            padding("push") + byteOffset + "\n" + 
-            padding2(padding("lassign" + byteSize) + stackOffset) + "(*Variable " + thisVariable->thisToken.getName() + "*)\n";
+        std::string returnType = "";
+        Variable* theVariable = nullptr;
+        MemberAccess* theMemberAccess = nullptr;
+        Dereference* theDereference = nullptr;
+
+        theVariable = dynamic_cast<Variable*>(left);
+        theMemberAccess = dynamic_cast<MemberAccess*>(left);
+        theDereference = dynamic_cast<Dereference*>(left);
+
+        if(theMemberAccess != nullptr){
+            theVariable = theMemberAccess->right;
         }
-        if(thisVariable->where == 1){
-            return code->printAll() +
-            padding("push") + std::to_string(thisVariable->owner->whichScope) + "\n" +
-            padding("push") + byteOffset + "\n" +
-            padding2(padding("massign" + byteSize) + stackOffset) + "(*Variable " + thisVariable->thisToken.getName() + "*)\n";            
+
+        if(theDereference != nullptr){
+            theVariable = theDereference->right;
         }
-        if(thisVariable->where == 2){
-            return code->printAll() + 
-            padding("push") + byteOffset + "\n" +
-            padding2(padding("gassign" + byteSize) + stackOffset) + "(*Variable " + thisVariable->thisToken.getName() + "*)\n";
+        
+        if(theVariable != nullptr){
+            switch(theVariable->where){
+                case 0:
+                    returnType = "lassign";
+                    break;
+                case 1:
+                    returnType = "massign";
+                    break;
+                case 2: 
+                    returnType = "gassign";
+                    break;
+                case 3:
+                    returnType = "hassign";
+                    break;
+            }
         }
-        if(thisVariable->where == 3){
-            return code->printAll() + 
-            padding2(padding("push") + "HEAP_ADDRESS") + "(*Given at run time*)" + "\n" +
-            padding("push") + byteOffset +
-            padding2(padding("hassign" + byteSize) + stackOffset) + "(*Variable " + thisVariable->thisToken.getName() + "*)\n";
-        }
-        //Unreachable
-        return "";
+
+        return right->printAll() + 
+        left->printAll() + "\n" +
+        "lassign\n";
+
     }
 
     void Assignment::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         Instruction assign;
-        Instruction push;
-        push.literal.fixed8 = thisVariable->stackBytePosition % 8;
-        //Generate code for the assignment.
-        code->FLVMCodeGen(inInstructions);
-        //Push back the instruction for assignment.
-        if(thisVariable->where == 0){
-            switch(allocationSize(thisVariable->type)){
-                case 1:
-                    assign.oper = Operation::lassign1;
-                    break;
-                case 2:
-                    assign.oper = Operation::lassign2;
-                    break;
-                case 4:
-                    assign.oper = Operation::lassign4;
-                    break;
-                case 8:
-                    assign.oper = Operation::lassign8;
-                    break;
+        Variable* someVariable = dynamic_cast<Variable*>(left);
+        if(someVariable != nullptr){
+            //Generate code for the assignment.
+            right->FLVMCodeGen(inInstructions);
+            //Push back the instruction for assignment.
+            if(someVariable->where == 0){
+                switch(allocationSize(left->type)){
+                    case 1:
+                        assign.oper = Operation::lassign1;
+                        break;
+                    case 2:
+                        assign.oper = Operation::lassign2;
+                        break;
+                    case 4:
+                        assign.oper = Operation::lassign4;
+                        break;
+                    case 8:
+                        assign.oper = Operation::lassign8;
+                        break;
+                }
+                assign.literal.fixed8 = someVariable->stackBytePosition;
+                inInstructions.push_back(assign);
+                return;
             }
-            assign.literal.fixed8 = thisVariable->stackBytePosition / 8;
-            inInstructions.push_back(push);
-            inInstructions.push_back(assign);
-            return;
-        }
-        if(thisVariable->where == 1){
-            push.oper = Operation::push;
-            push.literal.fixed8 = thisVariable->owner->whichScope;
-            //Add the location of the scope in the instruction set.
-            inInstructions.push_back(push);
-            switch(allocationSize(thisVariable->type)){
-                case 1:
-                    assign.oper = Operation::massign1;
-                    break;
-                case 2:
-                    assign.oper = Operation::massign2;
-                    break;
-                case 4:
-                    assign.oper = Operation::massign4;
-                    break;
-                case 8:
-                    assign.oper = Operation::massign8;
-                    break;
+            if(someVariable->where == 1){
+                //Add the location of the scope in the instruction set.
+                switch(allocationSize(someVariable->type)){
+                    case 1:
+                        assign.oper = Operation::massign1;
+                        break;
+                    case 2:
+                        assign.oper = Operation::massign2;
+                        break;
+                    case 4:
+                        assign.oper = Operation::massign4;
+                        break;
+                    case 8:
+                        assign.oper = Operation::massign8;
+                        break;
+                }
+                assign.literal.fixed8 = someVariable->stackBytePosition;
+                //Push back the assignment instruction.
+                inInstructions.push_back(assign);
+                return;
             }
-            assign.literal.fixed8 = thisVariable->stackBytePosition / 8;
-            //Push back the assignment instruction.
-            inInstructions.push_back(assign);
-            return;
-        }
-        if(thisVariable->where == 2){
-            switch(allocationSize(thisVariable->type)){
-                case 1:
-                    assign.oper = Operation::gassign1;
-                    break;
-                case 2:
-                    assign.oper = Operation::gassign2;
-                    break;
-                case 4:
-                    assign.oper = Operation::gassign4;
-                    break;
-                case 8:
-                    assign.oper = Operation::gassign8;
-                    break;
+            if(someVariable->where == 2){
+                switch(allocationSize(someVariable->type)){
+                    case 1:
+                        assign.oper = Operation::gassign1;
+                        break;
+                    case 2:
+                        assign.oper = Operation::gassign2;
+                        break;
+                    case 4:
+                        assign.oper = Operation::gassign4;
+                        break;
+                    case 8:
+                        assign.oper = Operation::gassign8;
+                        break;
+                }
+                assign.literal.fixed8 = someVariable->stackBytePosition;
+                inInstructions.push_back(assign);
+                return;
             }
-            assign.literal.fixed8 = thisVariable->stackBytePosition / 8;
-            inInstructions.push_back(assign);
-            return;
-        }
-        if(thisVariable->where == 3){
-            switch(allocationSize(thisVariable->type)){
-                case 1:
-                    assign.oper = Operation::hassign1;
-                    break;
-                case 2:
-                    assign.oper = Operation::hassign2;
-                    break;
-                case 4:
-                    assign.oper = Operation::hassign4;
-                    break;
-                case 8:
-                    assign.oper = Operation::hassign8;
-                    break;
+            if(someVariable->where == 3){
+                switch(allocationSize(someVariable->type)){
+                    case 1:
+                        assign.oper = Operation::hassign1;
+                        break;
+                    case 2:
+                        assign.oper = Operation::hassign2;
+                        break;
+                    case 4:
+                        assign.oper = Operation::hassign4;
+                        break;
+                    case 8:
+                        assign.oper = Operation::hassign8;
+                        break;
+                }
+                assign.literal.fixed8 = someVariable->stackBytePosition;
+                inInstructions.push_back(assign);
             }
-            assign.literal.fixed8 = thisVariable->stackBytePosition / 8;
-            inInstructions.push_back(assign);
         }
     }
 
     Node* Assignment::copy(StackAllocator& input){
         Assignment* thisptr = input.alloc<Assignment>();
 
-        thisptr->thisVariable = thisVariable->pcopy(input);
-        thisptr->code = code->copy(input);
+        thisptr->left = left->copy(input);
+        thisptr->right = right->copy(input);
 
         return thisptr;
     }
@@ -1107,8 +1295,8 @@ int64_t allocationSize(FloridaType input){
     Assignment* Assignment::pcopy(StackAllocator& input){
         Assignment* thisptr = input.alloc<Assignment>();
 
-        thisptr->thisVariable = thisVariable->pcopy(input);
-        thisptr->code = code->copy(input);
+        thisptr->left = left->copy(input);
+        thisptr->right = right->copy(input);
 
         return thisptr;
     }
@@ -2592,6 +2780,42 @@ int64_t allocationSize(FloridaType input){
     MemberAccess* MemberAccess::pcopy(StackAllocator& input){
         MemberAccess* result = input.alloc<MemberAccess>();
 
+        result->left = left->copy(input);
+        result->right = right->pcopy(input);
+
+        return result;
+    }
+
+//Dereference
+    Dereference::Dereference(){
+        //Do nothing
+    }
+
+    std::string Dereference::ToString(std::string inLeft, std::string inRight){
+        return left->ToString(inLeft, inRight) + "->" + right->ToString(inLeft, inRight);
+    }
+
+    std::string Dereference::printAll(){
+        //TO DO
+        return "";
+    }
+
+    void Dereference::FLVMCodeGen(std::vector<Instruction>& inInstructions){
+        //TO DO
+    }
+
+    Node* Dereference::copy(StackAllocator& input){
+        Dereference* result = input.alloc<Dereference>();
+
+        result->left = left->copy(input);
+        result->right = right->pcopy(input);
+
+        return result;
+    }
+
+    Dereference* Dereference::pcopy(StackAllocator& input){
+                Dereference* result = input.alloc<Dereference>();
+        
         result->left = left->copy(input);
         result->right = right->pcopy(input);
 

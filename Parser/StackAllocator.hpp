@@ -10,6 +10,7 @@
 class Node;
 class Scope;
 class Function;
+class ObjectClass;
 
 class StackAllocator{
 public:
@@ -31,10 +32,15 @@ public:
     Function* currentFunction = nullptr;
     //A linked list of all the functions in the program.
     Function* allFunctions = nullptr;
+    //All objects in the heap will be found here.
+    ObjectClass* heapBound = nullptr;
     //The class being currently defined.
     //Object* currentObject = nullptr;
     //A linked list of all the classes in the program.
     //Ojbect* allObjects = nullptr;
+
+    ObjectClass* hasHeapObject(std::string_view input);
+    ObjectClass* getHeapObject(std::string_view input);
 
     StackAllocator();
 

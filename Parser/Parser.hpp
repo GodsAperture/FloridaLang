@@ -71,9 +71,12 @@ public:
     ObjectClass* object();
     //Determine the size of an object.
     uint64_t allocationSize(FloridaType input);
+    //Used to generate an access chain, such as `v1.v2.v3->v4.v5`.
+    Node* accessChain();
     //Access a member of an object.
-    //This can be a `MemberAccess` or a `Dereference`.
-    Node* access();
+    MemberAccess* memberAccess();
+    //Dereference a pointer to an object in the heap.
+    Dereference* dereference();
 
 //Tree related functions.
 

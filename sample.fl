@@ -7,4 +7,4 @@ object thisThing{
 
 thisThing x;
 
-x.theDouble;
+x.theDouble = 3.141;
