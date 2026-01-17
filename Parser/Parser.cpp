@@ -809,6 +809,8 @@ Scope* Parser::scope(){
     newScope->body = body();
     //Return to the outerscope.
     stack->currentScope = stack->currentScope->parent;
+    //Make sure to assign each variable an appropriate size.
+    newScope->byteAssign();
 
     return newScope;
 }
@@ -1287,9 +1289,13 @@ ObjectClass* Parser::object(){
         if(!check("}")){
             //TO DO, debugging.
         }
-
-        result->code->byteAssign();
         stack->currentScope->push(result);
+
+        Initialize* currentInitialize = result->code->allInitializations;
+        while(currentInitialize != nullptr){
+            std::cout << currentInitialize->thisVariable->thisToken.getName() << " " << currentInitialize->thisVariable->stackBytePosition << "\n";
+            currentInitialize = currentInitialize->memoryOrder;
+        }
 
         return result;
     }
@@ -1307,13 +1313,11 @@ Node* Parser::accessChain(){
     MemberAccess* theAccess = nullptr;
     Dereference* theDereference = nullptr;
     Node* result = left;
-    int64_t byteOffset = left->stackBytePosition;
 
     //Determine if there are any chained accesses.
     do{
         theAccess = memberAccess();
         if(theAccess != nullptr){
-            byteOffset += theAccess->right->stackBytePosition;
             theAccess->left = result;
             result = theAccess;
             continue;
@@ -1323,7 +1327,6 @@ Node* Parser::accessChain(){
         if(theDereference != nullptr){
             theDereference->left = result;
             result = theDereference;
-            byteOffset = 0;
             continue;
         }
         //If neither condition is met, then the chain ends.
@@ -1348,21 +1351,11 @@ MemberAccess* Parser::memberAccess(){
     if(bool2){
         iter++;
         MemberAccess* result = stack->alloc<MemberAccess>();
-        Variable* right = stack->alloc<Variable>();
         //We need to find the object class in question.
         ObjectClass* theObject = stack->currentScope->getVariable(given[iter - 2].name)->objectType;
         //Then we find its member variable.
-        Variable* theVariable = theObject->code->getVariable(given[iter].name);
-        right->objectType = theVariable->objectType;
-        right->owner = theVariable->owner;
-        right->thisToken = theVariable->thisToken;
-        //This currently doesn't support the heap.
-        right->where = theObject->code->whereVariable(theVariable->thisToken.name);
-        right->stackBytePosition = theVariable->stackBytePosition;
+        result->right = theObject->code->getVariable(given[iter].name);
 
-
-        //The `stackBytePosition` of `result` will be determined after returning.
-        result->right = right;
         iter++;
         return result;
     }

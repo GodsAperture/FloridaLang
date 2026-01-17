@@ -127,15 +127,13 @@ class Scope : public Node{
         //If it does not exist in the scope, it returns -1.
         Function* funGet(std::string input);
         ObjectClass* objGet(std::string input);
-        //Push a new initialization into the scope's initialize stack.
+        //Add the Initialization to the two linked lists that sort
+        //them by order found and size in bytes.
         void push(Initialize* input);
         //Push a new function into the scope's function stack.
         void push(Function* input);
         //Push a new class into the scope's class stack.
         void push(ObjectClass* input);
-        //funPop isn't needed because they don't disappear in pseudoscopes.
-        size_t varCount();
-        size_t funCount();
         //Assigns each variable a byte value that will be used to
         //determine where in the stack or heap a packed variable is.
         void byteAssign();

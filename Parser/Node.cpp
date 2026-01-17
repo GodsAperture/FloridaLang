@@ -328,19 +328,25 @@ int64_t allocationSize(FloridaType input){
         //Append the initialization to the tail end of the "linked list."
         currentInitialize->next = input;
 
+        //Reach the end of the sorted list.
+        currentInitialize = sortedInitializations;
+        while(currentInitialize->memoryOrder != nullptr){
+            currentInitialize = currentInitialize->memoryOrder;
+        }
         //If the input is some object, prepend it.
         //These are always whole multiples of 8, so
         //order doesn't particularly matter for these.
         if(input->thisVariable->objectType != nullptr){
             input->memoryOrder = sortedInitializations;
             sortedInitializations = input;
+            return;
         }
 
         currentInitialize = sortedInitializations;
         //This will place input in a sorted place based on size in the linked list.
         while(currentInitialize != nullptr){
             theirSize = allocationSize(currentInitialize->thisVariable->type);
-            if(byteSize < theirSize){
+            if(byteSize <= theirSize){
                 previousInitialize = currentInitialize;
                 currentInitialize = currentInitialize->memoryOrder;
                 continue;
@@ -390,28 +396,6 @@ int64_t allocationSize(FloridaType input){
         currObj->next = input;
     }
 
-    size_t Scope::varCount(){
-        size_t count = 0;
-        Initialize* currInit = allInitializations;
-        while(currInit != nullptr){
-            count++;
-            currInit = currInit->next;
-        }
-
-        return count;
-    }
-
-    size_t Scope::funCount(){
-        size_t count = 0;
-        Function* currFun = functions;
-        while(currFun != nullptr){
-            count++;
-            currFun = currFun->next;
-        }
-
-        return count;
-    }
-
     void Scope::byteAssign(){
         if(allInitializations == nullptr){
             return;
@@ -436,6 +420,8 @@ int64_t allocationSize(FloridaType input){
         variableSlotSize += bitmask & (8 - (bitmask & variableSlotSize));
     }
 
+
+    
     std::string Scope::ToString(std::string inLeft, std::string inRight){
         if(body != nullptr){
             return body->ToString(inLeft, ";");
@@ -509,6 +495,8 @@ int64_t allocationSize(FloridaType input){
 
         return thisptr;
     }
+
+
 
     bool Scope::hasVariable(std::string_view input){
         //Go through all scopes as needed.
@@ -894,6 +882,7 @@ int64_t allocationSize(FloridaType input){
     }
 
 
+
 //Variable
     Variable::Variable(){
         //Do nothing. It's not a problem.
@@ -1191,7 +1180,7 @@ int64_t allocationSize(FloridaType input){
         }
 
         return right->printAll() + 
-        left->printAll() + "\n" +
+        left->printAll() +
         "lassign\n";
 
     }
@@ -2032,14 +2021,17 @@ int64_t allocationSize(FloridaType input){
     }
 
     std::string IfClass::printAll(){
-        std::string result = "\t(*condition*)\n" + condition->printAll();
+        std::string result = "\t(*condition*)\n" +
+        condition->printAll() +
+        "cjump\n";
         if(ifBody != nullptr){
-            result += "\t(*if body*)\n" + ifBody->printAll();
+            result += "\t(*if body*)\n" + ifBody->printAll() + "\t(*end if*)\n";
         }
         if(elseBody != nullptr){
-            result += "\t(*else body*)\n" + elseBody->printAll() + "\t(*end else*)";
-        } else {
-            result += "\t(*end if*)\n";
+            result += "\t(*else body*)\n" +
+            elseBody->printAll() +
+            "jump\n" + 
+            "\t(*end else*)\n";
         }
 
         return result;
@@ -2760,7 +2752,14 @@ int64_t allocationSize(FloridaType input){
     }
 
     std::string MemberAccess::printAll(){
-        //TO DO
+        // Variable* theVariable = nullptr;
+        // MemberAccess* theAccess = nullptr;
+        // Dereference* theDereference = nullptr;
+        // Instruction push = Instruction();
+        // push.literal.fixed8 = right->stackBytePosition;
+
+        std::cout << right->stackBytePosition << "\n";
+
         return "";
     }
 

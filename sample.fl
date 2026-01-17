@@ -1,10 +1,10 @@
-object thisThing{
-    float8 theDouble = 3.14;
-    fixed4 theInteger = 8;
-    boolean theBool = true;
-    fixed4 secondInteger = 0;
+object theThing{
+    float8 first;
+    float4 second;
+    float4 third;
 }
 
-thisThing x;
+theThing y;
+theThing z;
 
-x.theDouble = 3.141;
+z.third = 3.0;
