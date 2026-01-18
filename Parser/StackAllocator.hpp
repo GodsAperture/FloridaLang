@@ -18,9 +18,12 @@ public:
     void* current = nullptr;
     void* end = nullptr;
 
-    //Other pointers
-    Node* ZEROPTR = nullptr;
-    Node* ONEPTR = nullptr;
+    //The reason I don't use the nullptr for the ZEROPTR is to mark nullptr as an error.
+
+    //ZEROPTR will be used for optimizations with derivatives.
+    Node* ZEROPTR = (Node*) (((char*) nullptr) + 8);
+    //ONEPTR will be used for optimizations with derivatives.
+    Node* ONEPTR = (Node*) (((char*) ZEROPTR) + 8);
     //The Abstract Syntax Tree
     Node* AST = nullptr;
 
@@ -79,9 +82,6 @@ public:
             ptr->~T(); // Call the destructor explicitly
         }
     }
-
-    //This only exists to create the ZEROPTR, ONEPTR, and FUNPTR.
-    void* give();
 
     template<typename T>
     void mdealloc(T* ptr){

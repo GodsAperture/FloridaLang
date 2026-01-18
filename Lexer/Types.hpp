@@ -1,6 +1,7 @@
 #ifndef Types_h__
 #define Types_h__
-enum FloridaType{
+//2 byte type information
+enum FloridaType : int16_t {
     //Void
     tvoid,
     //Default type, for errors;
@@ -22,6 +23,10 @@ enum FloridaType{
     //Numbers
     ufixed1, ufixed2, ufixed4, ufixed8,
     fixed1, fixed2, fixed4, fixed8,
+    //If float1 and/or float2 ever come into existence:
+    //1.) Why did hardware manufactureres do this??
+    //2.) These are objectively awful for floating point numbers.
+    /*Non-existent*/ float1, /*Non-existent*/ float2,
     float4, float8,
     ufixedn, fixedn, floatn,
 

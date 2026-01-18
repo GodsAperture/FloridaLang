@@ -154,6 +154,90 @@ int64_t allocationSize(FloridaType input){
         }
     }
 
+//Abuse more mathematical mapping methods to simplify this.
+std::string fetchPad(FloridaType input, char where){
+    std::string result = "fetch";
+    const int64_t bitmask = 3;
+    //Determine the byte size of the type in question.
+    input = (FloridaType) (bitmask & (input - FloridaType::ufixed1));
+
+    //Assign the appropriate locality.
+    switch(where){
+        case 0:
+            result = "l" + result;
+            break;
+        case 1:
+            result = "m" + result;
+            break;
+        case 2:
+            result = "g" + result;
+            break;
+        case 3:
+            result = "h" + result;
+            break;
+    }
+    
+    //Assign the appropriate byte size.
+    switch(input){
+        case 0:
+            result += "1";
+            break;
+        case 1:
+            result += "2";
+            break;
+        case 2:
+            result += "4";
+            break;
+        case 3:
+            result += "8";
+            break;
+    }
+
+    return result;
+}
+
+//Abuse more mathematical mapping methods to simplify this.
+std::string assignPad(FloridaType input, char where){
+    std::string result = "assign";
+    const int64_t bitmask = 3;
+    //Determine the byte size of the type in question.
+    input = (FloridaType) (bitmask & (input - FloridaType::ufixed1));
+
+    //Assign the appropriate locality.
+    switch(where){
+        case 0:
+            result = "l" + result;
+            break;
+        case 1:
+            result = "m" + result;
+            break;
+        case 2:
+            result = "g" + result;
+            break;
+        case 3:
+            result = "h" + result;
+            break;
+    }
+    
+    //Assign the appropriate byte size.
+    switch(input){
+        case 0:
+            result += "1";
+            break;
+        case 1:
+            result += "2";
+            break;
+        case 2:
+            result += "4";
+            break;
+        case 3:
+            result += "8";
+            break;
+    }
+
+    return result;
+}
+
 
 
 //TypecastClass
@@ -2752,19 +2836,36 @@ int64_t allocationSize(FloridaType input){
     }
 
     std::string MemberAccess::printAll(){
-        // Variable* theVariable = nullptr;
-        // MemberAccess* theAccess = nullptr;
-        // Dereference* theDereference = nullptr;
-        // Instruction push = Instruction();
-        // push.literal.fixed8 = right->stackBytePosition;
+        std::string result = "";
+        Variable* theVariable = nullptr;
+        MemberAccess* theAccess = nullptr;
+        Dereference* theDereference = nullptr;
+        Node* currentNode = left;
 
-        std::cout << right->stackBytePosition << "\n";
+        //I cannot recursively descend these nodes if I want to to optimize this.
+        while(true){
+            theAccess = dynamic_cast<MemberAccess*>(currentNode);
+            if(theAccess != nullptr){
+                result = "";
+            }
+        }
 
-        return "";
+        return result;
     }
 
     void MemberAccess::FLVMCodeGen(std::vector<Instruction>& inInstructions){
-        //TO DO
+        Variable* theVariable = nullptr;
+        MemberAccess* theAccess = nullptr;
+        Dereference* theDereference = nullptr;
+        Node* currentNode = left;
+        Instruction theFetch;
+
+        //I cannot recursively descend these nodes if I want to to optimize this.
+        while(true){
+            theAccess = dynamic_cast<MemberAccess*>(currentNode);
+            if(theAccess != nullptr){
+            }
+        }
     }
 
     Node* MemberAccess::copy(StackAllocator& input){

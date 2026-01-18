@@ -7,7 +7,8 @@
 
 class Scope;
 
-enum Operation{
+//2 byte representation for all operations.
+enum Operation : int16_t {
     newScope,
     deleteScope,
     call,
@@ -327,10 +328,17 @@ union types{
     }
 };  
 
+//16-byte representation of an `Instruction` for the Florida Virtual Machine.
 class Instruction{
 public:
+    //2 bytes, totalling 2 bytes.
     FloridaType type;
+    //2 bytes, totalling 4 bytes.
     Operation oper;
+    //4 bytes, totalling 8 bytes.
+    //This will be used to pair information together with the `literal`.
+    int32_t secondary;
+    //8 bytes, totalling 16 bytes.
     types literal;
 
     Instruction(){
