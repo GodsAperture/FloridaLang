@@ -993,6 +993,7 @@ std::string assignPad(FloridaType input, char where){
         std::string byteOffset = std::to_string(stackBytePosition % 8);
         std::string byteSize = std::to_string(allocationSize(type));
         std::string contextComment = "(*Variable " + thisToken.getName() + " || stackOffset: " + stackOffset + " byteOffset: " + byteOffset + " *)\n";
+
         if(where == 0){
             return padding2(padding("lfetch" + byteSize) + stackOffset) + contextComment;
         }
@@ -1012,87 +1013,10 @@ std::string assignPad(FloridaType input, char where){
     }
 
     void Variable::FLVMCodeGen(std::vector<Instruction>& inInstructions){
-        Instruction instruction;
-        if(where == 0){
-            switch(allocationSize(type)){
-                case 1:
-                    instruction.oper = gfetch1;
-                    break;
-                case 2:
-                    instruction.oper = gfetch2;
-                    break;
-                case 4:
-                    instruction.oper = gfetch4;
-                    break;
-                case 8:
-                    instruction.oper = gfetch8;
-            }
-            instruction.literal.fixed8 = stackBytePosition;
-            //Push back the instruction for local variable.
-            inInstructions.push_back(instruction);
-            return;
-        }
-        if(where == 1){
-            instruction.oper = Operation::push;
-            instruction.literal.fixed8 = owner->whichScope;
-            //Push the push instruction onto the stack.
-            inInstructions.push_back(instruction);
-            switch(allocationSize(type)){
-                case 1:
-                    instruction.oper = mfetch1;
-                    break;
-                case 2:
-                    instruction.oper = mfetch2;
-                    break;
-                case 4:
-                    instruction.oper = mfetch4;
-                    break;
-                case 8:
-                    instruction.oper = mfetch8;
-            }            
-            instruction.literal.fixed8 = stackBytePosition;
-            //Push the mfetch instruction onto the stack.
-            inInstructions.push_back(instruction);
-            return;
-        }
-        if(where == 2){
-            switch(allocationSize(type)){
-                case 1:
-                    instruction.oper = lfetch1;
-                    break;
-                case 2:
-                    instruction.oper = lfetch2;
-                    break;
-                case 4:
-                    instruction.oper = lfetch4;
-                    break;
-                case 8:
-                    instruction.oper = lfetch8;
-            }
-            instruction.literal.fixed8 = stackBytePosition;
-            //Push back the instruction for the global variable.
-            inInstructions.push_back(instruction);
-            return;
-        }
-        if(where == 3){
-            switch(allocationSize(type)){
-                case 1:
-                    instruction.oper = hfetch1;
-                    break;
-                case 2:
-                    instruction.oper = hfetch2;
-                    break;
-                case 4:
-                    instruction.oper = hfetch4;
-                    break;
-                case 8:
-                    instruction.oper = hfetch8;
-            }
-            instruction.literal.fixed8 = stackBytePosition;
-            //Push back the instruction for the global variable.
-            inInstructions.push_back(instruction);
-            return;
-        }
+        Instruction pushInstruction;
+        pushInstruction.oper = Operation::push;
+        pushInstruction.literal.fixed8 = stackBytePosition;
+        pushInstruction.secondary = owner->whichScope;
     }
 
     Node* Variable::copy(StackAllocator& input){
@@ -1160,16 +1084,16 @@ std::string assignPad(FloridaType input, char where){
             Instruction assign = Instruction();
             switch(allocationSize(type)){
                 case 1:
-                    assign.oper = Operation::lassign1;
+                    assign.oper = Operation::assign1;
                     break;
                 case 2:
-                    assign.oper = Operation::lassign2;
+                    assign.oper = Operation::assign2;
                     break;
                 case 4:
-                    assign.oper = Operation::lassign4;
+                    assign.oper = Operation::assign4;
                     break;
                 case 8:
-                    assign.oper = Operation::lassign8;
+                    assign.oper = Operation::assign8;
                     break;
             }
             //Get the stack index.
@@ -1238,12 +1162,16 @@ std::string assignPad(FloridaType input, char where){
         theMemberAccess = dynamic_cast<MemberAccess*>(left);
         theDereference = dynamic_cast<Dereference*>(left);
 
+        std::cout << "FIX ASSIGNMENT::PRINTALL()\n";
+
+        return "";
+
         if(theMemberAccess != nullptr){
             theVariable = theMemberAccess->right;
         }
 
         if(theDereference != nullptr){
-            theVariable = theDereference->right;
+            //theVariable = theDereference->right;
         }
         
         if(theVariable != nullptr){
@@ -1271,89 +1199,7 @@ std::string assignPad(FloridaType input, char where){
 
     void Assignment::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         Instruction assign;
-        Variable* someVariable = dynamic_cast<Variable*>(left);
-        if(someVariable != nullptr){
-            //Generate code for the assignment.
-            right->FLVMCodeGen(inInstructions);
-            //Push back the instruction for assignment.
-            if(someVariable->where == 0){
-                switch(allocationSize(left->type)){
-                    case 1:
-                        assign.oper = Operation::lassign1;
-                        break;
-                    case 2:
-                        assign.oper = Operation::lassign2;
-                        break;
-                    case 4:
-                        assign.oper = Operation::lassign4;
-                        break;
-                    case 8:
-                        assign.oper = Operation::lassign8;
-                        break;
-                }
-                assign.literal.fixed8 = someVariable->stackBytePosition;
-                inInstructions.push_back(assign);
-                return;
-            }
-            if(someVariable->where == 1){
-                //Add the location of the scope in the instruction set.
-                switch(allocationSize(someVariable->type)){
-                    case 1:
-                        assign.oper = Operation::massign1;
-                        break;
-                    case 2:
-                        assign.oper = Operation::massign2;
-                        break;
-                    case 4:
-                        assign.oper = Operation::massign4;
-                        break;
-                    case 8:
-                        assign.oper = Operation::massign8;
-                        break;
-                }
-                assign.literal.fixed8 = someVariable->stackBytePosition;
-                //Push back the assignment instruction.
-                inInstructions.push_back(assign);
-                return;
-            }
-            if(someVariable->where == 2){
-                switch(allocationSize(someVariable->type)){
-                    case 1:
-                        assign.oper = Operation::gassign1;
-                        break;
-                    case 2:
-                        assign.oper = Operation::gassign2;
-                        break;
-                    case 4:
-                        assign.oper = Operation::gassign4;
-                        break;
-                    case 8:
-                        assign.oper = Operation::gassign8;
-                        break;
-                }
-                assign.literal.fixed8 = someVariable->stackBytePosition;
-                inInstructions.push_back(assign);
-                return;
-            }
-            if(someVariable->where == 3){
-                switch(allocationSize(someVariable->type)){
-                    case 1:
-                        assign.oper = Operation::hassign1;
-                        break;
-                    case 2:
-                        assign.oper = Operation::hassign2;
-                        break;
-                    case 4:
-                        assign.oper = Operation::hassign4;
-                        break;
-                    case 8:
-                        assign.oper = Operation::hassign8;
-                        break;
-                }
-                assign.literal.fixed8 = someVariable->stackBytePosition;
-                inInstructions.push_back(assign);
-            }
-        }
+        std::cout << "FIX ASSIGNMENT::FLVMCODEGEN()\n";
     }
 
     Node* Assignment::copy(StackAllocator& input){
@@ -2591,6 +2437,7 @@ std::string assignPad(FloridaType input, char where){
         //This will allow the user to access classes and variables from
         //the most recently created version of this scope.
         Instruction uniqueScopeNumber;
+        Instruction theCall;
         uniqueScopeNumber.oper = Operation::push;
         uniqueScopeNumber.literal.fixed8 = function->code->whichScope;
         //Push the necessary scope reference onto the stack.
@@ -2602,8 +2449,11 @@ std::string assignPad(FloridaType input, char where){
             arguments->FLVMCodeGen(inInstructions);
         }
 
+        theCall.oper = Operation::call;
+        theCall.literal.fixed8 = function->position;
+
         //Make the function call after the function's arguments are created.
-        inInstructions.push_back(Instruction(Operation::call, function->position));
+        inInstructions.push_back(theCall);
     }
 
     Node* Call::copy(StackAllocator& input){
@@ -2908,7 +2758,7 @@ std::string assignPad(FloridaType input, char where){
         Dereference* result = input.alloc<Dereference>();
 
         result->left = left->copy(input);
-        result->right = right->pcopy(input);
+        result->right = right->copy(input);
 
         return result;
     }
@@ -2917,7 +2767,7 @@ std::string assignPad(FloridaType input, char where){
                 Dereference* result = input.alloc<Dereference>();
         
         result->left = left->copy(input);
-        result->right = right->pcopy(input);
+        result->right = right->copy(input);
 
         return result;
     }

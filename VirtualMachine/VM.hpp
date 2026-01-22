@@ -18,13 +18,16 @@ public:
     size_t instructionNumber = 0;
     //All of the program instructions.
     std::vector<Instruction> programInstructions = std::vector<Instruction>();
-    //The pseudo-stack of the language.
-    std::vector<types> computationVector = std::vector<types>();
-    //Base pointer stack. Takes the form WhichScope, Reference.
+    //The stack of the language.
+    types* computationStack = nullptr;
+    int64_t stackSize = 0;
+    types* currentStackPosition = nullptr;
+    //Base pointer stack or `BPStack`. Takes the form WhichScope, Reference in the array.
     uint64_t* BPStack = nullptr;
     uint64_t BPStackSize = 0;
     uint64_t BPMax = 0;
     //Instruction number stack.
+    //When I `return` from a function call, I can restore the previous instructions.
     uint64_t* INStack = nullptr;
     uint64_t INStackSize = 0;
     uint64_t INMax = 0;
@@ -38,8 +41,8 @@ public:
     Function* allFunctions = nullptr;
     
     //Exceutes the current instruction in the virtual machine.
-    //Returns true if an instruction was successfully executed.
-    bool next();
+    //Returns characters based on success, failure, etc.
+    char next();
     //Prints the current instruction, the next instruction, and the instruction number.
     //Returns `true` if an instruction was successfully executed.
     bool debuggerNext();
@@ -52,14 +55,14 @@ public:
 
 ////Computation stack specific tools.
 
-    //Push the given value to the computation vector.
+    //Push the given value to the computation stack.
     inline void push(types& input);
-    //Pop the current value from the computation vector.
+    //Pop `input` values from the computation stack.
+    inline void pop(int64_t input);
+    //Pop a single object from the computation stack.
     inline void pop();
-    //Get the top most union from the computation vector.
+    //Get the top most union from the computation stack.
     inline types& top();
-    //Get the `types` union just before the top most union in the computation vector.
-    inline types& prior();
     //Make a copy of the topmost element.
     inline void copy();
     //Edit the top of the computation stack.
@@ -87,7 +90,7 @@ public:
     //Pop the top-most element from the INStack.
     uint64_t INPop();
 
-    FloridaVM(Parser input){
+    FloridaVM(Parser input, int64_t stackSize){
         //Generate the function bytecode.
         if(input.stack->allFunctions != nullptr){
             input.stack->allFunctions->FLVMCodeGen(programInstructions);
@@ -96,6 +99,9 @@ public:
         BPStack = (uint64_t*) malloc(2 * 100 * sizeof(uint64_t));
         INStack = (uint64_t*) malloc(100 * sizeof(uint64_t));
         CurrentBP = (uint64_t*) malloc(sizeof(uint64_t) * input.scopeCount);
+        //Generate a stack of some user defined size.
+        computationStack = (types*) malloc(sizeof(types) * stackSize);
+        currentStackPosition = computationStack;
 
         for(int i = 0; i < input.scopeCount; i++){
             CurrentBP[i] = 0;

@@ -21,58 +21,15 @@ enum Operation : int16_t {
     //lfetch = local scope variable fetch
     //hfetch = heap variable fetch
 
-    //1 byte fetch requests
-    gfetch1,
-    mfetch1,
-    lfetch1,
-    hfetch1,
+    fetch1,
+    fetch2,
+    fetch4,
+    fetch8,
 
-    //2 byte fetch requests
-    gfetch2,
-    mfetch2,
-    lfetch2,
-    hfetch2,
-
-    //4 byte fetch requests
-    gfetch4,
-    mfetch4,
-    lfetch4,
-    hfetch4,
-
-    //8 byte fetch requests
-    gfetch8,
-    mfetch8,
-    lfetch8,
-    hfetch8,
-
-    //gassign = global variable assign
-    //massign = middle of the stack variable assign
-    //lassign = local scope variable assign
-    //hassign = heap variable assign
-
-    //1 byte assign requests
-    gassign1,
-    massign1,
-    lassign1,
-    hassign1,
-
-    //2 byte assign requests
-    gassign2,
-    massign2,
-    lassign2,
-    hassign2,
-
-    //4 byte assign requests
-    gassign4,
-    massign4,
-    lassign4,
-    hassign4,
-
-    //8 byte assign requests
-    gassign8,
-    massign8,
-    lassign8,
-    hassign8,
+    assign1,
+    assign2,
+    assign4,
+    assign8,
 
     //`Initialize` will have a value to determine how many slots to open.
     initialize,

@@ -1247,7 +1247,7 @@ Initialize* Parser::initialize(){
 
 Assignment* Parser::assignment(){
     Start start = currInfo();
-    Node* left = accessChain();
+    Node* left = dereference();
     Assignment* result = nullptr;
 
     if((left != nullptr) and check("=")){
@@ -1304,44 +1304,13 @@ ObjectClass* Parser::object(){
 
 }
 
-Node* Parser::accessChain(){
-    //Even if there is only the variable, it will return that variable alone.
-    Variable* left = variable();
-    if(left == nullptr){
-        return nullptr;
-    }
-    MemberAccess* theAccess = nullptr;
-    Dereference* theDereference = nullptr;
-    Node* result = left;
-
-    //Determine if there are any chained accesses.
-    do{
-        theAccess = memberAccess();
-        if(theAccess != nullptr){
-            theAccess->left = result;
-            result = theAccess;
-            continue;
-        }
-
-        theDereference = dereference();
-        if(theDereference != nullptr){
-            theDereference->left = result;
-            result = theDereference;
-            continue;
-        }
-        //If neither condition is met, then the chain ends.
-        return result;
-    }while(true);
-}
-
 MemberAccess* Parser::memberAccess(){
     if(!hasTokens(2)){
         return nullptr;
     }
 
     //Determine if the code takes the shape `variable.variable`.
-    std::string_view name = given[iter].name;
-    bool bool1 = name == ".";
+    bool bool1 = given[iter].name == ".";
     if(!bool1){
         return nullptr;
     }
@@ -1356,6 +1325,16 @@ MemberAccess* Parser::memberAccess(){
         //Then we find its member variable.
         result->right = theObject->code->getVariable(given[iter].name);
 
+        while(check(".")){
+            //Move to the next object in the chain.
+            theObject = theObject->code->getVariable(given[iter].name)->objectType;
+            //Check if it is an object.
+            if(theObject != nullptr){
+                
+            }
+
+        }
+
         iter++;
         return result;
     }
@@ -1365,21 +1344,19 @@ MemberAccess* Parser::memberAccess(){
 }
 
 Dereference* Parser::dereference(){
-    if(!hasTokens(2)){
-        return nullptr;
-    }
+    MemberAccess* left = memberAccess();
 
     //Determine if the code takes the shape variable.variable or
     //variable->variable.
-    std::string_view name = given[iter].name;
-    bool bool1 = name == "->";
+    bool bool1 = given[iter].name == "->";
     bool bool2 = given[iter + 1].type == FloridaType::Identifier;
 
     //If this is not satisfied, then it is a not an access.
     if(bool1 and bool2){
         iter++;
         Dereference* result = stack->alloc<Dereference>();
-        Variable* right = variable();
+        result->left = left;
+        Dereference* right = dereference();
         result->right = right;
 
         iter++;

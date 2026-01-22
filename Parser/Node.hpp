@@ -704,7 +704,7 @@ class Dereference : public Node{
 public:
     //`left` will only be a `Variable`, `MemberAccess`, or a `Dereference`.
     Node* left = nullptr;
-    Variable* right = nullptr;
+    Node* right = nullptr;
     
     Dereference();
     std::string ToString(std::string inLeft, std::string inRight) override;
