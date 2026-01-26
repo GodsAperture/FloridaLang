@@ -698,6 +698,8 @@ public:
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     Node* copy(StackAllocator& input) override;
     MemberAccess* pcopy(StackAllocator& input);
+
+    Variable* getBaseVariable();
 };
 
 class Dereference : public Node{
@@ -712,6 +714,8 @@ public:
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
     Node* copy(StackAllocator& input) override;
     Dereference* pcopy(StackAllocator& input);
+
+    Variable* getBaseVariable();
 };
 
 #endif

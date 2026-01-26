@@ -1,5 +1,7 @@
 #ifndef Types_h__
 #define Types_h__
+#include <stdint.h>
+
 //2 byte type information
 enum FloridaType : int16_t {
     //Void
@@ -26,6 +28,7 @@ enum FloridaType : int16_t {
     //If float1 and/or float2 ever come into existence:
     //1.) Why did hardware manufactureres do this??
     //2.) These are objectively awful for floating point numbers.
+    //Solution? Don't implement these as hardware instructions.
     /*Non-existent*/ float1, /*Non-existent*/ float2,
     float4, float8,
     ufixedn, fixedn, floatn,

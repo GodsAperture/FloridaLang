@@ -31,11 +31,9 @@ enum Operation : int16_t {
     assign4,
     assign8,
 
-    //`Initialize` will have a value to determine how many slots to open.
-    initialize,
     //`Push` will contain the literal to be pushed.
     push,
-    //`Pop` will have a value to determine how many slots to move back.
+    //`pop` will "remove" the top most element of the stack.
     pop,
 
     //All type casts
@@ -294,8 +292,10 @@ public:
     Operation oper;
     //4 bytes, totalling 8 bytes.
     //This will be used to pair information together with the `literal`.
+    //This is reserved for `whichScope`.
     int32_t secondary;
     //8 bytes, totalling 16 bytes.
+    //This is reserved for `stackByteOffset`.
     types literal;
 
     Instruction(){

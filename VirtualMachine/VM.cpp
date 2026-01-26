@@ -1,4 +1,5 @@
 #include "VM.hpp"
+#include <stdint.h>
 
 inline void FloridaVM::push(types& input){
     computationStack[stackSize - 1] = input;
@@ -119,9 +120,12 @@ char FloridaVM::next(){
     types left;
     types right;
     types result;
-    //byteOffset and stackOffset are for naming convenience.
-    int64_t byteOffset = 0;
-    int64_t stackOffset = 0;
+    //`stackOffset` is used to index the `ComputationStack` for the correct position.
+    int64_t stackOffset;
+    //`byteOffset` is used to index the correct spot in the `types` object.
+    int64_t byteOffset;
+    //`whichScope` is convenient for finding base pointers for each scope.
+    uint64_t whichScope;
     //These constants are important for fast modulo.
     const int64_t bitmask4 = 1;
     const int64_t bitmask2 = 3;
@@ -139,6 +143,9 @@ char FloridaVM::next(){
         case Operation::push:
             push(programInstructions[instructionNumber].literal);
             break;
+        case Operation::pop:
+            stackSize--;
+            break;
         case Operation::call:
             //Push the current Instruction number to the INStack.
             INPush(instructionNumber);            
@@ -147,11 +154,13 @@ char FloridaVM::next(){
             return true;
         case Operation::newScope:
             //Use left to get the correct UniqueScope.
-            left = top();
+            whichScope = current.secondary;
             //Move the CurrentInfo value to the BPStack.
-            BPPush(left.fixed8, CurrentBP[left.fixed8]);
+            BPPush(whichScope, CurrentBP[whichScope]);
             //Adjust CurrentBP.
-            CurrentBP[left.fixed8] = reference;
+            CurrentBP[whichScope] = reference;
+            //Initialize all the empty spots for variables.
+            stackSize += current.literal.fixed8;
             //Adjust the VM's current reference to be the new size of the vector.
             reference = stackSize - 1;
             //Pop the information used to adjust the proper unique scope.
@@ -194,9 +203,6 @@ char FloridaVM::next(){
         case Operation::jump:
             instructionNumber = current.literal.fixed8;
             break;
-        case Operation::initialize:
-            stackSize++;
-            break;
 
 
 
@@ -213,14 +219,60 @@ char FloridaVM::next(){
         //Bitmasking an int64_t using 2^N-1 is the equivalent to doing int64_t % 2^N.
         //These hold true for when N is natural number.
         case Operation::fetch1:
+            stackOffset = current.literal.fixed8 >> 3;
+            byteOffset = (bitmask1 & current.literal.fixed8);
+            whichScope = (uint64_t) current.secondary;
+
+            //Determine the correct scope.
+            whichScope = CurrentBP[whichScope];
+            //Assign the result to the correct position.
+            computationStack[whichScope + stackOffset].fixed1[byteOffset] = top().fixed1[0];
+            //Remove the top.
+            pop();
             break;
         case Operation::fetch2:
+            stackOffset = current.literal.fixed8 >> 3;
+            byteOffset = (bitmask2 & current.literal.fixed8) >> 1;
+            whichScope = current.secondary;
             break;
         case Operation::fetch4:
+            stackOffset = current.literal.fixed8 >> 3;
+            byteOffset = (bitmask4 & current.literal.fixed8) >> 2;
+            whichScope = current.secondary;
             break;
         case Operation::fetch8:
+            stackOffset = current.literal.fixed8 >> 3;
+            whichScope = current.secondary;
             break;
-        
+
+
+
+//Assign instructions
+        //Bitshifting an int64_t by N is equivalent to dividing an int64_t by 2^N.
+        //Bitmasking an int64_t using 2^N-1 is the equivalent to doing int64_t % 2^N.
+        //These hold true for when N is natural number.
+        case Operation::assign1:
+            stackOffset = current.literal.fixed8 >> 3;
+            byteOffset = (bitmask1 & current.literal.fixed8);
+            whichScope = current.secondary;
+
+
+            break;
+        case Operation::assign2:
+            stackOffset = current.literal.fixed8 >> 3;
+            byteOffset = (bitmask2 & current.literal.fixed8) >> 1;
+            whichScope = current.secondary;
+            break;
+        case Operation::assign4:
+            stackOffset = current.literal.fixed8 >> 3;
+            byteOffset = (bitmask4 & current.literal.fixed8) >> 2;
+            whichScope = current.secondary;
+            break;
+        case Operation::assign8:
+            stackOffset = current.literal.fixed8 >> 3;
+            whichScope = current.secondary;
+            break;
+
 
 
 ////Typecasting, in a different order.

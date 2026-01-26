@@ -71,10 +71,9 @@ public:
     ObjectClass* object();
     //Determine the size of an object.
     uint64_t allocationSize(FloridaType input);
-    //Access a member of an object.
-    MemberAccess* memberAccess();
-    //Dereference a pointer to an object in the heap.
-    Dereference* dereference();
+    //Access a member of an object such as `v1.v2` or `v1->v2`.
+    Node* memberAccess();
+
 
 //Tree related functions.
 

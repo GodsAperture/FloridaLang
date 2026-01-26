@@ -1,10 +1,14 @@
-object theThing{
+object thing1{
     float8 first;
+}
+
+object thing2{
+    thing1 first;
     float4 second;
     float4 third;
 }
 
-theThing y;
-theThing z;
-
-z.third = 3.0;
+object thing3{
+    thing1 first;
+    thing2 second;
+}

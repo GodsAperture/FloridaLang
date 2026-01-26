@@ -191,6 +191,9 @@ std::string fetchPad(FloridaType input, char where){
         case 3:
             result += "8";
             break;
+        default:
+            //Do nothing, just make the compiler stop complaining.
+            break;
     }
 
     return result;
@@ -232,6 +235,9 @@ std::string assignPad(FloridaType input, char where){
             break;
         case 3:
             result += "8";
+            break;
+        default:
+            //Do nothing, just make the compiler stop complaining.
             break;
     }
 
@@ -417,12 +423,16 @@ std::string assignPad(FloridaType input, char where){
         while(currentInitialize->memoryOrder != nullptr){
             currentInitialize = currentInitialize->memoryOrder;
         }
-        //If the input is some object, prepend it.
-        //These are always whole multiples of 8, so
-        //order doesn't particularly matter for these.
+        //If the input is some object, then place it
+        //with the other variables whose memory sizes
+        //are multiples of 8.
         if(input->thisVariable->objectType != nullptr){
-            input->memoryOrder = sortedInitializations;
-            sortedInitializations = input;
+            while(currentInitialize->thisVariable->objectType != nullptr){
+                currentInitialize = currentInitialize->memoryOrder;
+            }
+
+            input->memoryOrder = currentInitialize->memoryOrder;
+            currentInitialize->memoryOrder = input;
             return;
         }
 
@@ -934,6 +944,8 @@ std::string assignPad(FloridaType input, char where){
         //Add the current chunk of code if it is not a function.
         if(dynamic_cast<Function*>(current) == nullptr){
             current->FLVMCodeGen(inInstructions);
+            //After the line has finished execution, pop it from the stack.
+            inInstructions.push_back(Instruction(Operation::pop));
         }
         //If next isn't a nullptr, then generate code for it too.
         if(next != nullptr){
@@ -989,8 +1001,8 @@ std::string assignPad(FloridaType input, char where){
     }
 
     std::string Variable::printAll(){
-        std::string stackOffset = std::to_string(stackBytePosition / 8);
-        std::string byteOffset = std::to_string(stackBytePosition % 8);
+        std::string stackOffset = std::to_string(stackBytePosition >> 3);
+        std::string byteOffset = std::to_string(7L & stackBytePosition);
         std::string byteSize = std::to_string(allocationSize(type));
         std::string contextComment = "(*Variable " + thisToken.getName() + " || stackOffset: " + stackOffset + " byteOffset: " + byteOffset + " *)\n";
 
@@ -1073,13 +1085,6 @@ std::string assignPad(FloridaType input, char where){
             //Generate the code for the right hand side.
             code->FLVMCodeGen(inInstructions);
 
-            //After executing those instructions, we want to assign the result.
-            Instruction push = Instruction();
-            push.oper = Operation::push;
-            //Get the byte index and push it.
-            push.literal.fixed8 = thisVariable->stackBytePosition % 8;
-            inInstructions.push_back(push);
-
             //Get the correct byte size.
             Instruction assign = Instruction();
             switch(allocationSize(type)){
@@ -1096,10 +1101,6 @@ std::string assignPad(FloridaType input, char where){
                     assign.oper = Operation::assign8;
                     break;
             }
-            //Get the stack index.
-            assign.literal.fixed8 = thisVariable->stackBytePosition / 8;
-            //Push an assignment instruction.
-            inInstructions.push_back(assign);
         }
     }
 
@@ -2107,7 +2108,7 @@ std::string assignPad(FloridaType input, char where){
         }
 
         //Start the scope, because we don't want to continually assign/initialize.
-        inInstructions.push_back(Instruction(Operation::newScope));
+        inInstructions.push_back(Instruction(Operation::newScope, body->variableSlotSize >> 3));
 
         //This will be where the end of the loop will unconditionally jump to.
         int64_t jumpTo = inInstructions.size();
@@ -2436,14 +2437,13 @@ std::string assignPad(FloridaType input, char where){
     void Call::FLVMCodeGen(std::vector<Instruction>& inInstructions){
         //This will allow the user to access classes and variables from
         //the most recently created version of this scope.
-        Instruction uniqueScopeNumber;
+        Instruction newScopeOperation;
         Instruction theCall;
-        uniqueScopeNumber.oper = Operation::push;
-        uniqueScopeNumber.literal.fixed8 = function->code->whichScope;
+        newScopeOperation.literal.fixed8 = function->code->variableSlotSize;
+        newScopeOperation.secondary = function->code->whichScope;
+        
         //Push the necessary scope reference onto the stack.
-        inInstructions.push_back(uniqueScopeNumber);
-        //Start the scope here.
-        inInstructions.push_back(Instruction(Operation::newScope));
+        inInstructions.push_back(newScopeOperation);
         //Generate the arguments, if any.
         if(arguments != nullptr){
             arguments->FLVMCodeGen(inInstructions);
@@ -2687,9 +2687,9 @@ std::string assignPad(FloridaType input, char where){
 
     std::string MemberAccess::printAll(){
         std::string result = "";
-        Variable* theVariable = nullptr;
+        //Variable* theVariable = nullptr;
         MemberAccess* theAccess = nullptr;
-        Dereference* theDereference = nullptr;
+        //Dereference* theDereference = nullptr;
         Node* currentNode = left;
 
         //I cannot recursively descend these nodes if I want to to optimize this.
@@ -2704,9 +2704,9 @@ std::string assignPad(FloridaType input, char where){
     }
 
     void MemberAccess::FLVMCodeGen(std::vector<Instruction>& inInstructions){
-        Variable* theVariable = nullptr;
+        //Variable* theVariable = nullptr;
         MemberAccess* theAccess = nullptr;
-        Dereference* theDereference = nullptr;
+        //Dereference* theDereference = nullptr;
         Node* currentNode = left;
         Instruction theFetch;
 

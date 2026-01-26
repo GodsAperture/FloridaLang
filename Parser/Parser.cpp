@@ -1247,7 +1247,7 @@ Initialize* Parser::initialize(){
 
 Assignment* Parser::assignment(){
     Start start = currInfo();
-    Node* left = dereference();
+    Node* left = memberAccess();
     Assignment* result = nullptr;
 
     if((left != nullptr) and check("=")){
@@ -1292,11 +1292,23 @@ ObjectClass* Parser::object(){
         stack->currentScope->push(result);
 
         Initialize* currentInitialize = result->code->allInitializations;
-        while(currentInitialize != nullptr){
-            std::cout << currentInitialize->thisVariable->thisToken.getName() << " " << currentInitialize->thisVariable->stackBytePosition << "\n";
-            currentInitialize = currentInitialize->memoryOrder;
-        }
+        //Use this to determine the size of the object in memory.
+        if(currentInitialize != nullptr){
+            //The tail end of `memoryOrder` will have the the variable
+            //with the highest `stackBytePosition`. If I add its
+            //stackBytePosition to its size in memory, then I know
+            //how large this object will be.
+            while(currentInitialize->memoryOrder != nullptr){
+                currentInitialize = currentInitialize->memoryOrder;
+            }
 
+            //Determine the size of the object allocation.
+            if(currentInitialize->thisVariable->objectType == nullptr){
+                result->memorySize = currentInitialize->thisVariable->stackBytePosition + allocationSize(currentInitialize->thisVariable->type);
+            } else {
+                result->memorySize = currentInitialize->thisVariable->stackBytePosition + currentInitialize->thisVariable->objectType->memorySize;
+            }
+        }
         return result;
     }
 
@@ -1304,13 +1316,19 @@ ObjectClass* Parser::object(){
 
 }
 
-MemberAccess* Parser::memberAccess(){
-    if(!hasTokens(2)){
+Node* Parser::memberAccess(){
+    if(!hasTokens(3)){
         return nullptr;
     }
 
-    //Determine if the code takes the shape `variable.variable`.
-    bool bool1 = given[iter].name == ".";
+    //Start by finding a variable.
+    Variable* start = variable();
+    if(start == nullptr){
+        return nullptr;
+    }
+
+    //Determine if the code takes the shape `v1.v2` or `v1->v2`.
+    bool bool1 = (given[iter].name == ".") or (given[iter].name == "->");
     if(!bool1){
         return nullptr;
     }
@@ -1319,23 +1337,45 @@ MemberAccess* Parser::memberAccess(){
     //If this is not satisfied, then it is a not an access.
     if(bool2){
         iter++;
-        MemberAccess* result = stack->alloc<MemberAccess>();
-        //We need to find the object class in question.
-        ObjectClass* theObject = stack->currentScope->getVariable(given[iter - 2].name)->objectType;
+        int64_t stackByteOffset = 0;
+        MemberAccess* theAccess = stack->alloc<MemberAccess>();
+        Node* result = nullptr;
+        //Get the object type of the variable.
+        ObjectClass* leftObject = start->objectType;
         //Then we find its member variable.
-        result->right = theObject->code->getVariable(given[iter].name);
+        theAccess->right = leftObject->code->getVariable(given[iter].name);
+        //Adjust the stackBytePosition of the `MemberAccess`.
+        if(theAccess->right->objectType == nullptr){
+            stackByteOffset = allocationSize(theAccess->right->type);
+        } else {
+            stackByteOffset = theAccess->right->stackBytePosition;
+        }
+        theAccess->stackBytePosition = stackByteOffset;
+        result = theAccess;
+        //Increment for the right hand side of the operation.
+        iter++;
 
-        while(check(".")){
+        while(true){
             //Move to the next object in the chain.
-            theObject = theObject->code->getVariable(given[iter].name)->objectType;
-            //Check if it is an object.
-            if(theObject != nullptr){
-                
+            leftObject = leftObject->code->getVariable(given[iter].name)->objectType;
+
+            if(check(".")){
+                theAccess = stack->alloc<MemberAccess>();
+                theAccess->left = result;
+                theAccess->right = leftObject->code->getVariable(given[iter].name);
+                stackByteOffset = theAccess->right->stackBytePosition;
+
+                continue;
+            }
+
+            if(check("->")){
+
+
+                continue;
             }
 
         }
 
-        iter++;
         return result;
     }
 
@@ -1343,28 +1383,6 @@ MemberAccess* Parser::memberAccess(){
 
 }
 
-Dereference* Parser::dereference(){
-    MemberAccess* left = memberAccess();
-
-    //Determine if the code takes the shape variable.variable or
-    //variable->variable.
-    bool bool1 = given[iter].name == "->";
-    bool bool2 = given[iter + 1].type == FloridaType::Identifier;
-
-    //If this is not satisfied, then it is a not an access.
-    if(bool1 and bool2){
-        iter++;
-        Dereference* result = stack->alloc<Dereference>();
-        result->left = left;
-        Dereference* right = dereference();
-        result->right = right;
-
-        iter++;
-        return result;
-    }
-
-    return nullptr;
-}
 
 
 //Function stuff
