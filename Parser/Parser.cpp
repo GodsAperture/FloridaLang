@@ -1138,8 +1138,6 @@ Variable* Parser::variable(){
 
     //Check to see if the variable is accessible from the current scope.
     if(stack->currentScope->hasVariable(given[iter].name)){
-        //Where is the way to describe if a variable is local, middle, global, or in the heap.
-        char where = 3;
         Scope* thisScope = stack->currentScope;
         int64_t stackBytePosition = -1;
         //Find what scope the variable resides in.
@@ -1161,28 +1159,10 @@ Variable* Parser::variable(){
         
         FloridaType theType = thisScope->getInit(given[iter].getName())->thisVariable->type;
         
-        //Determine if lfetch, mfetch, gfetch, or hfetch is needed.
-        //This is for lfetch
-        if(thisScope == stack->currentScope){
-            where = 0;
-        }
-        //This is for mfetch
-        if((thisScope != stack->currentScope) && (thisScope->parent != nullptr)){
-            where = 1;
-        }
-        //This is for gfetch
-        if(thisScope->parent == nullptr){
-            where = 2;
-        }
-        //Something something, have to figure out how to handle heap stuff.
-        if(false){
-            where = 3;
-        }
         //Assign the location of the variable in the scope.
         Variable* newVariable = stack->alloc<Variable>();
         newVariable->thisToken = given[iter];
         newVariable->stackBytePosition = stackBytePosition;
-        newVariable->where = where;
         newVariable->owner = thisScope;
         newVariable->type = theType;
         if(theType == FloridaType::Null){
@@ -1248,9 +1228,14 @@ Initialize* Parser::initialize(){
 Assignment* Parser::assignment(){
     Start start = currInfo();
     Node* left = memberAccess();
+    if(left != nullptr){
+        
+    } else {
+        return nullptr;
+    }
     Assignment* result = nullptr;
 
-    if((left != nullptr) and check("=")){
+    if(check("=")){
         Node* right = commonExpressions();
         if(right != nullptr){
             result = stack->alloc<Assignment>();
@@ -1261,7 +1246,6 @@ Assignment* Parser::assignment(){
 
         reset(start);
         return nullptr;
-        
     }
 
     reset(start);
@@ -1317,68 +1301,68 @@ ObjectClass* Parser::object(){
 }
 
 Node* Parser::memberAccess(){
+    Start start = Start();
     if(!hasTokens(3)){
         return nullptr;
     }
 
     //Start by finding a variable.
-    Variable* start = variable();
-    if(start == nullptr){
+    Variable* thisVariable = variable();
+    if(thisVariable == nullptr){
         return nullptr;
     }
+    ObjectClass* thisObject = thisVariable->objectType;
+
 
     //Determine if the code takes the shape `v1.v2` or `v1->v2`.
     bool bool1 = (given[iter].name == ".") or (given[iter].name == "->");
     if(!bool1){
-        return nullptr;
+        return thisVariable;
     }
-    bool bool2 = stack->currentScope->getVariable(given[iter - 1].name)->objectType->code->hasVariable(given[iter + 1].name);
+    //Determine if the `v2` part of `v1.v2` or `v1->v2` is a member of the object.
+    bool bool2 = thisObject->code->hasVariable(given[iter + 1].name);
 
     //If this is not satisfied, then it is a not an access.
     if(bool2){
-        iter++;
-        int64_t stackByteOffset = 0;
-        MemberAccess* theAccess = stack->alloc<MemberAccess>();
-        Node* result = nullptr;
-        //Get the object type of the variable.
-        ObjectClass* leftObject = start->objectType;
-        //Then we find its member variable.
-        theAccess->right = leftObject->code->getVariable(given[iter].name);
-        //Adjust the stackBytePosition of the `MemberAccess`.
-        if(theAccess->right->objectType == nullptr){
-            stackByteOffset = allocationSize(theAccess->right->type);
-        } else {
-            stackByteOffset = theAccess->right->stackBytePosition;
-        }
-        theAccess->stackBytePosition = stackByteOffset;
-        result = theAccess;
-        //Increment for the right hand side of the operation.
-        iter++;
+        Node* result = thisVariable;
 
         while(true){
-            //Move to the next object in the chain.
-            leftObject = leftObject->code->getVariable(given[iter].name)->objectType;
-
+            //Check for the pattern `v1.v2`.
             if(check(".")){
-                theAccess = stack->alloc<MemberAccess>();
+                MemberAccess* theAccess = stack->alloc<MemberAccess>();
                 theAccess->left = result;
-                theAccess->right = leftObject->code->getVariable(given[iter].name);
-                stackByteOffset = theAccess->right->stackBytePosition;
+                result = theAccess;
+                theAccess->right = thisObject->code->getVariable(given[iter].name);
+                theAccess->thisObject = thisObject;
+                //Change to the next object in the chain.
+                thisObject = thisObject->code->getVariable(given[iter].name)->objectType;
+                iter++;
 
                 continue;
             }
 
+            //Check for the pattern `v1->v2`.
             if(check("->")){
-
+                Dereference* theDereference = stack->alloc<Dereference>();
+                theDereference->left = result;
+                result = theDereference;
+                theDereference->right = thisObject->code->getVariable(given[iter].name);
+                theDereference->thisObject = thisObject;
+                //Change to the next object in the chain.
+                thisObject = thisObject->code->getVariable(given[iter].name)->objectType;
+                iter++;
 
                 continue;
             }
-
+            //This means the access chain has ended.
+            break;
         }
 
+        //Return the completed chain access.
         return result;
     }
 
+    reset(start);
     return nullptr;
 
 }

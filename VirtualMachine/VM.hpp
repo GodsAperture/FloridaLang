@@ -112,7 +112,9 @@ public:
         //Adjust the start of the program.
         instructionNumber = programInstructions.size();
         //Generate the rest of the instructions.
-        input.stack->AST->FLVMCodeGen(programInstructions);
+        //This is always a `Scope`.
+        
+        dynamic_cast<Scope*>(input.stack->AST)->body->FLVMCodeGen(programInstructions);
         //Obtain the abstract syntax tree.
         AST = input.stack->AST;
         //Obtain all function definitions

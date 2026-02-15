@@ -12,3 +12,7 @@ object thing3{
     thing1 first;
     thing2 second;
 }
+
+thing3 x;
+
+x.second.first.first = 3.0;

@@ -64,26 +64,21 @@ public:
 class Variable : public Node{
 public:
     Token thisToken;//There exists a default Token() constructor.
-    //0 = local, 1 = middle, 2 = global, 3 = heap, 4 = error. 
-    char where = 4;
     Scope* owner = nullptr;
-    //The `byte index` will be pushed onto the stack and then the
-    //`stack index` will be put into the instruction.
-    //Together, these will grab the correct value of the correct byte size.
-    //stackBytePosition / 8 = `stack index`.
-    //stackBytePosition % 8 = `byte index`.
+    //`stackOffset` = stackBytePosition >> 3.
+    //`byteOffset` = (stackBytePostion % 8) / allocationSize(variable->type).
+    //Example: computationStack[`stackIndex`].fixed1[`byteOffset`]
     int64_t stackBytePosition = -1;
     types value;
     Variable* next = nullptr;
     //Applicable only if the variable is not a primitive type.
     ObjectClass* objectType = nullptr;
-
+    
     Variable();
     //I get this comes off as really janky, but whatever, it's convenient.
     void operator=(Variable* input){
         this->thisToken = input->thisToken;
         this->owner = input->owner;
-        this->where = input->where;
         this->stackBytePosition = input->stackBytePosition;
         this->value = input->value;
         this->next = input->next;
@@ -93,6 +88,8 @@ public:
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
+    //Generates the appropriate assignment instruction. 
+    void AssignCodeGen(std::vector<Instruction>& inInstructions);
     Node* copy(StackAllocator& input) override;
     Variable* pcopy(StackAllocator& input);
 };
@@ -201,7 +198,7 @@ public:
 
 
 //General operator classes.
-//This will let group all other operators together.
+//This will let me group all other operators together.
 class Operators : public Node{
 public:
     std::string_view name;
@@ -689,13 +686,13 @@ public:
     //`left` will only be a `Variable`, `MemberAccess`, or a `Dereference`.
     Node* left = nullptr;
     Variable* right = nullptr;
-    //Only the outermost `MemberAccess` will have a `stackBytePosition` != -1.
-    int64_t stackBytePosition = -1;
+    ObjectClass* thisObject = nullptr;
     
     MemberAccess();
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
+    void AssignCodeGen(std::vector<Instruction>& inInstructions);
     Node* copy(StackAllocator& input) override;
     MemberAccess* pcopy(StackAllocator& input);
 
@@ -706,12 +703,14 @@ class Dereference : public Node{
 public:
     //`left` will only be a `Variable`, `MemberAccess`, or a `Dereference`.
     Node* left = nullptr;
-    Node* right = nullptr;
+    Variable* right = nullptr;
+    ObjectClass* thisObject = nullptr;
     
     Dereference();
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string printAll() override;
     void FLVMCodeGen(std::vector<Instruction>& inInstructions) override;
+    void AssignCodeGen(std::vector<Instruction>& inInstructions);
     Node* copy(StackAllocator& input) override;
     Dereference* pcopy(StackAllocator& input);
 

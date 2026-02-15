@@ -31,6 +31,8 @@ inline void FloridaVM::edit(types input){
 
 void FloridaVM::infoPrint(){
     std::cout << "--Instruction number: " << instructionNumber << "\n";
+    std::cout << "--Literal: " << programInstructions[instructionNumber].literal.fixed8 << "\n";
+    std::cout << "--Secondary: " << programInstructions[instructionNumber].secondary << "\n";
     std::cout << "--Stack size: " << stackSize << "\n";
     std::cout << "--Call Stack count: " << BPStackSize / 2 << "\n";
     std::cout << "\n";
@@ -112,7 +114,7 @@ void FloridaVM::printAll(){
 
     result += "\t(*MAIN SCRIPT*)\n";
 
-    std::cout << result + AST->printAll();
+    std::cout << result + dynamic_cast<Scope*>(AST)->body->printAll();
 }
 
 char FloridaVM::next(){

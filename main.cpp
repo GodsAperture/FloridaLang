@@ -93,25 +93,25 @@ int main(){
 	//Debug the bytecode.
 
 	//Execute the instructions.
-	bool successful = true;
+	char returnCode = 1;
 	uint64_t counter = 0;
 	bool infoPrinter = 1;
 	uint64_t VMBreaker = 7;
 
 	//Use this to skip loads of nonsense in the VM's execution and print information.	
-	for(uint64_t i = 0; (i < VMBreaker) or successful; i++){
+	for(uint64_t i = 0; (i < VMBreaker) or (returnCode != 1); i++){
 		//This is just useful for debugging the VM.
 		if(infoPrinter){
 			std::cout << "--Counter: " << counter << "\n";
 			Florida.infoPrint();
 			counter++;
 		}
-		successful = Florida.next();
+		returnCode = Florida.next();
 	}
 
 	//Standard method for VM execution.
-	while(successful){
-		successful = Florida.next();
+	while(returnCode){
+		returnCode = Florida.next();
 		counter++;
 	}
 

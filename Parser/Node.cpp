@@ -945,7 +945,7 @@ std::string assignPad(FloridaType input, char where){
         if(dynamic_cast<Function*>(current) == nullptr){
             current->FLVMCodeGen(inInstructions);
             //After the line has finished execution, pop it from the stack.
-            inInstructions.push_back(Instruction(Operation::pop));
+            //inInstructions.push_back(Instruction(Operation::pop));
         }
         //If next isn't a nullptr, then generate code for it too.
         if(next != nullptr){
@@ -1006,36 +1006,41 @@ std::string assignPad(FloridaType input, char where){
         std::string byteSize = std::to_string(allocationSize(type));
         std::string contextComment = "(*Variable " + thisToken.getName() + " || stackOffset: " + stackOffset + " byteOffset: " + byteOffset + " *)\n";
 
-        if(where == 0){
-            return padding2(padding("lfetch" + byteSize) + stackOffset) + contextComment;
-        }
-        if(where == 1){
-            return padding2(padding("push") + std::to_string(owner->whichScope)) + "(*scope: " + std::string(owner->name) + "*)\n" +
-            padding2(padding("mfetch" + byteSize) + stackOffset) + contextComment;
-        }
-        if(where == 2){
-            return padding2(padding("push" + byteOffset)) + "\n" +
-            padding2(padding("gfetch" + byteSize) + stackOffset) + contextComment;
-        }
-        if(where == 3){
-            return padding2(padding("push") + "HEAP_ADDRESS") + "(*Determined at run time*)" + "\n" +
-            padding2(padding("hfetch" + byteSize) + std::to_string(stackBytePosition)) + contextComment;
-        }
         return "";
     }
 
     void Variable::FLVMCodeGen(std::vector<Instruction>& inInstructions){
-        Instruction pushInstruction;
-        pushInstruction.oper = Operation::push;
-        pushInstruction.literal.fixed8 = stackBytePosition;
-        pushInstruction.secondary = owner->whichScope;
+        //Check if the variable is an object.
+        //If it is, fetch everything.
+        if(objectType != nullptr){
+            Instruction theFetch;
+            theFetch.oper = Operation::fetch8;
+            theFetch.secondary = owner->whichScope;
+            //This will fetch the full object.
+            for(uint64_t i = 0; i < objectType->memorySize / 8; i++){
+                theFetch.literal.fixed8 = stackBytePosition + i * 8;
+                inInstructions.push_back(theFetch);
+            }
+
+            return;
+        }
+
+        Instruction theFetch;
+        //More math-magic. I can map the `type` to the correct `operation`.
+        int64_t bitmask = 7L;
+        theFetch.oper = (Operation) ((bitmask & (type - FloridaType::ufixed1)) + Operation::assign1);
+        //This is where in the stack the variable starts.
+        theFetch.literal.fixed8 = stackBytePosition;
+        //This is useful for finding which scope in the stack the variable exists.
+        theFetch.secondary = owner->whichScope;
+
+        inInstructions.push_back(theFetch);
     }
 
     Node* Variable::copy(StackAllocator& input){
         Variable* thisptr = input.alloc<Variable>();
 
         thisptr->thisToken = thisToken;
-        thisptr->where = where;
         thisptr->stackBytePosition = stackBytePosition;
         thisptr->value = value;
         thisptr->type = type;
@@ -1047,7 +1052,6 @@ std::string assignPad(FloridaType input, char where){
         Variable* thisptr = input.alloc<Variable>();
 
         thisptr->thisToken = thisToken;
-        thisptr->where = where;
         thisptr->stackBytePosition = stackBytePosition;
         thisptr->value = value;
         thisptr->type = type;
@@ -1101,6 +1105,9 @@ std::string assignPad(FloridaType input, char where){
                     assign.oper = Operation::assign8;
                     break;
             }
+
+            //This isn't the finished solution. I still need to fix this.
+            inInstructions.push_back(assign);
         }
     }
 
@@ -1159,48 +1166,68 @@ std::string assignPad(FloridaType input, char where){
         MemberAccess* theMemberAccess = nullptr;
         Dereference* theDereference = nullptr;
 
-        theVariable = dynamic_cast<Variable*>(left);
-        theMemberAccess = dynamic_cast<MemberAccess*>(left);
-        theDereference = dynamic_cast<Dereference*>(left);
-
         std::cout << "FIX ASSIGNMENT::PRINTALL()\n";
 
-        return "";
-
+        theMemberAccess = dynamic_cast<MemberAccess*>(left);
         if(theMemberAccess != nullptr){
+            left->printAll();
             theVariable = theMemberAccess->right;
         }
 
+        theDereference = dynamic_cast<Dereference*>(left);
         if(theDereference != nullptr){
-            //theVariable = theDereference->right;
+            theVariable = theDereference->right;
         }
         
+        theVariable = dynamic_cast<Variable*>(left);
         if(theVariable != nullptr){
-            switch(theVariable->where){
-                case 0:
-                    returnType = "lassign";
-                    break;
-                case 1:
-                    returnType = "massign";
-                    break;
-                case 2: 
-                    returnType = "gassign";
-                    break;
-                case 3:
-                    returnType = "hassign";
-                    break;
-            }
+
         }
 
-        return right->printAll() + 
-        left->printAll() +
-        "lassign\n";
+        return left->printAll() + 
+        right->printAll() +
+        "assign\n";
 
     }
 
     void Assignment::FLVMCodeGen(std::vector<Instruction>& inInstructions){
-        Instruction assign;
-        std::cout << "FIX ASSIGNMENT::FLVMCODEGEN()\n";
+        //Evaluate the right hand side before assigning.
+        if(right != nullptr){
+            right->FLVMCodeGen(inInstructions);
+        }
+        //Generate the fetch instructions for this object.
+        //These will be changed to assignment instructions.
+        left->FLVMCodeGen(inInstructions);
+        Variable* theVariable = nullptr;
+        MemberAccess* theAccess = nullptr;
+        Dereference* theDereference = nullptr;
+
+        theVariable = dynamic_cast<Variable*>(left);
+        if(theVariable != nullptr){
+            //If the variable is an object,
+            //then we might change more than one instruction.
+            if(theVariable->objectType != nullptr){
+                //Change all the instructions to the appropriate kind.
+                for(int64_t i = 0; i < theVariable->objectType->code->variableSlotSize >> 3; i++){
+                    inInstructions[inInstructions.size() - 1 - i].oper = Operation::assign8;
+                }
+            } else {
+                if((inInstructions.back().oper >= Operation::fetch1) & (inInstructions.back().oper <= fetch8)){
+                    //Fetch instructions and assign instructions are exactly 4 apart.
+                    inInstructions.back().oper = (Operation) (inInstructions.back().oper + 4);
+                }
+            }
+        }
+
+        theAccess = dynamic_cast<MemberAccess*>(left);
+        if(theAccess != nullptr){
+            //Do shit
+        }
+
+        theDereference = dynamic_cast<Dereference*>(left);
+        if(theDereference != nullptr){
+            //Stuff
+        }
     }
 
     Node* Assignment::copy(StackAllocator& input){
@@ -2693,10 +2720,11 @@ std::string assignPad(FloridaType input, char where){
         Node* currentNode = left;
 
         //I cannot recursively descend these nodes if I want to to optimize this.
-        while(true){
+        while(false){
             theAccess = dynamic_cast<MemberAccess*>(currentNode);
             if(theAccess != nullptr){
                 result = "";
+                return result;
             }
         }
 
@@ -2704,17 +2732,35 @@ std::string assignPad(FloridaType input, char where){
     }
 
     void MemberAccess::FLVMCodeGen(std::vector<Instruction>& inInstructions){
-        //Variable* theVariable = nullptr;
+        Variable* theVariable = nullptr;
         MemberAccess* theAccess = nullptr;
-        //Dereference* theDereference = nullptr;
+        Dereference* theDereference = nullptr;
         Node* currentNode = left;
-        Instruction theFetch;
 
-        //I cannot recursively descend these nodes if I want to to optimize this.
-        while(true){
-            theAccess = dynamic_cast<MemberAccess*>(currentNode);
-            if(theAccess != nullptr){
+        //This will create a push instruction or adjust the literal of the instruction.
+        theAccess = dynamic_cast<MemberAccess*>(currentNode);
+        if(theAccess != nullptr){
+            theAccess->left->FLVMCodeGen(inInstructions);
+            if(inInstructions.back().oper == Operation::push){
+                inInstructions.back().literal.fixed8 += theAccess->right->stackBytePosition;
+            } else {
+                Instruction thePush;
+                thePush.oper = Operation::push;
+                inInstructions.push_back(thePush);
             }
+        }
+
+        //This will create a dereference instruction for the object.
+        theDereference = dynamic_cast<Dereference*>(currentNode);
+        if(theDereference != nullptr){
+            theDereference->left->FLVMCodeGen(inInstructions);  
+            //The instructions for this don't exist yet.
+        }
+
+        //Reaching a variable means that the chain has ended.
+        theVariable = dynamic_cast<Variable*>(currentNode);
+        if(theVariable != nullptr){
+            theVariable->FLVMCodeGen(inInstructions);
         }
     }
 
@@ -2736,6 +2782,8 @@ std::string assignPad(FloridaType input, char where){
         return result;
     }
 
+
+
 //Dereference
     Dereference::Dereference(){
         //Do nothing
@@ -2751,14 +2799,41 @@ std::string assignPad(FloridaType input, char where){
     }
 
     void Dereference::FLVMCodeGen(std::vector<Instruction>& inInstructions){
-        //TO DO
+        Variable* theVariable = nullptr;
+        MemberAccess* theAccess = nullptr;
+        Dereference* theDereference = nullptr;
+        Node* currentNode = left;
+
+        theAccess = dynamic_cast<MemberAccess*>(currentNode);
+        if(theAccess != nullptr){
+            theAccess->left->FLVMCodeGen(inInstructions);
+            if(inInstructions.back().oper == Operation::push){
+                inInstructions.back().literal.fixed8 += theAccess->right->stackBytePosition;
+            } else {
+                Instruction thePush;
+                thePush.oper = Operation::push;
+                inInstructions.push_back(thePush);
+            }
+        }
+
+        theDereference = dynamic_cast<Dereference*>(currentNode);
+        if(theDereference != nullptr){
+            theDereference->left->FLVMCodeGen(inInstructions);
+            //The instructions for this don't exist yet.
+        }
+
+        //Reaching a variable means that the chain has ended.
+        theVariable = dynamic_cast<Variable*>(currentNode);
+        if(theVariable != nullptr){
+            theVariable->FLVMCodeGen(inInstructions);
+        }
     }
 
     Node* Dereference::copy(StackAllocator& input){
         Dereference* result = input.alloc<Dereference>();
 
         result->left = left->copy(input);
-        result->right = right->copy(input);
+        result->right = right->pcopy(input);
 
         return result;
     }
@@ -2767,7 +2842,7 @@ std::string assignPad(FloridaType input, char where){
                 Dereference* result = input.alloc<Dereference>();
         
         result->left = left->copy(input);
-        result->right = right->copy(input);
+        result->right = right->pcopy(input);
 
         return result;
     }

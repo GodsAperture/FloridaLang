@@ -16,11 +16,6 @@ enum Operation : int16_t {
     cjump,
     jump,
 
-    //gfetch = global variable fetch
-    //mfetch = middle of the stack variable fetch
-    //lfetch = local scope variable fetch
-    //hfetch = heap variable fetch
-
     fetch1,
     fetch2,
     fetch4,
