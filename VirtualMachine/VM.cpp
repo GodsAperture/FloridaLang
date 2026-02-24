@@ -1,7 +1,7 @@
 #include "VM.hpp"
 #include <stdint.h>
 
-inline void FloridaVM::push(types& input){
+inline void FloridaVM::push(types input){
     computationStack[stackSize - 1] = input;
     stackSize++;
 }
@@ -105,6 +105,130 @@ uint64_t FloridaVM::INPop(){
 
 
 
+//Add the two numbers in question.
+inline types add(types left, types right, types theType){
+    types result;
+    switch(theType.type[0]){
+        case FloridaType::ufixed8:
+            result.ufixed8 = left.ufixed8 + right.ufixed8;
+            return result;
+        case FloridaType::ufixed4:
+            result.ufixed4[0] = left.ufixed4[0] + right.ufixed4[0];
+            return result;
+        case FloridaType::fixed8:
+            result.fixed8 = left.fixed8 + right.fixed8;
+            return result;
+        case FloridaType::fixed4:
+            result.fixed4[0] = left.fixed4[0] + right.fixed4[0];
+            return result;
+        case FloridaType::float8:
+            result.float8 = left.float8 + right.float8;
+            return result;
+        case FloridaType::float4:
+            result.float4[0] = left.float4[0] + right.float4[0];
+            return result;
+        default:
+            //This is an error.
+            return result;
+    }
+    return result;
+}
+
+
+
+//Subtract the two numbers in question.
+inline types subtract(types left, types right, types theType){
+    types result;
+    switch(theType.type[0]){
+        case FloridaType::ufixed8:
+            result.ufixed8 = left.ufixed8 - right.ufixed8;
+            return result;
+        case FloridaType::ufixed4:
+            result.ufixed4[0] = left.ufixed4[0] - right.ufixed4[0];
+            return result;
+        case FloridaType::fixed8:
+            result.fixed8 = left.fixed8 - right.fixed8;
+            return result;
+        case FloridaType::fixed4:
+            result.fixed4[0] = left.fixed4[0] - right.fixed4[0];
+            return result;
+        case FloridaType::float8:
+            result.float8 = left.float8 - right.float8;
+            return result;
+        case FloridaType::float4:
+            result.float4[0] = left.float4[0] - right.float4[0];
+            return result;
+        default:
+            //This is an error.
+            return result;
+    }
+    return result;
+}
+
+
+
+//Multiply the two numbers in question.
+inline types multiply(types left, types right, types theType){
+    types result;
+    switch(theType.type[0]){
+        case FloridaType::ufixed8:
+            result.ufixed8 = left.ufixed8 * right.ufixed8;
+            return result;
+        case FloridaType::ufixed4:
+            result.ufixed4[0] = left.ufixed4[0] * right.ufixed4[0];
+            return result;
+        case FloridaType::fixed8:
+            result.fixed8 = left.fixed8 * right.fixed8;
+            return result;
+        case FloridaType::fixed4:
+            result.fixed4[0] = left.fixed4[0] * right.fixed4[0];
+            return result;
+        case FloridaType::float8:
+            result.float8 = left.float8 * right.float8;
+            return result;
+        case FloridaType::float4:
+            result.float4[0] = left.float4[0] * right.float4[0];
+            return result;
+        default:
+            //This is an error.
+            return result;
+    }
+    return result;
+}
+
+
+
+//Divide the two numbers in question.
+inline types divide(types left, types right, types theType){
+    types result;
+    switch(theType.type[0]){
+        case FloridaType::ufixed8:
+            result.ufixed8 = left.ufixed8 / right.ufixed8;
+            return result;
+        case FloridaType::ufixed4:
+            result.ufixed4[0] = left.ufixed4[0] / right.ufixed4[0];
+            return result;
+        case FloridaType::fixed8:
+            result.fixed8 = left.fixed8 / right.fixed8;
+            return result;
+        case FloridaType::fixed4:
+            result.fixed4[0] = left.fixed4[0] / right.fixed4[0];
+            return result;
+        case FloridaType::float8:
+            result.float8 = left.float8 / right.float8;
+            return result;
+        case FloridaType::float4:
+            result.float4[0] = left.float4[0] / right.float4[0];
+            return result;
+        default:
+            //This is an error.
+            return result;
+    }
+    return result;
+}
+
+
+
 void FloridaVM::printAll(){
     std::cout << "\n    ====Instruction set debugger====\n\n";
     std::string result = "";
@@ -134,16 +258,16 @@ char FloridaVM::next(){
     const int64_t bitmask1 = 7;
 
     //Check to see if all of instructions have been executed.
-    if(instructionNumber >= programInstructions.size()){
+    if(instructionNumber >= programInstructions->maxByteCount >> 3){
         return false;
     }
 
     //Other variables that exist for convenience.
-    Instruction current = programInstructions[instructionNumber];
-    switch (programInstructions[instructionNumber].oper){
+    Operation current = programInstructions->next().operation[0];
+    switch (current){
         ////VM related instructions.
         case Operation::push:
-            push(programInstructions[instructionNumber].literal);
+            push(programInstructions->next());
             break;
         case Operation::pop:
             stackSize--;
@@ -152,7 +276,7 @@ char FloridaVM::next(){
             //Push the current Instruction number to the INStack.
             INPush(instructionNumber);            
             //Move the instruction to the start of its instruction set.
-            instructionNumber = programInstructions[instructionNumber].literal.fixed8;
+            instructionNumber = programInstructions->next().fixed8;
             return true;
         case Operation::newScope:
             //Use left to get the correct UniqueScope.

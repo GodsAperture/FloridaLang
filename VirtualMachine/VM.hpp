@@ -17,7 +17,7 @@ public:
     //The current instruction.
     size_t instructionNumber = 0;
     //All of the program instructions.
-    std::vector<Instruction> programInstructions = std::vector<Instruction>();
+    Instructions* programInstructions = new Instructions(512);
     //The stack of the language.
     types* computationStack = nullptr;
     int64_t stackSize = 0;
@@ -56,7 +56,7 @@ public:
 ////Computation stack specific tools.
 
     //Push the given value to the computation stack.
-    inline void push(types& input);
+    inline void push(types input);
     //Pop `input` values from the computation stack.
     inline void pop(int64_t input);
     //Pop a single object from the computation stack.

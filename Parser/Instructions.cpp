@@ -39,6 +39,10 @@ enum Operation : int16_t {
     //Unfortunately, this also means I have to define ALL of them in VM.
     //C'est la vie.
 
+    //Takes the form `Operation::typecast` followed by the starting type
+    //and then the resulting type.
+    typecast,
+
     //All ufixed1TO casts.
     ufixed1TOufixed1,
     ufixed1TOufixed2,
@@ -162,6 +166,19 @@ enum Operation : int16_t {
     //All math instructions are also organized as such so I
     //can use a math trick to get the correct instruction.
 
+    //Takes the form `Operation::multiply` followed by the type.
+    //`types.operation[0]` `types.type[1]` `types.type[2]`.
+    multiply,
+    //Takes the form `Operation::divide` followed by the type.
+    divide,
+    //Takes the form `Operation::add` followed by the type.
+    add,
+    //Takes the form `Operation::subtract` followed by the type.
+    subtract,
+    negate,
+    //Takes the form `Operation::exponent` followed by the type.
+    exponent,
+
     //ufixed1 math instructions
     ufixed1multiply,
     ufixed1divide,
@@ -270,46 +287,94 @@ union types{
     uint16_t ufixed2[4];
     uint8_t ufixed1[8];
 
+    //Information
+    FloridaType type[4];
+    Operation operation[4];
+
     //Heap thrown objects.
     types* object;
 
     types(){
         object = nullptr;
     }
-};  
+};
 
-//16-byte representation of an `Instruction` for the Florida Virtual Machine.
-class Instruction{
+//Instruction debugger exists to write clean IR code to the terminal.
+class InstructionsDebugger{
 public:
-    //2 bytes, totalling 2 bytes.
-    FloridaType type;
-    //2 bytes, totalling 4 bytes.
-    Operation oper;
-    //4 bytes, totalling 8 bytes.
-    //This will be used to pair information together with the `literal`.
-    //This is reserved for `whichScope`.
-    int32_t secondary;
-    //8 bytes, totalling 16 bytes.
-    //This is reserved for `stackByteOffset`.
-    types literal;
+    std::string_view name;
+    types* body = nullptr;
+    std::string comment = "";
+    std::string_view end;
+    //This is measured in multiples of 8.
+    uint64_t byteCount = 0;
+    uint64_t maxByteCount = 0;
+    InstructionsDebugger* next = nullptr;
 
-    Instruction(){
-        //Do nothing, just make the compiler stop complaining.
+    InstructionsDebugger(){
+        //Do nothing.
+    };
+
+    void push(types input){
+        if(byteCount < maxByteCount){
+            body[byteCount] = input;
+        } else {
+            body = (types*) realloc(body, 2 * maxByteCount);
+            maxByteCount *= 2;
+            body[byteCount] = input;
+            byteCount++;
+        }
+    }
+};
+
+//The class that will contain all of the instructions for the virtual machine.
+class Instructions{
+public:
+    types* instructionSet = nullptr;    
+    InstructionsDebugger* debuggedIR = nullptr;
+    //This is measured in multiples of 8.
+    uint64_t byteCount = 0;
+    uint64_t maxByteCount = 0;
+    //Normally this would be a 
+    uint64_t currentInstruction = 0;
+
+    //`input` is for the number of instructions.
+    //This will change dynamically and then after finishing
+    //excess memory will be freed up.
+    Instructions(uint64_t input){
+        //This guarantees that maxByteCount is a multiple of 8.
+        maxByteCount = 7L & (8 - (7L & input)) + input;
+        //Generate a region for the bytecode.
+        instructionSet = (types*) malloc(maxByteCount);
     }
 
-    Instruction(Operation inOper){
-        oper = inOper;
+    //Adds the `types` to the instruction set.
+    void push(types input){
+        if(byteCount < maxByteCount){
+            instructionSet[byteCount] = input;
+        } else {
+            instructionSet = (types*) realloc(instructionSet, 2 * maxByteCount);
+            maxByteCount *= 2;
+            instructionSet[byteCount] = input;
+            byteCount++;
+        }
     }
 
-    Instruction(Operation inOper, int64_t inPosition){
-        oper = inOper;
-        literal.fixed8 = inPosition;
+    //Returns the current instruction in the instruction set and increments.
+    inline types next(){
+        return instructionSet[currentInstruction++];
     }
 
-    Instruction(FloridaType inType, Operation inOperation, types inLiteral){
-        type = inType;
-        oper = inOperation;
-        literal = inLiteral;
+    //Only grab `types` of sizes 1, 2, 4, and 8.
+    inline types grab(uint64_t size){
+        types result;
+
+        for(uint64_t i = 0; i < size; i++){
+            result.fixed1[i] = instructionSet[byteCount >> 3].fixed1[7L & byteCount];
+            byteCount++;
+        }
+
+        return result;
     }
 
 };
