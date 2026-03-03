@@ -13,7 +13,7 @@
             },
             {
                 "type": "cppbuild",
-                "label": "makeFile",
+                "label": "makefile",
                 "command": "/usr/bin/g++",
                 "args": [
                     "-fdiagnostics-color=always",

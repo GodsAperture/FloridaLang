@@ -9,26 +9,37 @@ class Scope;
 
 //2 byte representation for all operations.
 enum Operation : int16_t {
+    //`newScope`, `whichScope`, `variableSlotSize`
     newScope,
+    //`deleteScope`, `whichScope`
     deleteScope,
     call,
     ireturn,
     cjump,
     jump,
 
+    //`fetch1`, `whichScope`, `stackOffset`
     fetch1,
+    //`fetch2`, `whichScope`, `stackOffset`
     fetch2,
+    //`fetch4`, `whichScope`, `stackOffset`
     fetch4,
+    //`fetch8`, `whichScope`, `stackOffset`
     fetch8,
 
+    //`assign1`, `whichScope`, `stackOffset`
     assign1,
+    //`assign2`, `whichScope`, `stackOffset`
     assign2,
+    //`assign4`, `whichSCope`, `stackOffset`
     assign4,
+    //`assign8`, `whichScope`, `stackOffset`
     assign8,
 
-    //`Push` will contain the literal to be pushed.
+    //`Push`, primitive.
     push,
-    //`pop` will "remove" the top most element of the stack.
+    //`pop`, fixed8.
+    //The fixed8 determines how many elements are popped.
     pop,
 
     //All type casts
@@ -39,8 +50,7 @@ enum Operation : int16_t {
     //Unfortunately, this also means I have to define ALL of them in VM.
     //C'est la vie.
 
-    //Takes the form `Operation::typecast` followed by the starting type
-    //and then the resulting type.
+    //`typecast`, starting type, ending type
     typecast,
 
     //All ufixed1TO casts.
@@ -167,16 +177,17 @@ enum Operation : int16_t {
     //can use a math trick to get the correct instruction.
 
     //Takes the form `Operation::multiply` followed by the type.
-    //`types.operation[0]` `types.type[1]` `types.type[2]`.
+    //`multiply`, type
     multiply,
-    //Takes the form `Operation::divide` followed by the type.
+    //`divide`, type
     divide,
-    //Takes the form `Operation::add` followed by the type.
+    //`add`, type
     add,
-    //Takes the form `Operation::subtract` followed by the type.
+    //`subtract`, type
     subtract,
+    //`negate`
     negate,
-    //Takes the form `Operation::exponent` followed by the type.
+    //`exponent`
     exponent,
 
     //ufixed1 math instructions
@@ -248,6 +259,8 @@ enum Operation : int16_t {
     float8add,
     float8subtract,
     float8negate,
+
+
 
     //Object comparisons
     equals,
@@ -333,8 +346,8 @@ public:
     types* instructionSet = nullptr;    
     InstructionsDebugger* debuggedIR = nullptr;
     //This is measured in multiples of 8.
-    uint64_t byteCount = 0;
-    uint64_t maxByteCount = 0;
+    uint64_t instructionCount = 0;
+    uint64_t maxInstructionCount = 0;
     //Normally this would be a 
     uint64_t currentInstruction = 0;
 
@@ -343,20 +356,20 @@ public:
     //excess memory will be freed up.
     Instructions(uint64_t input){
         //This guarantees that maxByteCount is a multiple of 8.
-        maxByteCount = 7L & (8 - (7L & input)) + input;
+        maxInstructionCount = 7L & (8 - (7L & input)) + input;
         //Generate a region for the bytecode.
-        instructionSet = (types*) malloc(maxByteCount);
+        instructionSet = (types*) malloc(maxInstructionCount);
     }
 
     //Adds the `types` to the instruction set.
     void push(types input){
-        if(byteCount < maxByteCount){
-            instructionSet[byteCount] = input;
+        if(instructionCount < maxInstructionCount){
+            instructionSet[instructionCount] = input;
         } else {
-            instructionSet = (types*) realloc(instructionSet, 2 * maxByteCount);
-            maxByteCount *= 2;
-            instructionSet[byteCount] = input;
-            byteCount++;
+            instructionSet = (types*) realloc(instructionSet, 2 * maxInstructionCount);
+            maxInstructionCount *= 2;
+            instructionSet[instructionCount] = input;
+            instructionCount++;
         }
     }
 
@@ -370,8 +383,8 @@ public:
         types result;
 
         for(uint64_t i = 0; i < size; i++){
-            result.fixed1[i] = instructionSet[byteCount >> 3].fixed1[7L & byteCount];
-            byteCount++;
+            result.fixed1[i] = instructionSet[instructionCount >> 3].fixed1[7L & instructionCount];
+            instructionCount++;
         }
 
         return result;

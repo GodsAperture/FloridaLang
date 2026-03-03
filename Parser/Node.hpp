@@ -36,13 +36,11 @@ public:
     Node& operator=(const Node&&) = delete;
 
     //Prints the program back to the user in a proper format.
-    virtual std::string ToString(std::string inLeft, std::string inRight) = 0;
+    virtual void ToString(std::string inLeft, std::string inRight) = 0;
     //Prints out the program as its bytecode.
     virtual std::string printAll() = 0;
     virtual void FLVMCodeGen(Instructions* inInstructions) = 0;
-    virtual Node* copy(StackAllocator& input) = 0;
     //virtual Node* differentiate(int64_t input) = 0;
-
     virtual ~Node(){};
 };
 
@@ -52,13 +50,9 @@ public:
     Body* next = nullptr;
 
     Body();
-    Body(Node* input);
     Body* append(Body* input);
-    std::string ToString(std::string inLeft, std::string inRight) override;
-    
+    void ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
-    Node* copy(StackAllocator& input) override;
-    Body* pcopy(StackAllocator& input);
 };
 
 class Variable : public Node{
@@ -85,13 +79,10 @@ public:
         this->objectType = input->objectType;
     };
     void append(Variable* input);
-    std::string ToString(std::string inLeft, std::string inRight) override;
-    
+    void ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
     //Generates the appropriate assignment instruction. 
     void AssignCodeGen(Instructions* inInstructions);
-    Node* copy(StackAllocator& input) override;
-    Variable* pcopy(StackAllocator& input);
 };
 
 class Scope : public Node{
@@ -148,14 +139,11 @@ class Scope : public Node{
         Function* getFunction(std::string_view input);
         //Determine if the variable in question is global, middle, local, or in the heap.
         char whereVariable(std::string_view input);
-
         //Standard methods.
         Scope();
-        std::string ToString(std::string inLeft, std::string inRight) override;
-        
+        void ToString(std::string inLeft, std::string inRight) override;
         void FLVMCodeGen(Instructions* inInstructions) override;
-        Node* copy(StackAllocator& input) override;
-        Scope* pcopy(StackAllocator& input);
+        
     };
 
 class Initialize : public Node{
@@ -169,12 +157,8 @@ public:
     Node* code = nullptr;
 
     Initialize();
-    std::string ToString(std::string inLeft, std::string inRight) override;
-    
+    void ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
-    Node* copy(StackAllocator& input) override;
-    virtual Initialize* pcopy(StackAllocator& input);
-
     //Append the `input` to the end of the linked list `next` of Initializations.
     void append(Initialize* input);
     //Append `input` to the end of the `memoryOrder` linked list.
@@ -188,11 +172,8 @@ public:
     Node* right = nullptr;
 
     Assignment();
-    std::string ToString(std::string inLeft, std::string inRight) override;
-    
+    void ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
-    Node* copy(StackAllocator& input) override;
-    Assignment* pcopy(StackAllocator& input);
 };
 
 
@@ -204,12 +185,8 @@ public:
     Node* right = nullptr;
 
     Add();
-    Add(Node* LHE, Node* RHE);
-    std::string ToString(std::string inLeft, std::string inRight) override;
-    
+    void ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
-    Node* copy(StackAllocator& input) override;
-    Add* pcopy(StackAllocator& input);
 };
 
 class Subtract : public Node{
@@ -218,12 +195,8 @@ public:
     Node* right = nullptr;
 
     Subtract();
-    Subtract(Node* LHE, Node* RHE);
-    std::string ToString(std::string inLeft, std::string inRight) override;
-    
+    void ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
-    Node* copy(StackAllocator& input) override;
-    Subtract* pcopy(StackAllocator& input);
 };
 
 
@@ -234,12 +207,8 @@ public:
     Node* right = nullptr;
 
     Multiply();
-    Multiply(Node* LHE, Node* RHE);
-    std::string ToString(std::string inLeft, std::string inRight) override;
-    
+    void ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
-    Node* copy(StackAllocator& input) override;
-    Multiply* pcopy(StackAllocator& input);
 };
 
 class Divide : public Node{
@@ -248,12 +217,8 @@ public:
     Node* right = nullptr;
 
     Divide();
-    Divide(Node* LHE, Node* RHE);
-    std::string ToString(std::string inLeft, std::string inRight) override;
-    
+    void ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
-    Node* copy(StackAllocator& input) override;
-    Divide* pcopy(StackAllocator& input);
 };
 
 
@@ -263,12 +228,8 @@ public:
     Node* subexpression = nullptr;
 
     Parentheses();
-    Parentheses(Node* input);
-    std::string ToString(std::string inLeft, std::string inRight) override;
-    
+    void ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
-    Node* copy(StackAllocator& input) override;
-    Parentheses* pcopy(StackAllocator& input);
 };
 
 class Negative : public Node{
@@ -276,12 +237,8 @@ public:
     Node* right = nullptr;
 
     Negative();
-    Negative(Node* input);
-    std::string ToString(std::string inLeft, std::string inRight) override;
-    
+    void ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
-    Node* copy(StackAllocator& input) override;
-    Negative* pcopy(StackAllocator& input);
 };
 
 
@@ -292,11 +249,8 @@ public:
     types value;
 
     Primitive();
-    std::string ToString(std::string inLeft, std::string inRight) override;
-    
+    void ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
-    Node* copy(StackAllocator& input) override;
-    Primitive* pcopy(StackAllocator& input);
 };
 
 
@@ -307,11 +261,8 @@ public:
     Node* body = nullptr;
 
     TypecastClass();
-    std::string ToString(std::string inLeft, std::string inRight) override;
-    
+    void ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
-    Node* copy(StackAllocator& input) override;
-    TypecastClass* pcopy(StackAllocator& input);
 };
 
 
@@ -323,12 +274,8 @@ public:
     Node* right = nullptr;
 
     Equal();
-    Equal(Node* inLeft, Node* inRight);
-    std::string ToString(std::string inLeft, std::string inRight) override;
-    
+    void ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
-    Node* copy(StackAllocator& input) override;
-    Equal* pcopy(StackAllocator& input);
 };
 
 class NotEqual : public Node{
@@ -337,12 +284,8 @@ public:
     Node* right = nullptr;
 
     NotEqual();
-    NotEqual(Node* inLeft, Node* inRight);
-    std::string ToString(std::string inLeft, std::string inRight) override;
-    
+    void ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
-    Node* copy(StackAllocator& input) override;
-    NotEqual* pcopy(StackAllocator& input);
 };
 
 class GreaterThan : public Node{
@@ -351,12 +294,8 @@ public:
     Node* right = nullptr;
 
     GreaterThan();
-    GreaterThan(Node* inLeft, Node* inRight);
-    std::string ToString(std::string inLeft, std::string inRight) override;
-    
+    void ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
-    Node* copy(StackAllocator& input) override;
-    GreaterThan* pcopy(StackAllocator& input);
 };
 
 class GreaterThanOr : public Node{
@@ -365,12 +304,8 @@ public:
     Node* right = nullptr;
 
     GreaterThanOr();
-    GreaterThanOr(Node* inLeft, Node* inRight);
-    std::string ToString(std::string inLeft, std::string inRight) override;
-    
+    void ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
-    Node* copy(StackAllocator& input) override;
-    GreaterThanOr* pcopy(StackAllocator& input);
 };
 
 class LessThan : public Node{
@@ -379,12 +314,8 @@ public:
     Node* right = nullptr;
 
     LessThan();
-    LessThan(Node* inLeft, Node* inRight);
-    std::string ToString(std::string inLeft, std::string inRight) override;
-    
+    void ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
-    Node* copy(StackAllocator& input) override;
-    LessThan* pcopy(StackAllocator& input);
 };
 
 class LessThanOr : public Node{
@@ -393,12 +324,8 @@ public:
     Node* right = nullptr;
 
     LessThanOr();
-    LessThanOr(Node* inLeft, Node* inRight);
-    std::string ToString(std::string inLeft, std::string inRight) override;
-    
+    void ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
-    Node* copy(StackAllocator& input) override;
-    LessThanOr* pcopy(StackAllocator& input);
 };
 
 
@@ -410,12 +337,8 @@ public:
     Node* right = nullptr;
 
     Or();
-    Or(Node* inLeft, Node* inRight);
-    std::string ToString(std::string inLeft, std::string inRight) override;
-    
+    void ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
-    Node* copy(StackAllocator& input) override;
-    Or* pcopy(StackAllocator& input);
 };
 
 class And : public Node{
@@ -424,12 +347,8 @@ public:
     Node* right = nullptr;
 
     And();
-    And(Node* inLeft, Node* inRight);
-    std::string ToString(std::string inLeft, std::string inRight) override;
-    
+    void ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
-    Node* copy(StackAllocator& input) override;
-    And* pcopy(StackAllocator& input);
 };
 
 class Not : public Node{
@@ -437,12 +356,8 @@ public:
     Node* right = nullptr;
 
     Not();
-    Not(Node* inRight);
-    std::string ToString(std::string inLeft, std::string inRight) override;
-    
+    void ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
-    Node* copy(StackAllocator& input) override;
-    Not* pcopy(StackAllocator& input);
 };
 
 
@@ -456,11 +371,8 @@ public:
     size_t elseVarCount = 0;
 
     IfClass();
-    std::string ToString(std::string inLeft, std::string inRight) override;
-    
+    void ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
-    Node* copy(StackAllocator& input) override;
-    IfClass* pcopy(StackAllocator& input);
 };
 
 class ForLoop : public Node{
@@ -471,11 +383,8 @@ public:
     Scope* body = nullptr;
 
     ForLoop();
-    std::string ToString(std::string inLeft, std::string inRight) override;
-    
+    void ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
-    Node* copy(StackAllocator& input) override;
-    ForLoop* pcopy(StackAllocator& input);
 };
 
 class WhileLoop : public Node{
@@ -484,11 +393,8 @@ public:
     Scope* body = nullptr;
 
     WhileLoop();
-    std::string ToString(std::string inLeft, std::string inRight) override;
-    
+    void ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
-    Node* copy(StackAllocator& input) override;
-    WhileLoop* pcopy(StackAllocator& input);
 };
 
 class Function : public Node{
@@ -512,12 +418,9 @@ public:
     bool alreadyGenerated = false;
 
     Function();
-    std::string ToString(std::string inLeft, std::string inRight) override;
-    
+    void ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
     void append(Initialize* input);
-    Node* copy(StackAllocator& input) override;
-    Function* pcopy(StackAllocator& input);
 };
 
 class Arguments : public Node{
@@ -526,13 +429,9 @@ public:
     Arguments* next = nullptr;
 
     Arguments();
-    Arguments(Node* input);
-    std::string ToString(std::string inLeft, std::string inRight) override;
-    
+    void ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
     void append(Arguments* input);
-    Node* copy(StackAllocator& input) override;
-    Arguments* pcopy(StackAllocator& input);
 };
 
 class Call : public Node{
@@ -542,11 +441,8 @@ public:
 
     Call();
     Call(Function* inFunction);
-    std::string ToString(std::string inLeft, std::string inRight) override;
-    
+    void ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
-    Node* copy(StackAllocator& input) override;
-    Call* pcopy(StackAllocator& input);
 };
 
 class ReturnClass : public Node{
@@ -556,11 +452,8 @@ public:
     Node* statement = nullptr;
 
     ReturnClass();
-    std::string ToString(std::string inLeft, std::string inRight) override;
-    
+    void ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
-    Node* copy(StackAllocator& input) override;
-    ReturnClass* pcopy(StackAllocator& input);
 };
 
 
@@ -586,11 +479,11 @@ public:
 //     bool alreadyGenerated = false;
 //
 //     Method();
-//     std::string ToString(std::string inLeft, std::string inRight) override;
+//     void ToString(std::string inLeft, std::string inRight) override;
 //     
 //     void FLVMCodeGen(Instructions* inInstructions) override;
 //     void append(Variable* input);
-//     Node* copy(StackAllocator& input) override;
+//     
 //     Method* pcopy(StackAllocator& input);
 // };
 
@@ -609,12 +502,8 @@ public:
     ObjectClass* heapNext = nullptr;
 
     ObjectClass();
-    std::string ToString(std::string inLeft, std::string inRight) override;
-    
+    void ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
-    Node* copy(StackAllocator& input) override;
-    ObjectClass* pcopy(StackAllocator& input);
-
     //Given some variable name, get the offset for the object from this class' stack.
     int64_t whereVariable(std::string input);
     //Given some variable name, get the offset in memory for it.
@@ -630,13 +519,9 @@ public:
     ObjectClass* thisObject = nullptr;
     
     MemberAccess();
-    std::string ToString(std::string inLeft, std::string inRight) override;
-    
+    void ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
     void AssignCodeGen(Instructions* inInstructions);
-    Node* copy(StackAllocator& input) override;
-    MemberAccess* pcopy(StackAllocator& input);
-
     Variable* getBaseVariable();
 };
 
@@ -648,13 +533,10 @@ public:
     ObjectClass* thisObject = nullptr;
     
     Dereference();
-    std::string ToString(std::string inLeft, std::string inRight) override;
-    
+    void ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
     void AssignCodeGen(Instructions* inInstructions);
-    Node* copy(StackAllocator& input) override;
     Dereference* pcopy(StackAllocator& input);
-
     Variable* getBaseVariable();
 };
 

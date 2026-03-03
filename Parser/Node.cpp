@@ -252,8 +252,8 @@ std::string assignPad(FloridaType input, char where){
         type = FloridaType::Typecast;
     }
 
-    std::string TypecastClass::ToString(std::string inLeft, std::string inRight){
-        return body->ToString(inLeft, inRight);
+    void TypecastClass::ToString(std::string inLeft, std::string inRight){
+        body->ToString(inLeft, inRight);
     }
 
     void TypecastClass::FLVMCodeGen(Instructions* inInstructions){
@@ -267,19 +267,6 @@ std::string assignPad(FloridaType input, char where){
         inInstructions->push(result);
     }
 
-    Node* TypecastClass::copy(StackAllocator& input){
-        TypecastClass* result = input.alloc<TypecastClass>();
-        result->body = body->copy(input);
-
-        return result;
-    }
-
-    TypecastClass* TypecastClass::pcopy(StackAllocator& input){
-        TypecastClass* result = input.alloc<TypecastClass>();
-        result->body = body->copy(input);
-
-        return result;
-    }
 
 
 //Scope
@@ -474,78 +461,33 @@ std::string assignPad(FloridaType input, char where){
 
 
     
-    std::string Scope::ToString(std::string inLeft, std::string inRight){
+    void Scope::ToString(std::string inLeft, std::string inRight){
         if(body != nullptr){
-            return body->ToString(inLeft, ";");
-        } 
-        return "";
-    }
-
-    std::string Scope::printAll(){
-
-        return "newScope\n" + body->printAll() + "deleteScope\n";
+            body->ToString(inLeft, ";");
+        }
     }
 
     void Scope::FLVMCodeGen(Instructions* inInstructions){
-        Instruction result = Instruction();
-        result.oper = Operation::push;
-        result.literal.fixed8 = whichScope;
-        //Be sure to add this otherwise I can never adjust the unique scopes.
-        inInstructions.push_back(result);
+        types result;
+
         //The new scope will use the last value to pick the proper scope and adjust its value.
-        inInstructions.push_back(Instruction(newScope));
+        result.operation[0] = Operation::newScope;
+        inInstructions->push(result);
+        //Be sure to add this otherwise I can never adjust the unique scopes.
+        result.fixed8 = whichScope;
+        inInstructions->push(result);
         //This is so I can preemptively allocate slots for the scope's variables.
-        Instruction initializeCount = Instruction();
-        initializeCount.literal.fixed8 = variableSlotSize;
-        inInstructions.push_back(initializeCount);
+        result.fixed8 = variableSlotSize;
+        inInstructions->push(result);
         if(body != nullptr){
             body->FLVMCodeGen(inInstructions);
         }
-        //Add it here to be able to adjust the unique Scope here too.
-        inInstructions.push_back(result);
-        inInstructions.push_back(Instruction(deleteScope));
-    }
-
-    Node* Scope::copy(StackAllocator& input){
-        Scope* thisptr = input.alloc<Scope>();
-        //If this is the first scope, then it's global and current.
-        if(input.currentScope == nullptr){
-            input.globalScope = thisptr;
-            input.currentScope = thisptr;
-        } else {
-        //Otherwise, the currentScope is now the parent
-        //and change thisptr to be the currentScope.
-            thisptr->parent = input.currentScope;
-            input.currentScope = thisptr;
-        }
-        //Don't directly copy the variables, functions, or classes.
-        //Add them as you find them to avoid future issues.
-        if(body != nullptr){
-            thisptr->body = (Body*) body->copy(input);
-        }
-
-        return thisptr;
-    }
-
-    Scope* Scope::pcopy(StackAllocator& input){
-        Scope* thisptr = input.alloc<Scope>();
-        //If this is the first scope, then it's global and current.
-        if(input.currentScope == nullptr){
-            input.globalScope = thisptr;
-            input.currentScope = thisptr;
-        } else {
-        //Otherwise, the currentScope is now the parent
-        //and change thisptr to be the currentScope.
-            thisptr->parent = input.currentScope;
-            input.currentScope = thisptr;
-        }
-        //Don't directly copy the variables, functions, or classes.
-        //Add them as you find them to avoid future issues.
-        if(body != nullptr){
-            thisptr->body = (Body*) body->copy(input);
-        }
-
-        return thisptr;
+        //Push the delete scope operation onto the stack.
+        result.operation[0] = Operation::deleteScope;
+        inInstructions->push(result);
+        //Add which here to be able to adjust the unique Scope here too.
+        result.fixed8 = whichScope;
+        inInstructions->push(result);
     }
 
 
@@ -722,126 +664,59 @@ std::string assignPad(FloridaType input, char where){
         //The type will be determined after a Primitive is created.
     }
 
-    std::string Primitive::ToString(std::string inLeft, std::string inRight){
-        std::string result = "";
+    void Primitive::ToString(std::string inLeft, std::string inRight){
         switch(type){
             case ufixed1:
-                result = std::to_string(value.ufixed1[0]);
+                std::cout << std::to_string(value.ufixed1[0]);
                 break;
             case ufixed2:
-                result = std::to_string(value.ufixed2[0]);
+                std::cout << std::to_string(value.ufixed2[0]);
                 break;
             case ufixed4:
-                result = std::to_string(value.ufixed4[0]);
+                std::cout << std::to_string(value.ufixed4[0]);
                 break;
             case ufixed8:
-                result = std::to_string(value.ufixed8);
+                std::cout << std::to_string(value.ufixed8);
                 break;
             case fixed1:
-                result = std::to_string(value.fixed1[0]);
+                std::cout << std::to_string(value.fixed1[0]);
                 break;
             case fixed2:
-                result = std::to_string(value.fixed2[0]);
+                std::cout << std::to_string(value.fixed2[0]);
                 break;
             case fixed4:
-                result = std::to_string(value.fixed4[0]);
+                std::cout << std::to_string(value.fixed4[0]);
                 break;
             case fixed8:
-                result = std::to_string(value.fixed8);
+                std::cout << std::to_string(value.fixed8);
                 break;
             case float4:
-                result = std::to_string(value.float4[0]);
+                std::cout << std::to_string(value.float4[0]);
                 break;
             case float8:
-                result = std::to_string(value.float8);
+                std::cout << std::to_string(value.float8);
                 break;
             case Bool:
                 if(value.boolean[0]){
-                    result = "\x1b[32mtrue\x1b[0m";
+                    std::cout << "\x1b[32mtrue\x1b[0m";
                 } else {
-                    result = "\x1b[31mfalse\x1b[0m";
+                    std::cout << "\x1b[31mfalse\x1b[0m";
                 }
                 break;
             default:
                 break;
             //Error
         }
-
-        return result;
-    }
-
-    std::string Primitive::printAll(){
-        std::string result = "";
-        switch(type){
-            case ufixed1:
-                result = std::to_string(value.ufixed1[0]);
-                break;
-            case ufixed2:
-                result = std::to_string(value.ufixed2[0]);
-                break;
-            case ufixed4:
-                result = std::to_string(value.ufixed4[0]);
-                break;
-            case ufixed8:
-                result = std::to_string(value.ufixed8);
-                break;
-            case fixed1:
-                result = std::to_string(value.fixed1[0]);
-                break;
-            case fixed2:
-                result = std::to_string(value.fixed2[0]);
-                break;
-            case fixed4:
-                result = std::to_string(value.fixed4[0]);
-                break;
-            case fixed8:
-                result = std::to_string(value.fixed8);
-                break;
-            case float4:
-                result = std::to_string(value.float4[0]);
-                break;
-            case float8:
-                result = std::to_string(value.float8);
-                break;
-            case Bool:
-                if(value.boolean[0]){
-                    result = "\x1b[32mtrue\x1b[0m";
-                } else {
-                    result = "\x1b[31mfalse\x1b[0m";
-                }
-                break;
-            default:
-                break;
-            //Error
-        }
-
-        return padding("push") + result + "\n";
-
     }
 
     void Primitive::FLVMCodeGen(Instructions* inInstructions){
-        Instruction result = Instruction();
-        result.literal = value;
-        result.type = type;
-        result.oper = Operation::push;
-
-        inInstructions.push_back(result);
-    }
-
-    Node* Primitive::copy(StackAllocator& input){
-        Primitive* result = input.alloc<Primitive>();
-        result->type = type;
-        result->value = value;
-
-        return result;
-    }
-
-    Primitive* Primitive::pcopy(StackAllocator& input){
-        Primitive* result = input.alloc<Primitive>();
-        result->type = type;
-        result->value = value;
-
-        return result;        
+        types result;
+        //Generate a push instruction.
+        result.operation[0] = Operation::push;
+        inInstructions->push(result);
+        //The primitive to be pushed.
+        result = value;
+        inInstructions->push(result);
     }
 
 
@@ -849,11 +724,6 @@ std::string assignPad(FloridaType input, char where){
 //Body
     Body::Body(){
         current = nullptr;
-        next = nullptr;
-    }
-
-    Body::Body(Node* input){
-        current = input;
         next = nullptr;
     }
 
@@ -874,28 +744,12 @@ std::string assignPad(FloridaType input, char where){
 
     }
 
-    std::string Body::ToString(std::string inLeft, std::string inRight){
+    void Body::ToString(std::string inLeft, std::string inRight){
+        current->ToString(inLeft, inRight);
+        std::cout << "\n";
         if(next != nullptr){
-            return current->ToString(inLeft, inRight) + "\n" + next->ToString(inLeft, inRight);
+            next->ToString(inLeft, inRight);
         }
-
-        return current->ToString(inLeft, inRight);
-    }
-
-    std::string Body::printAll(){
-        if(next != nullptr){
-            if(dynamic_cast<Function*>(current) == nullptr){
-                return current->printAll() + next->printAll();
-            } else {
-                return next->printAll();
-            }
-        }
-        if(dynamic_cast<Function*>(current) == nullptr){
-            return current->printAll();
-        }
-
-        return "";
-
     }
 
     void Body::FLVMCodeGen(Instructions* inInstructions){
@@ -909,30 +763,6 @@ std::string assignPad(FloridaType input, char where){
         if(next != nullptr){
             next->FLVMCodeGen(inInstructions);
         }
-    }
-
-    Node* Body::copy(StackAllocator& input){
-        Body* thisptr = input.alloc<Body>();
-        if(next == nullptr){
-            thisptr->current = current->copy(input);
-        } else {
-            thisptr->current = current->copy(input);
-            thisptr->next = (Body*) next->copy(input);
-        }
-
-        return thisptr;
-    }
-
-    Body* Body::pcopy(StackAllocator& input){
-                Body* thisptr = input.alloc<Body>();
-        if(next == nullptr){
-            thisptr->current = current->copy(input);
-        } else {
-            thisptr->current = current->copy(input);
-            thisptr->next = (Body*) next->copy(input);
-        }
-
-        return thisptr;
     }
 
 
@@ -954,67 +784,37 @@ std::string assignPad(FloridaType input, char where){
 
     }
 
-    std::string Variable::ToString(std::string inLeft, std::string inRight){
-        return thisToken.getName();
-    }
-
-    std::string Variable::printAll(){
-        std::string stackOffset = std::to_string(stackBytePosition >> 3);
-        std::string byteOffset = std::to_string(7L & stackBytePosition);
-        std::string byteSize = std::to_string(allocationSize(type));
-        std::string contextComment = "(*Variable " + thisToken.getName() + " || stackOffset: " + stackOffset + " byteOffset: " + byteOffset + " *)\n";
-
-        return "";
+    void Variable::ToString(std::string inLeft, std::string inRight){
+        std::cout << thisToken.getName();
     }
 
     void Variable::FLVMCodeGen(Instructions* inInstructions){
+        types result;
         //Check if the variable is an object.
         //If it is, fetch everything.
         if(objectType != nullptr){
-            Instruction theFetch;
-            theFetch.oper = Operation::fetch8;
-            theFetch.secondary = owner->whichScope;
             //This will fetch the full object.
             for(uint64_t i = 0; i < objectType->memorySize / 8; i++){
-                theFetch.literal.fixed8 = stackBytePosition + i * 8;
-                inInstructions.push_back(theFetch);
+                result.operation[0] = Operation::fetch8;
+                inInstructions->push(result);
+                result.fixed8 = stackBytePosition + i * 8;
+                inInstructions->push(result);
             }
 
             return;
         }
 
-        Instruction theFetch;
         //More math-magic. I can map the `type` to the correct `operation`.
         int64_t bitmask = 7L;
-        theFetch.oper = (Operation) ((bitmask & (type - FloridaType::ufixed1)) + Operation::assign1);
+        //Determine which fetch operation is needed.
+        result.operation[0] = (Operation) ((bitmask & (type - FloridaType::ufixed1)) + Operation::assign1);
+        inInstructions->push(result);
+        //Get which scope the variable is in.
+        result.fixed8 = owner->whichScope;
+        inInstructions->push(result);
         //This is where in the stack the variable starts.
-        theFetch.literal.fixed8 = stackBytePosition;
-        //This is useful for finding which scope in the stack the variable exists.
-        theFetch.secondary = owner->whichScope;
-
-        inInstructions.push_back(theFetch);
-    }
-
-    Node* Variable::copy(StackAllocator& input){
-        Variable* thisptr = input.alloc<Variable>();
-
-        thisptr->thisToken = thisToken;
-        thisptr->stackBytePosition = stackBytePosition;
-        thisptr->value = value;
-        thisptr->type = type;
-
-        return thisptr;
-    }
-
-    Variable* Variable::pcopy(StackAllocator& input){
-        Variable* thisptr = input.alloc<Variable>();
-
-        thisptr->thisToken = thisToken;
-        thisptr->stackBytePosition = stackBytePosition;
-        thisptr->value = value;
-        thisptr->type = type;
-
-        return thisptr;
+        result.fixed8 = stackBytePosition;
+        inInstructions->push(result);
     }
 
 
@@ -1024,21 +824,21 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing.
     };
 
-    std::string Initialize::ToString(std::string inLeft, std::string inRight){
+    void Initialize::ToString(std::string inLeft, std::string inRight){ 
         if(thisVariable->objectType != nullptr){
             if(code != nullptr){
-                return inLeft + std::string(thisVariable->objectType->name) + " " + thisVariable->thisToken.getName() + " = " + code->ToString(inLeft, inRight) + inRight;
+                std::cout <<  inLeft << std::string(thisVariable->objectType->name) << " " << thisVariable->thisToken.getName() << " = ";
+                code->ToString(inLeft, inRight);
+                std::cout << inRight;
             }
-            return inLeft + std::string(thisVariable->objectType->name) + " " + thisVariable->thisToken.getName() + inRight;
+            std::cout << inLeft << std::string(thisVariable->objectType->name) << " " << thisVariable->thisToken.getName() << inRight;
         }
         if(code != nullptr){
-            return inLeft + typeString(thisVariable->thisToken.type) + " " + thisVariable->thisToken.getName() + " = " +  code->ToString(inLeft, inRight) + inRight;
+            std::cout << inLeft << typeString(thisVariable->thisToken.type) << " " << thisVariable->thisToken.getName() << " = ";
+            code->ToString(inLeft, inRight);
+            std::cout << inRight;
         }
-        return inLeft + typeString(thisVariable->thisToken.type) + " " + thisVariable->thisToken.getName() + inRight;
-    }
-
-    std::string Initialize::printAll(){
-        return padding2("initialize") + "(*Variable " + thisVariable->thisToken.getName() + "*)\n";
+        std::cout << inLeft << typeString(thisVariable->thisToken.type) << " " << thisVariable->thisToken.getName() << inRight;
     }
 
     void Initialize::FLVMCodeGen(Instructions* inInstructions){
@@ -1048,45 +848,29 @@ std::string assignPad(FloridaType input, char where){
             code->FLVMCodeGen(inInstructions);
 
             //Get the correct byte size.
-            Instruction assign = Instruction();
+            types result;
             switch(allocationSize(type)){
                 case 1:
-                    assign.oper = Operation::assign1;
+                    result.operation[0] = Operation::assign1;
                     break;
                 case 2:
-                    assign.oper = Operation::assign2;
+                    result.operation[0] = Operation::assign2;
                     break;
                 case 4:
-                    assign.oper = Operation::assign4;
+                    result.operation[0] = Operation::assign4;
                     break;
                 case 8:
-                    assign.oper = Operation::assign8;
+                    result.operation[0] = Operation::assign8;
                     break;
             }
-
-            //This isn't the finished solution. I still need to fix this.
-            inInstructions.push_back(assign);
+            inInstructions->push(result);
+            //Get which scope this belongs to.
+            result.fixed8 = thisVariable->owner->whichScope;
+            inInstructions->push(result);
+            //Get the stack offset.
+            result.fixed8 = thisVariable->stackBytePosition;
+            inInstructions->push(result);
         }
-    }
-
-    Node* Initialize::copy(StackAllocator& input){
-        Initialize* thisptr = input.alloc<Initialize>();
-
-        thisptr->thisVariable = thisVariable->pcopy(input);
-        input.currentScope->push(thisptr);
-        thisptr->code = code->copy(input);
-
-        return thisptr;
-    }
-
-    Initialize* Initialize::pcopy(StackAllocator& input){
-        Initialize* thisptr = input.alloc<Initialize>();
-
-        thisptr->thisVariable = thisVariable->pcopy(input);
-        input.currentScope->push(thisptr);
-        thisptr->code = code->copy(input);
-
-        return thisptr;
     }
 
     //Append the `input` to the end of the linked list of Initializations.
@@ -1114,38 +898,12 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     };
 
-    std::string Assignment::ToString(std::string inLeft, std::string inRight){
-        return inLeft + left->ToString(inLeft, inRight) + " = " + right->ToString(inLeft, inRight) + inRight;
-    }
-
-    std::string Assignment::printAll(){
-        std::string returnType = "";
-        Variable* theVariable = nullptr;
-        MemberAccess* theMemberAccess = nullptr;
-        Dereference* theDereference = nullptr;
-
-        std::cout << "FIX ASSIGNMENT::PRINTALL()\n";
-
-        theMemberAccess = dynamic_cast<MemberAccess*>(left);
-        if(theMemberAccess != nullptr){
-            left->printAll();
-            theVariable = theMemberAccess->right;
-        }
-
-        theDereference = dynamic_cast<Dereference*>(left);
-        if(theDereference != nullptr){
-            theVariable = theDereference->right;
-        }
-        
-        theVariable = dynamic_cast<Variable*>(left);
-        if(theVariable != nullptr){
-
-        }
-
-        return left->printAll() + 
-        right->printAll() +
-        "assign\n";
-
+    void Assignment::ToString(std::string inLeft, std::string inRight){
+        std::cout << inLeft;
+        left->ToString(inLeft, inRight);
+        std::cout << " = ";
+        right->ToString(inLeft, inRight);
+        std::cout << inRight;
     }
 
     void Assignment::FLVMCodeGen(Instructions* inInstructions){
@@ -1179,24 +937,6 @@ std::string assignPad(FloridaType input, char where){
         }
     }
 
-    Node* Assignment::copy(StackAllocator& input){
-        Assignment* thisptr = input.alloc<Assignment>();
-
-        thisptr->left = left->copy(input);
-        thisptr->right = right->copy(input);
-
-        return thisptr;
-    }
-
-    Assignment* Assignment::pcopy(StackAllocator& input){
-        Assignment* thisptr = input.alloc<Assignment>();
-
-        thisptr->left = left->copy(input);
-        thisptr->right = right->copy(input);
-
-        return thisptr;
-    }
-
 
     
 //Add +
@@ -1204,19 +944,10 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    Add::Add(Node* LHE, Node* RHE){
-        left = LHE;
-        right = RHE;
-    }
-
-    std::string Add::ToString(std::string inLeft, std::string inRight){
-        std::string leftString = left->ToString(inLeft, inRight);
-        std::string rightString = right->ToString(inLeft, inRight);
-        return leftString + " + " + rightString;
-    }
-
-    std::string Add::printAll(){
-        return left->printAll() + right->printAll() + "add\n";
+    void Add::ToString(std::string inLeft, std::string inRight){
+        left->ToString(inLeft, inRight);
+        std::cout << " + ";
+        right->ToString(inLeft, inRight);
     }
 
     void Add::FLVMCodeGen(Instructions* inInstructions){
@@ -1237,24 +968,6 @@ std::string assignPad(FloridaType input, char where){
         inInstructions.push_back(result);
     }
 
-    Node* Add::copy(StackAllocator& input){
-        Add* thisptr = input.alloc<Add>();
-
-        thisptr->left = left->copy(input);
-        thisptr->right = right->copy(input);
-
-        return thisptr;
-    }
-
-    Add* Add::pcopy(StackAllocator& input){
-        Add* thisptr = input.alloc<Add>();
-
-        thisptr->left = left->copy(input);
-        thisptr->right = right->copy(input);
-
-        return thisptr;
-    }
-
 
 
 //Subtract -
@@ -1262,17 +975,10 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    Subtract::Subtract(Node* LHE, Node* RHE){
-        left = LHE;
-        right = RHE;
-    }
-
-    std::string Subtract::ToString(std::string inLeft, std::string inRight){
-        return left->ToString(inLeft, inRight) + " - " + right->ToString(inLeft, inRight);
-    }
-
-    std::string Subtract::printAll(){
-        return left->printAll() + right->printAll() + "subtract\n";
+    void Subtract::ToString(std::string inLeft, std::string inRight){
+        left->ToString(inLeft, inRight);
+        std::cout << " - ";
+        right->ToString(inLeft, inRight);
     }
 
     void Subtract::FLVMCodeGen(Instructions* inInstructions){
@@ -1293,24 +999,6 @@ std::string assignPad(FloridaType input, char where){
         inInstructions.push_back(result);
     }
 
-    Node* Subtract::copy(StackAllocator& input){
-        Subtract* thisptr = input.alloc<Subtract>();
-
-        thisptr->left = left->copy(input);
-        thisptr->right = right->copy(input);
-
-        return thisptr;
-    }
-
-    Subtract* Subtract::pcopy(StackAllocator& input){
-        Subtract* thisptr = input.alloc<Subtract>();
-
-        thisptr->left = left->copy(input);
-        thisptr->right = right->copy(input);
-
-        return thisptr;
-    }
-
 
 
 //Multiply *
@@ -1318,17 +1006,10 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    Multiply::Multiply(Node* LHE, Node* RHE){
-        left = LHE;
-        right = RHE;
-    }
-
-    std::string Multiply::ToString(std::string inLeft, std::string inRight){
-        return left->ToString(inLeft, inRight) + " * " + right->ToString(inLeft, inRight);
-    }
-
-    std::string Multiply::printAll(){
-        return left->printAll() + right->printAll() + "multiply\n";
+    void Multiply::ToString(std::string inLeft, std::string inRight){
+        left->ToString(inLeft, inRight);
+        std::cout << " * ";
+        right->ToString(inLeft, inRight);
     }
 
     void Multiply::FLVMCodeGen(Instructions* inInstructions){
@@ -1349,24 +1030,6 @@ std::string assignPad(FloridaType input, char where){
         inInstructions.push_back(result);
     }
 
-    Node* Multiply::copy(StackAllocator& input){
-        Multiply* thisptr = input.alloc<Multiply>();
-
-        thisptr->left = left->copy(input);
-        thisptr->right = right->copy(input);
-
-        return thisptr;
-    }
-
-    Multiply* Multiply::pcopy(StackAllocator& input){
-        Multiply* thisptr = input.alloc<Multiply>();
-
-        thisptr->left = left->copy(input);
-        thisptr->right = right->copy(input);
-
-        return thisptr;
-    }
-
 
 
 //Divide /
@@ -1374,17 +1037,10 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     };
 
-    Divide::Divide(Node* LHE, Node* RHE){
-        left = LHE;
-        right = RHE;
-    }
-
-    std::string Divide::ToString(std::string inLeft, std::string inRight){
-        return left->ToString(inLeft, inRight) + " / " + right->ToString(inLeft, inRight);
-    }
-
-    std::string Divide::printAll(){
-        return left->printAll() + right->printAll() + "divide\n";
+    void Divide::ToString(std::string inLeft, std::string inRight){
+        left->ToString(inLeft, inRight);
+        std::cout << " / ";
+        right->ToString(inLeft, inRight);
     }
 
     void Divide::FLVMCodeGen(Instructions* inInstructions){
@@ -1405,24 +1061,6 @@ std::string assignPad(FloridaType input, char where){
         inInstructions.push_back(result);
     }
 
-    Node* Divide::copy(StackAllocator& input){
-        Divide* thisptr = input.alloc<Divide>();
-
-        thisptr->left = left->copy(input);
-        thisptr->right = right->copy(input);
-
-        return thisptr;
-    }
-
-    Divide* Divide::pcopy(StackAllocator& input){
-        Divide* thisptr = input.alloc<Divide>();
-
-        thisptr->left = left->copy(input);
-        thisptr->right = right->copy(input);
-
-        return thisptr;
-    }
-
 
 
 //Parentheses ()
@@ -1430,36 +1068,14 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    Parentheses::Parentheses(Node* input){
-        subexpression = input;
-    }
-
-    std::string Parentheses::ToString(std::string inLeft, std::string inRight){
-        return "(" + subexpression->ToString(inLeft, inRight) + ")";
-    }
-
-    std::string Parentheses::printAll(){
-        return subexpression->printAll();
+    void Parentheses::ToString(std::string inLeft, std::string inRight){
+        std::cout << "(";
+        subexpression->ToString(inLeft, inRight);
+        std::cout << ")";
     }
 
     void Parentheses::FLVMCodeGen(Instructions* inInstructions){
         subexpression->FLVMCodeGen(inInstructions);
-    }
-
-    Node* Parentheses::copy(StackAllocator& input){
-        Parentheses* thisptr = input.alloc<Parentheses>();
-
-        thisptr->subexpression = subexpression->copy(input);
-
-        return thisptr;
-    }
-
-    Parentheses* Parentheses::pcopy(StackAllocator& input){
-        Parentheses* thisptr = input.alloc<Parentheses>();
-
-        thisptr->subexpression = subexpression->copy(input);
-
-        return thisptr;        
     }
 
 
@@ -1469,16 +1085,9 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing;
     }
 
-    Negative::Negative(Node* input){
-        right = input;
-    }
-
-    std::string Negative::ToString(std::string inLeft, std::string inRight){
-        return "-" + right->ToString(inLeft, inRight);
-    }
-
-    std::string Negative::printAll(){
-        return right->printAll() + "negate\n";
+    void Negative::ToString(std::string inLeft, std::string inRight){
+        std::cout << "-";
+        right->ToString(inLeft, inRight);
     }
 
     void Negative::FLVMCodeGen(Instructions* inInstructions){
@@ -1492,22 +1101,6 @@ std::string assignPad(FloridaType input, char where){
         inInstructions.push_back(result);
     }
 
-    Node* Negative::copy(StackAllocator& input){
-        Negative* thisptr = input.alloc<Negative>();
-
-        thisptr->right = right->copy(input);
-
-        return thisptr;
-    }
-
-    Negative* Negative::pcopy(StackAllocator& input){
-        Negative* thisptr = input.alloc<Negative>();
-
-        thisptr->right = right->copy(input);
-
-        return thisptr;        
-    }
-
 
 
 //Equal ==
@@ -1515,17 +1108,10 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    Equal::Equal(Node* inLeft, Node* inRight){
-        left = inLeft;
-        right = inRight;
-    }
-
-    std::string Equal::ToString(std::string inLeft, std::string inRight){
-        return left->ToString(inLeft, inRight) + " == " + right->ToString(inLeft, inRight);
-    }
-
-    std::string Equal::printAll(){
-        return left->printAll() + right->printAll() + "equals\n";
+    void Equal::ToString(std::string inLeft, std::string inRight){
+        left->ToString(inLeft, inRight);
+        std::cout << " == ";
+        right->ToString(inLeft, inRight);
     }
 
     void Equal::FLVMCodeGen(Instructions* inInstructions){
@@ -1535,24 +1121,6 @@ std::string assignPad(FloridaType input, char where){
         inInstructions.push_back(Instruction(equals));
     }
 
-    Node* Equal::copy(StackAllocator& input){
-        Equal* thisptr = input.alloc<Equal>();
-
-        thisptr->left = left->copy(input);
-        thisptr->right = right->copy(input);
-
-        return thisptr;
-    }
-
-    Equal* Equal::pcopy(StackAllocator& input){
-        Equal* thisptr = input.alloc<Equal>();
-
-        thisptr->left = left->copy(input);
-        thisptr->right = right->copy(input);
-
-        return thisptr;
-    }
-
 
 
 //Not equal !=
@@ -1560,17 +1128,10 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    NotEqual::NotEqual(Node* inLeft, Node* inRight){
-        left = inLeft;
-        right = inRight;
-    }
-
-    std::string NotEqual::ToString(std::string inLeft, std::string inRight){
-        return left->ToString(inLeft, inRight) + " != " + right->ToString(inLeft, inRight);
-    }
-
-    std::string NotEqual::printAll(){
-        return left->printAll() + right->printAll() + "nequals\n";
+    void NotEqual::ToString(std::string inLeft, std::string inRight){
+        left->ToString(inLeft, inRight);
+        std::cout << " != ";
+        right->ToString(inLeft, inRight);
     }
 
     void NotEqual::FLVMCodeGen(Instructions* inInstructions){
@@ -1580,24 +1141,6 @@ std::string assignPad(FloridaType input, char where){
         inInstructions.push_back(Instruction(nequals));
     }
 
-    Node* NotEqual::copy(StackAllocator& input){
-        NotEqual* thisptr = input.alloc<NotEqual>();
-
-        thisptr->left = left->copy(input);
-        thisptr->right = right->copy(input);
-
-        return thisptr;
-    }
-
-    NotEqual* NotEqual::pcopy(StackAllocator& input){
-        NotEqual* thisptr = input.alloc<NotEqual>();
-
-        thisptr->left = left->copy(input);
-        thisptr->right = right->copy(input);
-
-        return thisptr;        
-    }
-
 
 
 //Greater than >
@@ -1605,17 +1148,10 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    GreaterThan::GreaterThan(Node* inLeft, Node* inRight){
-        left = inLeft;
-        right = inRight;
-    }
-
-    std::string GreaterThan::ToString(std::string inLeft, std::string inRight){
-        return left->ToString(inLeft, inRight) + " > " + right->ToString(inLeft, inRight);
-    }
-
-    std::string GreaterThan::printAll(){
-        return left->printAll() + right->printAll() + "greater\n";
+    void GreaterThan::ToString(std::string inLeft, std::string inRight){
+        left->ToString(inLeft, inRight);
+        std::cout << " > ";
+        right->ToString(inLeft, inRight);
     }
 
     void GreaterThan::FLVMCodeGen(Instructions* inInstructions){
@@ -1625,24 +1161,6 @@ std::string assignPad(FloridaType input, char where){
         inInstructions.push_back(Instruction(greater));
     }
 
-    Node* GreaterThan::copy(StackAllocator& input){
-        GreaterThan* thisptr = input.alloc<GreaterThan>();
-
-        thisptr->left = left->copy(input);
-        thisptr->right = right->copy(input);
-
-        return thisptr;
-    }
-
-    GreaterThan* GreaterThan::pcopy(StackAllocator& input){
-        GreaterThan* thisptr = input.alloc<GreaterThan>();
-
-        thisptr->left = left->copy(input);
-        thisptr->right = right->copy(input);
-
-        return thisptr;
-    }
-
 
 
 //Greater than or equal to >=
@@ -1650,17 +1168,8 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    GreaterThanOr::GreaterThanOr(Node* inLeft, Node* inRight){
-        left = inLeft;
-        right = inRight;
-    }
-
-    std::string GreaterThanOr::ToString(std::string inLeft, std::string inRight){
+    void ::ToString(std::string inLeft, std::string inRight){
         return left->ToString(inLeft, inRight) + " >= " + right->ToString(inLeft, inRight);
-    }
-
-    std::string GreaterThanOr::printAll(){
-        return left->printAll() + right->printAll() + "greateror\n";
     }
 
     void GreaterThanOr::FLVMCodeGen(Instructions* inInstructions){
@@ -1670,24 +1179,6 @@ std::string assignPad(FloridaType input, char where){
         inInstructions.push_back(Instruction(greateror));
     }
 
-    Node* GreaterThanOr::copy(StackAllocator& input){
-        GreaterThanOr* thisptr = input.alloc<GreaterThanOr>();
-
-        thisptr->left = left->copy(input);
-        thisptr->right = right->copy(input);
-
-        return thisptr;
-    }
-
-    GreaterThanOr* GreaterThanOr::pcopy(StackAllocator& input){
-        GreaterThanOr* thisptr = input.alloc<GreaterThanOr>();
-
-        thisptr->left = left->copy(input);
-        thisptr->right = right->copy(input);
-
-        return thisptr;
-    }
-
 
 
 //Less than <
@@ -1695,17 +1186,8 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    LessThan::LessThan(Node* inLeft, Node* inRight){
-        left = inLeft;
-        right = inRight;
-    }
-
-    std::string LessThan::ToString(std::string inLeft, std::string inRight){
+    void ::ToString(std::string inLeft, std::string inRight){
         return left->ToString(inLeft, inRight) + " < " + right->ToString(inLeft, inRight);
-    }
-
-    std::string LessThan::printAll(){
-        return left->printAll() + right->printAll() + "lesser\n";
     }
 
     void LessThan::FLVMCodeGen(Instructions* inInstructions){
@@ -1715,23 +1197,6 @@ std::string assignPad(FloridaType input, char where){
         inInstructions.push_back(Instruction(lesser));
     }
 
-    Node* LessThan::copy(StackAllocator& input){
-        LessThan* thisptr = input.alloc<LessThan>();
-
-        thisptr->left = left->copy(input);
-        thisptr->right = right->copy(input);
-
-        return thisptr;
-    }
-
-    LessThan* LessThan::pcopy(StackAllocator& input){
-        LessThan* thisptr = input.alloc<LessThan>();
-
-        thisptr->left = left->copy(input);
-        thisptr->right = right->copy(input);
-
-        return thisptr;
-    }
 
 
 //Less than or equal to <=
@@ -1739,17 +1204,8 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    LessThanOr::LessThanOr(Node* inLeft, Node* inRight){
-        left = inLeft;
-        right = inRight;
-    }
-
-    std::string LessThanOr::ToString(std::string inLeft, std::string inRight){
+    void ::ToString(std::string inLeft, std::string inRight){
         return left->ToString(inLeft, inRight) + " <= " + right->ToString(inLeft, inRight);
-    }
-
-    std::string LessThanOr::printAll(){
-        return left->printAll() + right->printAll() + "lesseror\n";
     }
 
     void LessThanOr::FLVMCodeGen(Instructions* inInstructions){
@@ -1759,24 +1215,6 @@ std::string assignPad(FloridaType input, char where){
         inInstructions.push_back(Instruction(lesseror));
     }
 
-    Node* LessThanOr::copy(StackAllocator& input){
-        LessThanOr* thisptr = input.alloc<LessThanOr>();
-
-        thisptr->left = left->copy(input);
-        thisptr->right = right->copy(input);
-
-        return thisptr;
-    }
-
-    LessThanOr* LessThanOr::pcopy(StackAllocator& input){
-        LessThanOr* thisptr = input.alloc<LessThanOr>();
-
-        thisptr->left = left->copy(input);
-        thisptr->right = right->copy(input);
-
-        return thisptr;        
-    }
-
 
 
 //Or OR
@@ -1784,17 +1222,8 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     };
 
-    Or::Or(Node* inLeft, Node* inRight){
-        left = inLeft;
-        right = inRight;
-    }
-
-    std::string Or::ToString(std::string inLeft, std::string inRight){
+    void ::ToString(std::string inLeft, std::string inRight){
         return left->ToString(inLeft, inRight) + " OR " + right->ToString(inLeft, inRight);
-    }
-
-    std::string Or::printAll(){
-        return left->printAll() + right->printAll() + "ior\n";
     }
 
     void Or::FLVMCodeGen(Instructions* inInstructions){
@@ -1804,24 +1233,6 @@ std::string assignPad(FloridaType input, char where){
         inInstructions.push_back(Instruction(ior));
     }
 
-    Node* Or::copy(StackAllocator& input){
-        Or* thisptr = input.alloc<Or>();
-
-        thisptr->left = left->copy(input);
-        thisptr->right = right->copy(input);
-
-        return thisptr;
-    }
-
-    Or* Or::pcopy(StackAllocator& input){
-        Or* thisptr = input.alloc<Or>();
-
-        thisptr->left = left->copy(input);
-        thisptr->right = right->copy(input);
-
-        return thisptr;
-    }
-
 
 
 //And AND
@@ -1829,42 +1240,15 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    And::And(Node* inLeft, Node* inRight){
-        left = inLeft;
-        right = inRight;
-    }
-
-    std::string And::ToString(std::string inLeft, std::string inRight){
+    void ::ToString(std::string inLeft, std::string inRight){
         return left->ToString(inLeft, inRight) + " AND " + right->ToString(inLeft, inRight);
     }
 
-    std::string And::printAll(){
-        return left->printAll() + right->printAll() + "iand\n";
-    }
-    
     void And::FLVMCodeGen(Instructions* inInstructions){
         left->FLVMCodeGen(inInstructions);
         right->FLVMCodeGen(inInstructions);
         //Push back the instruction for AND
         inInstructions.push_back(Instruction(iand));
-    }
-
-    Node* And::copy(StackAllocator& input){
-        And* thisptr = input.alloc<And>();
-
-        thisptr->left = left->copy(input);
-        thisptr->right = right->copy(input);
-
-        return thisptr;
-    }
-
-    And* And::pcopy(StackAllocator& input){
-        And* thisptr = input.alloc<And>();
-
-        thisptr->left = left->copy(input);
-        thisptr->right = right->copy(input);
-
-        return thisptr;
     }
 
 
@@ -1874,37 +1258,13 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    Not::Not(Node* inRight){
-        right = inRight; 
-    }
-
-    std::string Not::ToString(std::string inLeft, std::string inRight){
+    void ::ToString(std::string inLeft, std::string inRight){
         return "!" + right->ToString(inLeft, inRight);
-    }
-
-    std::string Not::printAll(){
-        return right->printAll() + "inot\n";
     }
 
     void Not::FLVMCodeGen(Instructions* inInstructions){
         right->FLVMCodeGen(inInstructions);
         inInstructions.push_back(Instruction(inot));
-    }
-
-    Node* Not::copy(StackAllocator& input){
-        Not* thisptr = input.alloc<Not>();
-
-        thisptr->right = right->copy(input);
-
-        return thisptr;
-    }
-
-    Not* Not::pcopy(StackAllocator& input){
-        Not* thisptr = input.alloc<Not>();
-
-        thisptr->right = right->copy(input);
-
-        return thisptr;        
     }
 
 
@@ -1914,7 +1274,7 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     };
 
-    std::string IfClass::ToString(std::string inLeft, std::string inRight){
+    void ::ToString(std::string inLeft, std::string inRight){
         if(elseBody == nullptr){
             return inLeft + "\x1b[36mif\x1b[0m(" + condition->ToString(inLeft, inRight) + "){\n" + 
             ifBody->ToString("  " + inLeft, ";") + "\n" +
@@ -1925,23 +1285,6 @@ std::string assignPad(FloridaType input, char where){
             inLeft + "} else {\n" + elseBody->ToString("  " + inLeft, ";") + "\n" +
             inLeft + "}";
         }
-    }
-
-    std::string IfClass::printAll(){
-        std::string result = "\t(*condition*)\n" +
-        condition->printAll() +
-        "cjump\n";
-        if(ifBody != nullptr){
-            result += "\t(*if body*)\n" + ifBody->printAll() + "\t(*end if*)\n";
-        }
-        if(elseBody != nullptr){
-            result += "\t(*else body*)\n" +
-            elseBody->printAll() +
-            "jump\n" + 
-            "\t(*end else*)\n";
-        }
-
-        return result;
     }
 
     void IfClass::FLVMCodeGen(Instructions* inInstructions){
@@ -1991,44 +1334,6 @@ std::string assignPad(FloridaType input, char where){
 
     }
 
-    Node* IfClass::copy(StackAllocator& input){
-        IfClass* thisptr = input.alloc<IfClass>();
-
-        //Check for a condition.
-        if(condition != nullptr){
-            thisptr->condition = condition->copy(input);
-        }
-        //Check for an ifBody
-        if(ifBody != nullptr){
-            thisptr->ifBody = ifBody->pcopy(input);
-        }
-        //Check for an elseBody
-        if(elseBody != nullptr){
-            thisptr->elseBody = elseBody->pcopy(input);
-        }
-
-        return thisptr;
-    }
-
-    IfClass* IfClass::pcopy(StackAllocator& input){
-        IfClass* thisptr = input.alloc<IfClass>();
-
-        //Check for a condition.
-        if(condition != nullptr){
-            thisptr->condition = condition->copy(input);
-        }
-        //Check for an ifBody
-        if(ifBody != nullptr){
-            thisptr->ifBody = ifBody->pcopy(input);
-        }
-        //Check for an elseBody
-        if(elseBody != nullptr){
-            thisptr->elseBody = elseBody->pcopy(input);
-        }
-
-        return thisptr;
-    }
-
 
 
 //for
@@ -2036,7 +1341,7 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     };
 
-    std::string ForLoop::ToString(std::string inLeft, std::string inRight){
+    void ::ToString(std::string inLeft, std::string inRight){
         std::string finalString = inLeft + "\x1b[34mfor\x1b[0m(";
         if(assign != nullptr){
             finalString += assign->ToString("", ";");
@@ -2055,26 +1360,6 @@ std::string assignPad(FloridaType input, char where){
         finalString += "){\n";
 
         return finalString + inLeft + body->ToString(inLeft, inRight) + inLeft + "\n" + inLeft + "}\n";
-    }
-
-    std::string ForLoop::printAll(){
-        std::string result = "  (*Start of for loop*)\n";
-        if(assign != nullptr){
-            result += "\t(*assignment*)\n" + assign->printAll();
-        }
-        if(condition != nullptr){
-            result += "\t(*condition*)\n" + condition->printAll() + 
-                padding2("cjump") + "(*cjump out of the loop*)\n";
-        }
-        if(body != nullptr){
-            result += "\t(*body*)\n" + body->printAll();
-        }
-        if(incrementer != nullptr){
-            result += "\t(*incrementer*)\n" + incrementer->printAll();
-        }
-        result += padding2("cjump") + "(*cjump to the condition start*)\n\t(*End of for loop*)\n";
-
-        return result;
     }
 
     void ForLoop::FLVMCodeGen(Instructions* inInstructions){
@@ -2119,44 +1404,6 @@ std::string assignPad(FloridaType input, char where){
         inInstructions.push_back(Instruction(Operation::deleteScope));
     }
 
-    Node* ForLoop::copy(StackAllocator& input){
-        ForLoop* thisptr = input.alloc<ForLoop>();
-
-        if(assign != nullptr){
-            thisptr->assign = assign->copy(input);
-        }
-        if(condition != nullptr){
-            thisptr->condition = condition->copy(input);
-        }
-        if(incrementer != nullptr){
-            thisptr->incrementer = incrementer->copy(input);
-        }
-        if(body != nullptr){
-            thisptr->body = body->pcopy(input);
-        }
-
-        return thisptr;
-    }
-
-    ForLoop* ForLoop::pcopy(StackAllocator& input){
-        ForLoop* thisptr = input.alloc<ForLoop>();
-
-        if(assign != nullptr){
-            thisptr->assign = assign->copy(input);
-        }
-        if(condition != nullptr){
-            thisptr->condition = condition->copy(input);
-        }
-        if(incrementer != nullptr){
-            thisptr->incrementer = incrementer->copy(input);
-        }
-        if(body != nullptr){
-            thisptr->body = body->pcopy(input);
-        }
-
-        return thisptr;
-    }
-
 
 
 //while
@@ -2164,23 +1411,8 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     };
 
-    std::string WhileLoop::ToString(std::string inLeft, std::string inRight){
+    void ::ToString(std::string inLeft, std::string inRight){
         return inLeft + "while(" + condition->ToString(inLeft, inRight) + "){\n" + body->ToString("  " + inLeft, inRight) + inLeft + "}";
-    }
-
-    std::string WhileLoop::printAll(){
-        std::string result = "";
-        if(condition != nullptr){
-            result += "\t(*condition*)\n" + condition->printAll() + 
-                "negate\n" +
-                padding2("cjump") + "\t(*cjump to escape the loop*)\n";
-        }
-        if(body != nullptr){
-            result += "\t(*body*)\n" + body->printAll() + 
-                padding2("cjump") + "\t(*cjump to the condition*)\n\t(*End of while loop*)";
-        }
-
-        return result;
     }
 
     void WhileLoop::FLVMCodeGen(Instructions* inInstructions){
@@ -2210,32 +1442,6 @@ std::string assignPad(FloridaType input, char where){
         inInstructions.push_back(Instruction(Operation::deleteScope));
     }
 
-    Node* WhileLoop::copy(StackAllocator& input){
-        WhileLoop* thisptr = input.alloc<WhileLoop>();
-
-        if(condition != nullptr){
-            thisptr->condition = condition->copy(input);
-        }
-        if(body != nullptr){
-            thisptr->body = body->pcopy(input);
-        }
-
-        return thisptr;
-    }
-
-    WhileLoop* WhileLoop::pcopy(StackAllocator& input){
-        WhileLoop* thisptr = input.alloc<WhileLoop>();
-
-        if(condition != nullptr){
-            thisptr->condition = condition->copy(input);
-        }
-        if(body != nullptr){
-            thisptr->body = body->pcopy(input);
-        }
-
-        return thisptr;
-    }
-
 
 
 //Function
@@ -2243,7 +1449,7 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     };
 
-    std::string Function::ToString(std::string inLeft, std::string inRight){
+    void ::ToString(std::string inLeft, std::string inRight){
         std::string varString = "";
         Initialize* currInit = code->allInitializations;
 
@@ -2268,29 +1474,6 @@ std::string assignPad(FloridaType input, char where){
             return result;
         }
 
-    }
-
-    std::string Function::printAll(){
-        std::string result = "\t(*Function " + std::string(name) + "(";
-        Initialize* thisInitialize = code->allInitializations;
-
-        for(int64_t i = 0; i < argumentCount - 1; i++){
-            result += std::string(thisInitialize->thisVariable->thisToken.name) + ", ";
-            thisInitialize = thisInitialize->next;
-        }
-        if(thisInitialize != nullptr){
-            result += std::string(thisInitialize->thisVariable->thisToken.name);
-        }
-
-        result += ")*)\n";
-
-        if(code->body != nullptr){
-            result += code->body->printAll() + "\n";
-        }
-        if(allFunctions != nullptr){
-            return result + allFunctions->printAll();
-        }
-        return result;
     }
 
     void Function::append(Initialize* input){
@@ -2318,75 +1501,6 @@ std::string assignPad(FloridaType input, char where){
         }
     }
 
-    Node* Function::copy(StackAllocator& input){
-        Function* thisptr = input.alloc<Function>();
-        Scope* theScope = input.currentScope;
-        Function* theFunction = nullptr;
-
-        //Copy the function over.
-        thisptr->name = name;
-        thisptr->returnable = returnable;
-        thisptr->type = type;
-        thisptr->position = position;
-        thisptr->argumentCount = argumentCount;
-
-        //We have to uniquely copy the scope for the function.
-        //This is because function arguments do not have initializations.
-        Scope* newScope = input.alloc<Scope>();
-        //Assign the newly generated scope to the function.
-        thisptr->code = newScope;
-        //Adjust the current scope member to the newly made scope.
-        newScope->parent = input.currentScope;
-        input.currentScope = newScope;
-        //Directly copy the arguments over to the new scope.
-        //Otherwise, they are never found and added in the correct order.
-        Initialize* theirInitialize = code->allInitializations;
-        Initialize* newInitialize = nullptr;
-        for(int64_t i = 0; i < argumentCount; i++){
-            newInitialize = theirInitialize->pcopy(input);
-            newScope->push(newInitialize);
-            theirInitialize = theirInitialize->next;
-        }
-        //Copy the body of the function over.
-        newScope->body = code->body->pcopy(input);
-
-        //Put the function into the current scope.
-        if(theScope->functions == nullptr){
-            theScope->functions = thisptr;
-        } else {
-            theFunction = theScope->functions;
-            while(theFunction->next != nullptr){
-                theFunction = theFunction->next;
-            }
-            theFunction->next = thisptr;
-        }
-
-        //Add the function to the chain.
-        if(input.allFunctions == nullptr){
-            input.allFunctions = thisptr;
-        } else {
-            theFunction = input.allFunctions;
-            while(theFunction->allFunctions != nullptr){
-                theFunction = theFunction->allFunctions;
-            }
-            theFunction->allFunctions = thisptr;
-        }
-
-        //Move back to the previous scope.
-        input.currentScope = input.currentScope->parent;
-        return thisptr;
-    }
-
-    Function* Function::pcopy(StackAllocator& input){
-        Function* thisptr = input.alloc<Function>();
-
-        thisptr->returnable = returnable;
-        thisptr->position = position;
-        thisptr->code = code->pcopy(input);
-
-        return thisptr;
-    }
-
 
 
 //Function calls
@@ -2398,16 +1512,10 @@ std::string assignPad(FloridaType input, char where){
         function = inFunction;
     }
 
-    std::string Call::ToString(std::string inLeft, std::string inRight){
+    void ::ToString(std::string inLeft, std::string inRight){
         std::string theName = "\x1b[35m" + std::string(function->name) + "\x1b[0m";
         std::string theArguments = arguments->ToString(inLeft, "");
         return theName + "(" + theArguments + ")";
-    }
-
-    std::string Call::printAll(){
-        std::string result = "";
-
-        return "newScope\n" + arguments->printAll() + padding2("call") + "(*Function " + std::string(function->name) + "*)\n";
     }
 
     void Call::FLVMCodeGen(Instructions* inInstructions){
@@ -2432,62 +1540,6 @@ std::string assignPad(FloridaType input, char where){
         inInstructions.push_back(theCall);
     }
 
-    Node* Call::copy(StackAllocator& input){
-        Call* thisptr = input.alloc<Call>();
-        //Get the list of currently existing functions in the scope
-        Scope* theScope = input.currentScope;
-        Function* theFunction = input.currentScope->functions;
-
-        //Traverse the linked lists to find the function.
-        //It is guaranteed to exist, but may not be in the current scope.
-        while(theScope != nullptr){
-            theFunction = theScope->functions;
-            while(theFunction != nullptr){
-                if(theFunction->name == function->name){
-                    thisptr->function = theFunction;
-
-                    thisptr->function = theFunction;
-                    thisptr->arguments = arguments->pcopy(input);
-
-                    return thisptr;
-                }
-                theFunction = theFunction->next;
-            }
-            theScope = theScope->parent;
-        }
-
-        //Technically unreachable
-        return nullptr; 
-    }
-
-    Call* Call::pcopy(StackAllocator& input){
-        Call* thisptr = input.alloc<Call>();
-        //Get the list of currently existing functions in the scope
-        Scope* theScope = input.currentScope;
-        Function* theFunction = input.currentScope->functions;
-
-        //Traverse the linked lists to find the function.
-        //It is guaranteed to exist, but may not be in the current scope.
-        while(theScope != nullptr){
-            theFunction = theScope->functions;
-            while(theFunction != nullptr){
-                if(theFunction->name == function->name){
-                    thisptr->function = theFunction;
-
-                    thisptr->function = theFunction;
-                    thisptr->arguments = arguments->pcopy(input);
-
-                    return thisptr;
-                }
-                theFunction = theFunction->next;
-            }
-            theScope = theScope->parent;
-        }
-
-        //Technically unreachable
-        return nullptr; 
-    }
-
 
 
 //Arguments
@@ -2496,11 +1548,7 @@ std::string assignPad(FloridaType input, char where){
         //The default settings are already in place.
     }
 
-    Arguments::Arguments(Node* input){
-        current = input;
-    }
-
-    std::string Arguments::ToString(std::string inLeft, std::string inRight){
+    void ::ToString(std::string inLeft, std::string inRight){
         if(next != nullptr){
             return current->ToString(inLeft, "") + ", " + next->ToString(inLeft, "");
         } else {
@@ -2508,18 +1556,6 @@ std::string assignPad(FloridaType input, char where){
         }
 
         //Unreachable, just like uncountable infinity.
-        return "";
-
-    }
-
-    std::string Arguments::printAll(){
-        if(next != nullptr){
-            return current->printAll() + next->printAll();
-        } else {
-            return current->printAll();
-        }
-
-        //Unreachable, just like that 1600 SAT score.
         return "";
 
     }
@@ -2533,32 +1569,6 @@ std::string assignPad(FloridaType input, char where){
         currArgs->current->FLVMCodeGen(inInstructions);
     }
 
-    Node* Arguments::copy(StackAllocator& input){
-        Arguments* thisptr = input.alloc<Arguments>();
-
-        if(current != nullptr){
-            thisptr->current = current->copy(input);
-        }
-        if(next != nullptr){
-            thisptr->next = next->pcopy(input);
-        }
-
-        return thisptr;
-    }
-
-    Arguments* Arguments::pcopy(StackAllocator& input){
-        Arguments* thisptr = input.alloc<Arguments>();
-
-        if(current != nullptr){
-            thisptr->current = current->copy(input);
-        }
-        if(next != nullptr){
-            thisptr->next = next->pcopy(input);
-        }
-
-        return thisptr;        
-    }
-
 
 
 //Return statements
@@ -2566,12 +1576,8 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    std::string ReturnClass::ToString(std::string inLeft, std::string inRight){
+    void ::ToString(std::string inLeft, std::string inRight){
         return inLeft + "\x1b[34mreturn\x1b[0m " + statement->ToString(inLeft, inRight) + inRight;
-    }
-
-    std::string ReturnClass::printAll(){
-        return statement->printAll() + padding("return") + std::to_string(returnCount) + "\n";
     }
 
     void ReturnClass::FLVMCodeGen(Instructions* inInstructions){
@@ -2584,26 +1590,6 @@ std::string assignPad(FloridaType input, char where){
         inInstructions.push_back(result);
     }
 
-    Node* ReturnClass::copy(StackAllocator& input){
-        ReturnClass* thisptr = input.alloc<ReturnClass>();
-
-        if(statement != nullptr){
-            thisptr->statement = statement->copy(input);
-        }
-
-        return thisptr;
-    }
-
-    ReturnClass* ReturnClass::pcopy(StackAllocator& input){
-        ReturnClass* thisptr = input.alloc<ReturnClass>();
-
-        if(statement != nullptr){
-            thisptr->statement = statement->copy(input);
-        }
-
-        return thisptr;        
-    }
-
 
 
 //Objects
@@ -2611,7 +1597,7 @@ std::string assignPad(FloridaType input, char where){
         type = FloridaType::Object;
     }
 
-    std::string ObjectClass::ToString(std::string inLeft, std::string inRight){
+    void ::ToString(std::string inLeft, std::string inRight){
         std::string theInitialize = "";
 
         return "object " + std::string(name) + "{\n" + 
@@ -2619,35 +1605,8 @@ std::string assignPad(FloridaType input, char where){
         inLeft + "}\n";
     }
 
-    std::string ObjectClass::printAll(){
-        //There is nothing to print.
-        return "";
-    }
-
     void ObjectClass::FLVMCodeGen(Instructions* inInstructions){
         //TO DO
-    }
-
-    Node* ObjectClass::copy(StackAllocator& input){
-        ObjectClass* result = input.alloc<ObjectClass>();
-        Scope* currentScope = input.currentScope;
-
-        result->name = name;
-        result->code = code->pcopy(input);
-        currentScope->push(result);
-
-        return result;
-    }
-
-    ObjectClass* ObjectClass::pcopy(StackAllocator& input){
-        ObjectClass* result = input.alloc<ObjectClass>();
-        Scope* currentScope = input.currentScope;
-
-        result->name = name;
-        result->code = code->pcopy(input);
-        currentScope->push(result);
-
-        return result;
     }
 
 
@@ -2657,27 +1616,8 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    std::string MemberAccess::ToString(std::string inLeft, std::string inRight){
+    void ::ToString(std::string inLeft, std::string inRight){
         return left->ToString(inLeft, inRight) + "." + right->ToString(inLeft, inRight);
-    }
-
-    std::string MemberAccess::printAll(){
-        std::string result = "";
-        //Variable* theVariable = nullptr;
-        MemberAccess* theAccess = nullptr;
-        //Dereference* theDereference = nullptr;
-        Node* currentNode = left;
-
-        //I cannot recursively descend these nodes if I want to to optimize this.
-        while(false){
-            theAccess = dynamic_cast<MemberAccess*>(currentNode);
-            if(theAccess != nullptr){
-                result = "";
-                return result;
-            }
-        }
-
-        return result;
     }
 
     void MemberAccess::FLVMCodeGen(Instructions* inInstructions){
@@ -2713,24 +1653,6 @@ std::string assignPad(FloridaType input, char where){
         }
     }
 
-    Node* MemberAccess::copy(StackAllocator& input){
-        MemberAccess* result = input.alloc<MemberAccess>();
-
-        result->left = left->copy(input);
-        result->right = right->pcopy(input);
-
-        return result;
-    }
-
-    MemberAccess* MemberAccess::pcopy(StackAllocator& input){
-        MemberAccess* result = input.alloc<MemberAccess>();
-
-        result->left = left->copy(input);
-        result->right = right->pcopy(input);
-
-        return result;
-    }
-
 
 
 //Dereference
@@ -2738,13 +1660,8 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    std::string Dereference::ToString(std::string inLeft, std::string inRight){
+    void ::ToString(std::string inLeft, std::string inRight){
         return left->ToString(inLeft, inRight) + "->" + right->ToString(inLeft, inRight);
-    }
-
-    std::string Dereference::printAll(){
-        //TO DO
-        return "";
     }
 
     void Dereference::FLVMCodeGen(Instructions* inInstructions){
@@ -2776,22 +1693,4 @@ std::string assignPad(FloridaType input, char where){
         if(theVariable != nullptr){
             theVariable->FLVMCodeGen(inInstructions);
         }
-    }
-
-    Node* Dereference::copy(StackAllocator& input){
-        Dereference* result = input.alloc<Dereference>();
-
-        result->left = left->copy(input);
-        result->right = right->pcopy(input);
-
-        return result;
-    }
-
-    Dereference* Dereference::pcopy(StackAllocator& input){
-                Dereference* result = input.alloc<Dereference>();
-        
-        result->left = left->copy(input);
-        result->right = right->pcopy(input);
-
-        return result;
     }

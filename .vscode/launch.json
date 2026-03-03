@@ -6,7 +6,7 @@
     "configurations": [
         {
             "name": "(gdb) Launch",
-            "preLaunchTask": "makeFile",
+            "preLaunchTask": "makefile",
             "miDebuggerPath": "/usr/bin/gdb",
             "type": "cppdbg",
             "request": "launch",

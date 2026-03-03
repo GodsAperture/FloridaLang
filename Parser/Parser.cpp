@@ -156,7 +156,7 @@ Node* Parser::AddSub(){
         }
     }
 
-    return left;
+    return (Node*) ((Node*) stack->head - left);
 
 }
 
@@ -225,7 +225,7 @@ Node* Parser::MulDiv(){
         }
     }
 
-    return left;
+    return (Node*) ((Node*) stack->head - left);
 
 }
 
@@ -239,7 +239,7 @@ Node* Parser::primitive(){
         //Increment for the minus sign;
         expression = stack->alloc<Negative>(MulDiv());
 
-        return expression;
+        return (Node*) ((Node*) stack->head - expression);
     }
     //Check for expression within parentheses.
     if(check("(")){
@@ -251,7 +251,7 @@ Node* Parser::primitive(){
             errorStack.push_back("Missing ')' on line " + std::to_string(given[iter].row));
         }
 
-        return expression;
+        return (Node*) ((Node*) stack->head - expression);
     }
 
 
@@ -263,7 +263,7 @@ Node* Parser::primitive(){
         number->type = FloridaType::ufixed8;
         iter++;
 
-        return number;
+        return (Node*) ((Node*) stack->head - number);
     }
     if((given[iter].type == FloridaType::ufixed4) and (given[iter].getName() != "ufixed4")){
         Primitive* number = stack->alloc<Primitive>();
@@ -271,7 +271,7 @@ Node* Parser::primitive(){
         number->type = FloridaType::ufixed4;
         iter++;
 
-        return number;
+        return (Node*) ((Node*) stack->head - number);
     }
     if((given[iter].type == FloridaType::ufixed2) and (given[iter].getName() != "ufixed2")){
         Primitive* number = stack->alloc<Primitive>();
@@ -279,7 +279,7 @@ Node* Parser::primitive(){
         number->type = FloridaType::ufixed2;
         iter++;
 
-        return number;
+        return (Node*) ((Node*) stack->head - number);
     }
     if((given[iter].type == FloridaType::ufixed1) and (given[iter].getName() != "ufixed1")){
         Primitive* number = stack->alloc<Primitive>();
@@ -287,7 +287,7 @@ Node* Parser::primitive(){
         number->type = FloridaType::ufixed1;
         iter++;
 
-        return number;
+        return (Node*) ((Node*) stack->head - number);
     }
     if((given[iter].type == FloridaType::fixed8) and (given[iter].getName() != "fixed8")){
         Primitive* number = stack->alloc<Primitive>();
@@ -295,7 +295,7 @@ Node* Parser::primitive(){
         number->type = FloridaType::fixed8;
         iter++;
 
-        return number;
+        return (Node*) ((Node*) stack->head - number);
     }
     if((given[iter].type == FloridaType::fixed4) and (given[iter].getName() != "fixed4")){
         Primitive* number = stack->alloc<Primitive>();
@@ -303,7 +303,7 @@ Node* Parser::primitive(){
         number->type = FloridaType::fixed4;
         iter++;
 
-        return number;
+        return (Node*) ((Node*) stack->head - number);
     }
     if((given[iter].type == FloridaType::fixed2) and (given[iter].getName() != "fixed2")){
         Primitive* number = stack->alloc<Primitive>();
@@ -311,7 +311,7 @@ Node* Parser::primitive(){
         number->type = FloridaType::fixed2;
         iter++;
 
-        return number;
+        return (Node*) ((Node*) stack->head - number);
     }
     if((given[iter].type == FloridaType::fixed1) and (given[iter].getName() != "fixed1")){
         Primitive* number = stack->alloc<Primitive>();
@@ -319,7 +319,7 @@ Node* Parser::primitive(){
         number->type = FloridaType::fixed1;
         iter++;
 
-        return number;
+        return (Node*) ((Node*) stack->head - number);
     }
     if((given[iter].type == FloridaType::float8) and (given[iter].getName() != "float8")){
         Primitive* number = stack->alloc<Primitive>();
@@ -327,7 +327,7 @@ Node* Parser::primitive(){
         number->type = FloridaType::float8;
         iter++;
 
-        return number;
+        return (Node*) ((Node*) stack->head - number);
     }
     if((given[iter].type == FloridaType::float4) and (given[iter].getName() != "float4")){
         Primitive* number = stack->alloc<Primitive>();
@@ -335,7 +335,7 @@ Node* Parser::primitive(){
         number->type = FloridaType::float4;
         iter++;
 
-        return number;
+        return (Node*) ((Node*) stack->head - number);
     }
 
 
@@ -422,7 +422,7 @@ Node* Parser::equal(){
     result->right = right;
     result->type = FloridaType::Bool;
 
-    return result;
+    return (Equal*) ((Equal*) stack->head - result);
 
 }
 
@@ -478,7 +478,7 @@ Node* Parser::notEqual(){
     result->right = right;
     result->type = FloridaType::Bool;
 
-    return result;
+    return (Node*) ((Node*) stack->head - result);
 
 }
 
@@ -532,11 +532,12 @@ Node* Parser::greaterThan(){
     result->right = right;
     result->type = FloridaType::Bool;
 
-    return result;
+    return (Node*) ((Node*) stack->head - result);
 
 }
 
 Node* Parser::greaterThanOr(){
+    GreaterThanOr* result = nullptr;
     if(!hasTokens(3)){
         return nullptr;
     }
@@ -563,11 +564,34 @@ Node* Parser::greaterThanOr(){
         return nullptr;
     }
 
-    return stack->alloc<GreaterThanOr>(left, right);
+    FloridaType resultType = returnType(left->type, right->type);
+    //Determine if either the left or the right need to be typecasted.
+    if(left->type != resultType){
+        TypecastClass* that = stack->alloc<TypecastClass>();
+        that->body = left;
+        that->type = resultType;
+
+        left = that;     
+    }
+    if(right->type != resultType){
+        TypecastClass* that = stack->alloc<TypecastClass>();
+        that->body = right;
+        that->type = resultType;
+
+        right = that;
+    }
+
+    result = stack->alloc<GreaterThanOr>();
+    result->left = left;
+    result->right = right;
+    result->type = FloridaType::Bool;
+
+    return (Node*) ((Node*) stack->head - result);
 
 }
 
 Node* Parser::lessThan(){
+    LessThan* result = nullptr;
     if(!hasTokens(3)){
         return nullptr;
     }
@@ -617,7 +641,7 @@ Node* Parser::lessThan(){
     result->right = right;
     result->type = FloridaType::Bool;
 
-    return result;
+    return (Node*) ((Node*) stack->head - result);
 
 }
 
@@ -671,7 +695,7 @@ Node* Parser::lessThanOr(){
     result->right = right;
     result->type = FloridaType::Bool;
 
-    return result;
+    return (Node*) ((Node*) stack->head - result);
 
 }
 
@@ -748,7 +772,7 @@ Node* Parser::OR(){
 
     }
 
-    return left;
+    return (Node*) ((Node*) stack->head - left);
 
 }
 
@@ -781,7 +805,7 @@ Node* Parser::AND(){
 
     }
 
-    return left;
+    return (Node*) ((Node*) stack->head - left);
 }
 
 
@@ -812,7 +836,7 @@ Scope* Parser::scope(){
     //Make sure to assign each variable an appropriate size.
     newScope->byteAssign();
 
-    return newScope;
+    return (Scope*) ((Scope*) stack->head - newScope);
 }
 
 Body* Parser::body(){
@@ -846,9 +870,10 @@ Body* Parser::body(){
 
     }
 
-    return bodyStart;
+    return (Body*) ((Body*) stack->head - bodyStart);
 }
 
+//Convenient method
 Node* Parser::commonExpressions(){
     Node* result;
 
@@ -914,6 +939,7 @@ Node* Parser::commonExpressions(){
     return nullptr;
 }
 
+//Convenient method
 Node* Parser::commonStatements(){
     Node* result = nullptr;
 
@@ -935,7 +961,7 @@ Node* Parser::commonStatements(){
 }
 
 //if statement
-Node* Parser::IF(){ 
+IfClass* Parser::IF(){ 
     Node* condition = nullptr;
     IfClass* result = nullptr;
 
@@ -987,7 +1013,7 @@ Node* Parser::IF(){
         result->condition = condition;
         result->ifBody = ifScope;
         result->elseBody = elseScope;
-        return result;
+        return (IfClass*) ((IfClass*) stack->head - result);
 
     }
 
@@ -996,7 +1022,7 @@ Node* Parser::IF(){
 }
 
 //for loop
-Node* Parser::FOR(){
+ForLoop* Parser::FOR(){
     //These first three can remain nullptrs.
     Initialize* initializeVar = nullptr;
     Initialize* initializeAssignVar = nullptr;
@@ -1076,7 +1102,7 @@ Node* Parser::FOR(){
         //Assign each variable a placement in the pack.
         result->body->byteAssign();
 
-        return result;
+        return (ForLoop*) ((ForLoop*) stack->head - result);
 
     }
 
@@ -1085,7 +1111,7 @@ Node* Parser::FOR(){
 }
 
 //while loop
-Node* Parser::WHILE(){
+WhileLoop* Parser::WHILE(){
     if(check("while") & check("(")){
         std::string_view name = given[iter - 2].name;
         Node* condition = nullptr;
@@ -1123,7 +1149,7 @@ Node* Parser::WHILE(){
         //Assign each variable a placement in the pack.
         result->body->byteAssign();
 
-        return result;
+        return (WhileLoop*) ((WhileLoop*) stack->head - result);
 
     }
 
@@ -1170,7 +1196,7 @@ Variable* Parser::variable(){
         }
 
         iter++;
-        return newVariable;
+        return (Variable*) ((Variable*) stack->head - newVariable);
     }
 
     //This isn't an error, just that a variable wasn't found.
@@ -1218,7 +1244,7 @@ Initialize* Parser::initialize(){
             result->code = commonStatements();
         }
 
-        return result;
+        return (Initialize*) ((Initialize*) stack->head - result);
     }
 
     //This isn't an error, just that an initialization wasn't found.
@@ -1241,7 +1267,7 @@ Assignment* Parser::assignment(){
             result = stack->alloc<Assignment>();
             result->left = left;
             result->right = right;
-            return result;
+            return (Assignment*) ((Assignment*) stack->head - result);
         }
 
         reset(start);
@@ -1293,7 +1319,7 @@ ObjectClass* Parser::object(){
                 result->memorySize = currentInitialize->thisVariable->stackBytePosition + currentInitialize->thisVariable->objectType->memorySize;
             }
         }
-        return result;
+        return (ObjectClass*) ((ObjectClass*) stack->head - result);
     }
 
     return nullptr;
@@ -1359,7 +1385,7 @@ Node* Parser::memberAccess(){
         }
 
         //Return the completed chain access.
-        return result;
+        return (Node*) ((Node*) stack->head - result);
     }
 
     reset(start);
@@ -1370,7 +1396,7 @@ Node* Parser::memberAccess(){
 
 
 //Function stuff
-Node* Parser::function(){
+Function* Parser::function(){
     if(!hasTokens(3)){
         return nullptr;
     }
@@ -1451,7 +1477,7 @@ Node* Parser::function(){
         //Assign each variable a placement in the pack.
         result->code->byteAssign();
 
-        return result;
+        return (Function*) ((Function*) stack->head - result);
 
     }
 
@@ -1506,7 +1532,7 @@ Call* Parser::call(){
         //Readjust the scope to the previous scope.
         stack->currentScope = oldScope;
 
-        return result;
+        return (Call*) ((Call*) stack->head - result);
 
     }
 
@@ -1551,7 +1577,7 @@ ReturnClass* Parser::Return(){
             result->statement = thing;
         }
 
-        return result;
+        return (ReturnClass*) ((ReturnClass*) stack->head - result);
     }
     //The return is a lie.
     return nullptr;

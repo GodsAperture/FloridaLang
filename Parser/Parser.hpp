@@ -123,14 +123,14 @@ public:
     Node* AND();            //left: compare(), right: compare()
 
     //if statement
-    Node* IF();
+    IfClass* IF();
 
     //loops
-    Node* FOR();
-    Node* WHILE();
+    ForLoop* FOR();
+    WhileLoop* WHILE();
 
     //Functions and methods
-    Node* function();
+    Function* function();
     void functionAppend(Function* input);
     Call* call();
     ReturnClass* Return();

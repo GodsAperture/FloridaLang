@@ -110,7 +110,7 @@ public:
         BPMax = 2 * 100;
         INMax = 100;
         //Adjust the start of the program.
-        instructionNumber = programInstructions.size();
+        instructionNumber = programInstructions->instructionCount;
         //Generate the rest of the instructions.
         //This is always a `Scope`.
         

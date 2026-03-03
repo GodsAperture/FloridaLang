@@ -22,6 +22,4 @@
         input.current = input.head;
         //Set `input.end`
         input.end = (void*) ((long long) input.head + diff);
-        //Copy the AST from the original to the new StackAllocator. 
-        input.AST = AST->copy(input);
     }
