@@ -15,7 +15,9 @@ enum Operation : int16_t {
     deleteScope,
     call,
     ireturn,
+    //`cjump`, offset
     cjump,
+    //`jump`, location
     jump,
 
     //`fetch1`, `whichScope`, `stackOffset`
@@ -345,7 +347,6 @@ class Instructions{
 public:
     types* instructionSet = nullptr;    
     InstructionsDebugger* debuggedIR = nullptr;
-    //This is measured in multiples of 8.
     uint64_t instructionCount = 0;
     uint64_t maxInstructionCount = 0;
     //Normally this would be a 

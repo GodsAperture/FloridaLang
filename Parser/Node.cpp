@@ -247,7 +247,7 @@ std::string assignPad(FloridaType input, char where){
 //This allows me to find where in memory the pointer is supposed to exist given some `head`.
 //`add(body, head)`
 inline Node* add(void* left, void* right){
-    return (Node*) ((uint64_t) left + (uint64_t) right);
+    return (Node*) ((int64_t) left + (int64_t) right);
 }
 
 
@@ -1251,10 +1251,12 @@ inline Node* add(void* left, void* right){
     }
 
     void And::FLVMCodeGen(Instructions* inInstructions, Node* head){
-        left->FLVMCodeGen(inInstructions, head);
-        right->FLVMCodeGen(inInstructions, head);
+        types result;
+        add(left, head)->FLVMCodeGen(inInstructions, head);
+        add(right, head)->FLVMCodeGen(inInstructions, head);
         //Push back the instruction for AND
-        inInstructions.push_back(Instruction(iand));
+        result.operation[0] = Operation::iand;
+        inInstructions->push(result);
     }
 
 
@@ -1266,12 +1268,15 @@ inline Node* add(void* left, void* right){
 
     void Not::ToString(std::string inLeft, std::string inRight, Node* head){
         std::cout << "!";
-        right->ToString(inLeft, inRight);
+        add(right, head)->ToString(inLeft, inRight, head);
     }
 
     void Not::FLVMCodeGen(Instructions* inInstructions, Node* head){
-        right->FLVMCodeGen(inInstructions, head);
-        inInstructions.push_back(Instruction(inot));
+        types result;
+        add(right, head)->FLVMCodeGen(inInstructions, head);
+        //Push back the operation for !
+        result.operation[0] = Operation::inot;
+        inInstructions->push(result);
     }
 
 
@@ -1284,22 +1289,23 @@ inline Node* add(void* left, void* right){
     void IfClass::ToString(std::string inLeft, std::string inRight, Node* head){
         if(elseBody == nullptr){
             std::cout << inLeft << "\x1b[36mif\x1b[0m(";
-            condition->ToString(inLeft, inRight);
+            add(condition, head)->ToString(inLeft, inRight, head);
             std::cout << "){\n";
-                ifBody->ToString("  " + inLeft, ";");
+                add(ifBody, head)->ToString("  " + inLeft, ";", head);
             std::cout << "\n" << inLeft << "}";
         } else {
             std::cout << inLeft + "\x1b[36mif\x1b[0m(";
-            condition->ToString(inLeft, ";");
+            add(condition, head)->ToString(inLeft, ";", head);
             std::cout << "){\n";
-                ifBody->ToString("  " + inLeft, inRight);
+                add(ifBody, head)->ToString("  " + inLeft, inRight, head);
             std::cout << "\n" << inLeft << "} else {\n";
-                elseBody->ToString("  " + inLeft, ";");
+                add(elseBody, head)->ToString("  " + inLeft, ";", head);
             std::cout << "\n" << inLeft << "}";
         }
     }
 
     void IfClass::FLVMCodeGen(Instructions* inInstructions, Node* head){
+        types result;
         //If there is not an else statement, generate code for just an if statement.
         //otherwise, generate both bodies and cjumps as needed.
         if(elseBody == nullptr){
@@ -1307,41 +1313,43 @@ inline Node* add(void* left, void* right){
             condition->FLVMCodeGen(inInstructions, head);
 
             //Mark where the conditional jump instruction will be.
-            int64_t cjumpPosition = inInstructions.size();
+            int64_t cjumpPosition = inInstructions->instructionCount;
 
             //Push a cjump instruction. This will be edited later.
-            inInstructions.push_back(Instruction(Operation::cjump));
-            ifBody->FLVMCodeGen(inInstructions, head);
+            result.fixed8 = cjumpPosition;
+            inInstructions->push(result);
+            add(ifBody, head)->FLVMCodeGen(inInstructions, head);
 
             //Adjust the conditional jump destination.
-            inInstructions[cjumpPosition].literal.fixed8 = inInstructions.size() - cjumpPosition;
+            inInstructions->instructionSet[cjumpPosition].fixed8 = inInstructions->instructionCount - cjumpPosition;
         } else {
             //Generate the instructions for the if condition.
             condition->FLVMCodeGen(inInstructions, head);
 
-            //Get the size of the instruction stack before the body.
-            //This is also where the cjump instruction will be.
-            int64_t cjumpPosition = inInstructions.size();
+            //Mark where the conditional jump instruction will be.
+            int64_t cjumpPosition = inInstructions->instructionCount;
 
             //Push a cjump instruction. This will be edited later.
-            inInstructions.push_back(Instruction(Operation::cjump));
-            ifBody->FLVMCodeGen(inInstructions, head);
+            result.fixed8 = cjumpPosition;
+            inInstructions->push(result);
+            add(ifBody, head)->FLVMCodeGen(inInstructions, head);
 
             //Push an unconditional jump to skip over the else statement.
             //This will only be reached if the first branch is taken.
-            inInstructions.push_back(Instruction(Operation::jump));
+            result.operation[0] = Operation::jump;
+            inInstructions->push(result);
 
             //Get the size of the instructions set after the if body is made.
-            int64_t endIfSize = inInstructions.size();
+            int64_t endIfSize = inInstructions->instructionCount;
 
             //Adjust the conditional jump destination.
-            inInstructions[cjumpPosition].literal.fixed8 = endIfSize - cjumpPosition;
+            inInstructions->instructionSet[cjumpPosition].fixed8 = endIfSize - cjumpPosition;
             
             //Generate the bytecode for the else statement.
             elseBody->FLVMCodeGen(inInstructions, head);
 
             //Adjust the unconditional jump destination.
-            inInstructions[endIfSize - 1].literal.fixed8 = inInstructions.size();
+            inInstructions->instructionSet[endIfSize].fixed8 = inInstructions->instructionCount;
         }
 
     }
@@ -1356,64 +1364,83 @@ inline Node* add(void* left, void* right){
     void ForLoop::ToString(std::string inLeft, std::string inRight, Node* head){
         std::cout << inLeft << "\x1b[34mfor\x1b[0m(";
         if(assign != nullptr){
-            assign->ToString("", ";");
+            add(assign, head)->ToString("", ";", head);
         } else {
             std::cout << ";";
         }
 
         if(condition != nullptr){
-            condition->ToString("", ";");
+            add(condition, head)->ToString("", ";", head);
         }
         std::cout << ";";
 
         if(incrementer != nullptr){
-            incrementer->ToString("", "");
+            add(incrementer, head)->ToString("", "", head);
         }
         std::cout << "){\n";
-        body->ToString("  " + inLeft, inRight);
+        add(body, head)->ToString("  " + inLeft, inRight, head);
         std::cout << inLeft << "}\n";
     }
 
     void ForLoop::FLVMCodeGen(Instructions* inInstructions, Node* head){
+        types result;
         //The initial value of a for loop.
         if(assign != nullptr){
-            assign->FLVMCodeGen(inInstructions, head);
+            add(assign, head)->FLVMCodeGen(inInstructions, head);
         }
 
         //Start the scope, because we don't want to continually assign/initialize.
-        inInstructions.push_back(Instruction(Operation::newScope, body->variableSlotSize >> 3));
+        result.operation[0] = Operation::newScope;
+        inInstructions->push(result);
+        //Determine which scope this is for.
+        result.fixed8 = ((Scope*) add(body, head))->whichScope;
+        inInstructions->push(result);
+        //Get the variable slot size.
+        result.fixed8 = ((Scope*) add(body, head))->variableSlotSize;
+        inInstructions->push(result);
 
         //This will be where the end of the loop will unconditionally jump to.
-        int64_t jumpTo = inInstructions.size();
-
+        int64_t jumpTo = inInstructions->instructionCount;
+        result.fixed8 = jumpTo;
+        inInstructions->push(result);
+        
         //The condition for a for loop to terminate.
         //If none is provided, then it will perpetually loop.
         if(condition != nullptr){
-            condition->FLVMCodeGen(inInstructions, head);
+            add(condition, head)->FLVMCodeGen(inInstructions, head);
         } else {
-            inInstructions.push_back(Instruction(Operation::push, false));
+            result.boolean[0] = false;
+            inInstructions->push(result);
         }
 
         //Pushing the conditional jump that can break the loop.
-        int64_t cjumpPosition = inInstructions.size();
-        inInstructions.push_back(Instruction(Operation::cjump));
+        int64_t cjumpPosition = inInstructions->instructionCount;
+        result.fixed8 = cjumpPosition;
+        inInstructions->push(result);
 
         //Add the body of instructions.
-        body->body->FLVMCodeGen(inInstructions, head);
+        if(body != nullptr){
+            add(((Scope*) add(body, head))->body, head)->FLVMCodeGen(inInstructions, head);
+        }
 
         //Add another line of code for changes at the end of the loop.
         if(incrementer != nullptr){
-            incrementer->FLVMCodeGen(inInstructions, head);
+            add(incrementer, head)->FLVMCodeGen(inInstructions, head);
         }
 
         //Place the unconditional jump instruction at the end.
-        inInstructions.push_back(Instruction(jump, jumpTo));
+        result.fixed8 = inInstructions->instructionCount;
+        inInstructions->push(result);
 
-        //Adjust the position of the conditional jump to be outside of the loop
-        inInstructions[cjumpPosition].literal.fixed8 = inInstructions.size() - cjumpPosition;
+        //Adjust the position of the conditional jump to be outside of the loop.
+        inInstructions->instructionSet[cjumpPosition].fixed8 = inInstructions->instructionCount - cjumpPosition;
 
         //End the existing scope.
-        inInstructions.push_back(Instruction(Operation::deleteScope));
+        result.operation[0] = Operation::deleteScope;
+        inInstructions->push(result);
+        //Determine which scope this is for.
+        result.fixed8 = ((Scope*) add(body, head))->whichScope;
+        inInstructions->push(result);
     }
 
 
@@ -1432,30 +1459,54 @@ inline Node* add(void* left, void* right){
     }
 
     void WhileLoop::FLVMCodeGen(Instructions* inInstructions, Node* head){
-        Instruction result = Instruction();
-        result.oper = Operation::push;
-        result.literal.fixed8 = body->whichScope;
-        //Push the corresponding scope value to the instructions.
-        inInstructions.push_back(result);
+        types result;
+        //Generate the push instruction.
+        result.operation[0] = Operation::push;
+        inInstructions->push(result);
+        //Put the primitive next to it.
+        result.fixed8 = body->whichScope;
+        inInstructions->push(result);
+
         //Start of the scope, granted while loops don't really need scopes.
+        //This is just for consistency and ease of use.
         //It just makes work easier for me.
-        inInstructions.push_back(Instruction(Operation::newScope));
+        result.operation[0] = Operation::newScope;
+        inInstructions->push(result);
+        //Don't forget which scope.
+        result.fixed8 = ((Scope*) add(body, head))->whichScope;
+        inInstructions->push(result);
+        //Add the variable slot size.
+        result.fixed8 = body->variableSlotSize;
+        inInstructions->push(result);
+
         //Where the unconditional jump will always land.
-        size_t start = inInstructions.size();
+        size_t start = inInstructions->instructionCount;
         //Generate the code for the condition, if any.
-        condition->FLVMCodeGen(inInstructions, head);
+        if(condition != nullptr){
+            add(condition, head)->FLVMCodeGen(inInstructions, head);
+        }
         //The location of the conditional jump statement.
-        size_t here = inInstructions.size();
+        size_t here = inInstructions->instructionCount;    
         //Lay down the conditional jump.
-        inInstructions.push_back(Instruction(Operation::cjump));
+        result.operation[0] = Operation::cjump;
+        inInstructions->push(result);
         //Generate the code for the body.
-        body->body->FLVMCodeGen(inInstructions, head);
+        add(((Scope*) add(body, head))->body, head)->FLVMCodeGen(inInstructions, head);
         //Place an unconditional jump to restart the loop.
-        inInstructions.push_back(Instruction(Operation::jump, start));
+        result.operation[0] = Operation::jump;
+        inInstructions->push(result);
+        //The location to jump to.
+        result.fixed8 = start;
+        inInstructions->push(result);
         //Adjust where the unconditional jump will land.
-        inInstructions[here].literal.fixed8 = inInstructions.size() - here;
+        inInstructions->instructionSet[here].fixed8 = inInstructions->instructionCount - here;
+        
         //End the scope.
-        inInstructions.push_back(Instruction(Operation::deleteScope));
+        result.operation[0] = Operation::deleteScope;
+        inInstructions->push(result);
+        //Which scope is being deleted.
+        result.fixed8 = ((Scope*) add(body, head))->whichScope;
+        inInstructions->push(result);
     }
 
 
