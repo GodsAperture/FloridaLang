@@ -244,6 +244,12 @@ std::string assignPad(FloridaType input, char where){
     return result;
 }
 
+//This allows me to find where in memory the pointer is supposed to exist given some `head`.
+//`add(body, head)`
+inline Node* add(void* left, void* right){
+    return (Node*) ((uint64_t) left + (uint64_t) right);
+}
+
 
 
 //TypecastClass
@@ -252,13 +258,13 @@ std::string assignPad(FloridaType input, char where){
         type = FloridaType::Typecast;
     }
 
-    void TypecastClass::ToString(std::string inLeft, std::string inRight){
-        body->ToString(inLeft, inRight);
+    void TypecastClass::ToString(std::string inLeft, std::string inRight, Node* head){
+        add(body, head)->ToString(inLeft, inRight, head);
     }
 
-    void TypecastClass::FLVMCodeGen(Instructions* inInstructions){
+    void TypecastClass::FLVMCodeGen(Instructions* inInstructions, Node* head){
         types result;
-        body->FLVMCodeGen(inInstructions);
+        add(body, head)->FLVMCodeGen(inInstructions, head);   
         //Once again, I abuse the integer nature to get the correct operation.
         //This will pick the correct one among 100 total options.
         //10 of those are redundant and only necessary to let the math work.
@@ -461,13 +467,13 @@ std::string assignPad(FloridaType input, char where){
 
 
     
-    void Scope::ToString(std::string inLeft, std::string inRight){
+    void Scope::ToString(std::string inLeft, std::string inRight, Node* head){
         if(body != nullptr){
-            body->ToString(inLeft, ";");
+            add(body, head)->ToString(inLeft, ";", head);
         }
     }
 
-    void Scope::FLVMCodeGen(Instructions* inInstructions){
+    void Scope::FLVMCodeGen(Instructions* inInstructions, Node* head){
         types result;
 
         //The new scope will use the last value to pick the proper scope and adjust its value.
@@ -480,7 +486,7 @@ std::string assignPad(FloridaType input, char where){
         result.fixed8 = variableSlotSize;
         inInstructions->push(result);
         if(body != nullptr){
-            body->FLVMCodeGen(inInstructions);
+            add(body, head)->FLVMCodeGen(inInstructions, head);
         }
         //Push the delete scope operation onto the stack.
         result.operation[0] = Operation::deleteScope;
@@ -664,7 +670,7 @@ std::string assignPad(FloridaType input, char where){
         //The type will be determined after a Primitive is created.
     }
 
-    void Primitive::ToString(std::string inLeft, std::string inRight){
+    void Primitive::ToString(std::string inLeft, std::string inRight, Node* head){
         switch(type){
             case ufixed1:
                 std::cout << std::to_string(value.ufixed1[0]);
@@ -709,7 +715,7 @@ std::string assignPad(FloridaType input, char where){
         }
     }
 
-    void Primitive::FLVMCodeGen(Instructions* inInstructions){
+    void Primitive::FLVMCodeGen(Instructions* inInstructions, Node* head){
         types result;
         //Generate a push instruction.
         result.operation[0] = Operation::push;
@@ -744,24 +750,24 @@ std::string assignPad(FloridaType input, char where){
 
     }
 
-    void Body::ToString(std::string inLeft, std::string inRight){
-        current->ToString(inLeft, inRight);
+    void Body::ToString(std::string inLeft, std::string inRight, Node* head){
+        add(current, head)->ToString(inLeft, inRight, head);
         std::cout << "\n";
         if(next != nullptr){
-            next->ToString(inLeft, inRight);
+            add(next, head)->ToString(inLeft, inRight, head);
         }
     }
 
-    void Body::FLVMCodeGen(Instructions* inInstructions){
+    void Body::FLVMCodeGen(Instructions* inInstructions, Node* head){
         //Add the current chunk of code if it is not a function.
         if(dynamic_cast<Function*>(current) == nullptr){
-            current->FLVMCodeGen(inInstructions);
+            add(current, head)->FLVMCodeGen(inInstructions, head);
             //After the line has finished execution, pop it from the stack.
             //inInstructions.push_back(Instruction(Operation::pop));
         }
         //If next isn't a nullptr, then generate code for it too.
         if(next != nullptr){
-            next->FLVMCodeGen(inInstructions);
+            add(next, head)->FLVMCodeGen(inInstructions, head);
         }
     }
 
@@ -784,11 +790,11 @@ std::string assignPad(FloridaType input, char where){
 
     }
 
-    void Variable::ToString(std::string inLeft, std::string inRight){
+    void Variable::ToString(std::string inLeft, std::string inRight, Node* head){
         std::cout << thisToken.getName();
     }
 
-    void Variable::FLVMCodeGen(Instructions* inInstructions){
+    void Variable::FLVMCodeGen(Instructions* inInstructions, Node* head){
         types result;
         //Check if the variable is an object.
         //If it is, fetch everything.
@@ -824,28 +830,28 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing.
     };
 
-    void Initialize::ToString(std::string inLeft, std::string inRight){ 
+    void Initialize::ToString(std::string inLeft, std::string inRight, Node* head){ 
         if(thisVariable->objectType != nullptr){
             if(code != nullptr){
                 std::cout <<  inLeft << std::string(thisVariable->objectType->name) << " " << thisVariable->thisToken.getName() << " = ";
-                code->ToString(inLeft, inRight);
+                add(code, head)->ToString(inLeft, inRight, head);
                 std::cout << inRight;
             }
             std::cout << inLeft << std::string(thisVariable->objectType->name) << " " << thisVariable->thisToken.getName() << inRight;
         }
         if(code != nullptr){
             std::cout << inLeft << typeString(thisVariable->thisToken.type) << " " << thisVariable->thisToken.getName() << " = ";
-            code->ToString(inLeft, inRight);
+            add(code, head)->ToString(inLeft, inRight, head);
             std::cout << inRight;
         }
         std::cout << inLeft << typeString(thisVariable->thisToken.type) << " " << thisVariable->thisToken.getName() << inRight;
     }
 
-    void Initialize::FLVMCodeGen(Instructions* inInstructions){
+    void Initialize::FLVMCodeGen(Instructions* inInstructions, Node* head){
         //If there's code, then generate it.
         if(code != nullptr){
             //Generate the code for the right hand side.
-            code->FLVMCodeGen(inInstructions);
+            add(code, head)->FLVMCodeGen(inInstructions, head);
 
             //Get the correct byte size.
             types result;
@@ -898,39 +904,36 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     };
 
-    void Assignment::ToString(std::string inLeft, std::string inRight){
+    void Assignment::ToString(std::string inLeft, std::string inRight, Node* head){
         std::cout << inLeft;
-        left->ToString(inLeft, inRight);
+        add(left, head)->ToString(inLeft, inRight, head);
         std::cout << " = ";
-        right->ToString(inLeft, inRight);
+        add(right, head)->ToString(inLeft, inRight, head);
         std::cout << inRight;
     }
 
-    void Assignment::FLVMCodeGen(Instructions* inInstructions){
+    void Assignment::FLVMCodeGen(Instructions* inInstructions, Node* head){
         //Evaluate the right hand side before assigning.
         if(right != nullptr){
-            right->FLVMCodeGen(inInstructions);
+            add(right, add)->FLVMCodeGen(inInstructions, head);
         }
         //Generate the fetch instructions for this object.
         //These will be changed to assignment instructions.
-        left->FLVMCodeGen(inInstructions);
-        Variable* theVariable = nullptr;
-        MemberAccess* theAccess = nullptr;
-        Dereference* theDereference = nullptr;
+        add(left, head)->FLVMCodeGen(inInstructions, head);
 
-        theVariable = dynamic_cast<Variable*>(left);
+        Variable* theVariable = dynamic_cast<Variable*>(left);
         if(theVariable != nullptr){
             theVariable->AssignCodeGen(inInstructions);
             return;
         }
 
-        theAccess = dynamic_cast<MemberAccess*>(left);
+        MemberAccess* theAccess = dynamic_cast<MemberAccess*>(left);
         if(theAccess != nullptr){
             theAccess->AssignCodeGen(inInstructions);
             return;
         }
 
-        theDereference = dynamic_cast<Dereference*>(left);
+        Dereference* theDereference = dynamic_cast<Dereference*>(left);
         if(theDereference != nullptr){
             theDereference->AssignCodeGen(inInstructions);
             return;
@@ -944,28 +947,23 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    void Add::ToString(std::string inLeft, std::string inRight){
-        left->ToString(inLeft, inRight);
+    void Add::ToString(std::string inLeft, std::string inRight, Node* head){
+        add(left, head)->ToString(inLeft, inRight, head);
         std::cout << " + ";
-        right->ToString(inLeft, inRight);
+        add(right, head)->ToString(inLeft, inRight, head);
     }
 
-    void Add::FLVMCodeGen(Instructions* inInstructions){
-        FloridaType theType = left->type;
+    void Add::FLVMCodeGen(Instructions* inInstructions, Node* head){
         types result;
+        add(left, head)->FLVMCodeGen(inInstructions, head);
+        add(right, head)->FLVMCodeGen(inInstructions, head);
+        //Push the operation
+        result.operation[0] = Operation::add;
+        inInstructions->push(result);
+        //Push the data type
+        result.type[0] = left->type;
+        inInstructions->push(result);
 
-        if(left->type < right->type){
-            theType = right->type;
-        }
-
-        //Determine which operation needs to be generated.
-        //Because of the organization in Instruction.cpp,
-        //A linear combination can find the operation type.
-        result.oper = (Operation) ((theType - FloridaType::ufixed1) * 5 + Operation::ufixed1add);
-
-        left->FLVMCodeGen(inInstructions);
-        right->FLVMCodeGen(inInstructions);
-        inInstructions.push_back(result);
     }
 
 
@@ -975,28 +973,23 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    void Subtract::ToString(std::string inLeft, std::string inRight){
-        left->ToString(inLeft, inRight);
+    void Subtract::ToString(std::string inLeft, std::string inRight, Node* head){
+        add(left, head)->ToString(inLeft, inRight, head);
         std::cout << " - ";
-        right->ToString(inLeft, inRight);
+        add(right, head)->ToString(inLeft, inRight, head);
     }
 
-    void Subtract::FLVMCodeGen(Instructions* inInstructions){
-        FloridaType theType = left->type;
-        Instruction result = Instruction();
+    void Subtract::FLVMCodeGen(Instructions* inInstructions, Node* head){
+        types result;
 
-        if(left->type < right->type){
-            theType = right->type;
-        }
-
-        //Determine which operation needs to be generated.
-        //Because of the organization in Instruction.cpp,
-        //A linear combination can find the operation type.
-        result.oper = (Operation) ((theType - FloridaType::ufixed1) * 5 + Operation::ufixed1subtract);
-
-        left->FLVMCodeGen(inInstructions);
-        right->FLVMCodeGen(inInstructions);
-        inInstructions.push_back(result);
+        add(left, head)->FLVMCodeGen(inInstructions, head);
+        add(right, head)->FLVMCodeGen(inInstructions, head);
+        //Push the operation
+        result.operation[0] = Operation::subtract;
+        inInstructions->push(result);
+        //Push the data type
+        result.type[0] = left->type;
+        inInstructions->push(result);
     }
 
 
@@ -1006,28 +999,23 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    void Multiply::ToString(std::string inLeft, std::string inRight){
-        left->ToString(inLeft, inRight);
+    void Multiply::ToString(std::string inLeft, std::string inRight, Node* head){
+        add(left, head)->ToString(inLeft, inRight, head);
         std::cout << " * ";
-        right->ToString(inLeft, inRight);
+        add(right, head)->ToString(inLeft, inRight, head);
     }
 
-    void Multiply::FLVMCodeGen(Instructions* inInstructions){
-        FloridaType theType = left->type;
-        Instruction result = Instruction();
+    void Multiply::FLVMCodeGen(Instructions* inInstructions, Node* head){
+        types result;
 
-        if(left->type < right->type){
-            theType = right->type;
-        }
-
-        //Determine which operation needs to be generated.
-        //Because of the organization in Instruction.cpp,
-        //A linear combination can find the operation type.
-        result.oper = (Operation) ((theType - FloridaType::ufixed1) * 5 + Operation::ufixed1multiply);
-
-        left->FLVMCodeGen(inInstructions);
-        right->FLVMCodeGen(inInstructions);
-        inInstructions.push_back(result);
+        add(left, head)->FLVMCodeGen(inInstructions, head);
+        add(right, head)->FLVMCodeGen(inInstructions, head);
+        //Push the operation
+        result.operation[0] = Operation::multiply;
+        inInstructions->push(result);
+        //Push the data type
+        result.type[0] = left->type;
+        inInstructions->push(result);
     }
 
 
@@ -1037,28 +1025,24 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     };
 
-    void Divide::ToString(std::string inLeft, std::string inRight){
-        left->ToString(inLeft, inRight);
+    void Divide::ToString(std::string inLeft, std::string inRight, Node* head){
+        add(left, head)->ToString(inLeft, inRight, head);
         std::cout << " / ";
-        right->ToString(inLeft, inRight);
+        add(right, head)->ToString(inLeft, inRight, head);
     }
 
-    void Divide::FLVMCodeGen(Instructions* inInstructions){
+    void Divide::FLVMCodeGen(Instructions* inInstructions, Node* head){
         FloridaType theType = left->type;
-        Instruction result = Instruction();
+        types result;
 
-        if(left->type < right->type){
-            theType = right->type;
-        }
-
-        //Determine which operation needs to be generated.
-        //Because of the organization in Instruction.cpp,
-        //A linear combination can find the operation type.
-        result.oper = (Operation) ((theType - FloridaType::ufixed1) * 5 + Operation::ufixed1divide);
-
-        left->FLVMCodeGen(inInstructions);
-        right->FLVMCodeGen(inInstructions);
-        inInstructions.push_back(result);
+        add(left, head)->FLVMCodeGen(inInstructions, head);
+        add(right, head)->FLVMCodeGen(inInstructions, head);
+        //Push the operation
+        result.operation[0] = Operation::subtract;
+        inInstructions->push(result);
+        //Push the data type
+        result.type[0] = left->type;
+        inInstructions->push(result);
     }
 
 
@@ -1068,14 +1052,14 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    void Parentheses::ToString(std::string inLeft, std::string inRight){
+    void Parentheses::ToString(std::string inLeft, std::string inRight, Node* head){
         std::cout << "(";
-        subexpression->ToString(inLeft, inRight);
+        add(subexpression, head)->ToString(inLeft, inRight, head);
         std::cout << ")";
     }
 
-    void Parentheses::FLVMCodeGen(Instructions* inInstructions){
-        subexpression->FLVMCodeGen(inInstructions);
+    void Parentheses::FLVMCodeGen(Instructions* inInstructions, Node* head){
+        add(subexpression, head)->FLVMCodeGen(inInstructions, head);
     }
 
 
@@ -1085,20 +1069,18 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing;
     }
 
-    void Negative::ToString(std::string inLeft, std::string inRight){
+    void Negative::ToString(std::string inLeft, std::string inRight, Node* head){
         std::cout << "-";
-        right->ToString(inLeft, inRight);
+        add(right, head)->ToString(inLeft, inRight, head);
     }
 
-    void Negative::FLVMCodeGen(Instructions* inInstructions){
-        Instruction result = Instruction();
-        //Determine which operation needs to be generated.
-        //Because of the organization in Instruction.cpp,
-        //A linear combination can find the operation type.
-        result.oper = (Operation) ((right->type - FloridaType::ufixed1) * 5 + Operation::ufixed1negate);
+    void Negative::FLVMCodeGen(Instructions* inInstructions, Node* head){
+        types result;
 
-        right->FLVMCodeGen(inInstructions);
-        inInstructions.push_back(result);
+        add(right, head)->FLVMCodeGen(inInstructions, head);
+        //Push back the instruction for -
+        result.operation[0] = Operation::negate;
+        inInstructions->push(result);
     }
 
 
@@ -1108,17 +1090,19 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    void Equal::ToString(std::string inLeft, std::string inRight){
-        left->ToString(inLeft, inRight);
+    void Equal::ToString(std::string inLeft, std::string inRight, Node* head){
+        add(left, head)->ToString(inLeft, inRight, head);
         std::cout << " == ";
-        right->ToString(inLeft, inRight);
+        add(right, head)->ToString(inLeft, inRight, head);
     }
 
-    void Equal::FLVMCodeGen(Instructions* inInstructions){
-        left->FLVMCodeGen(inInstructions);
-        right->FLVMCodeGen(inInstructions);
+    void Equal::FLVMCodeGen(Instructions* inInstructions, Node* head){
+        types result;
+        add(left, head)->FLVMCodeGen(inInstructions, head);
+        add(right, head)->FLVMCodeGen(inInstructions, head);
         //Push back the instruction for ==
-        inInstructions.push_back(Instruction(equals));
+        result.operation[0] = Operation::equals;
+        inInstructions->push(result);
     }
 
 
@@ -1128,17 +1112,19 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    void NotEqual::ToString(std::string inLeft, std::string inRight){
-        left->ToString(inLeft, inRight);
+    void NotEqual::ToString(std::string inLeft, std::string inRight, Node* head){
+        add(left, head)->ToString(inLeft, inRight, head);
         std::cout << " != ";
-        right->ToString(inLeft, inRight);
+        add(right, head)->ToString(inLeft, inRight, head);
     }
 
-    void NotEqual::FLVMCodeGen(Instructions* inInstructions){
-        left->FLVMCodeGen(inInstructions);
-        right->FLVMCodeGen(inInstructions);
+    void NotEqual::FLVMCodeGen(Instructions* inInstructions, Node* head){
+        types result;
+        left->FLVMCodeGen(inInstructions, head);
+        right->FLVMCodeGen(inInstructions, head);
         //Push back the instruction for !=
-        inInstructions.push_back(Instruction(nequals));
+        result.operation[0] = Operation::nequals;
+        inInstructions->push(result);
     }
 
 
@@ -1148,17 +1134,19 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    void GreaterThan::ToString(std::string inLeft, std::string inRight){
-        left->ToString(inLeft, inRight);
+    void GreaterThan::ToString(std::string inLeft, std::string inRight, Node* head){
+        add(left, head)->ToString(inLeft, inRight, head);
         std::cout << " > ";
-        right->ToString(inLeft, inRight);
+        add(right, head)->ToString(inLeft, inRight, head);
     }
 
-    void GreaterThan::FLVMCodeGen(Instructions* inInstructions){
-        left->FLVMCodeGen(inInstructions);
-        right->FLVMCodeGen(inInstructions);
+    void GreaterThan::FLVMCodeGen(Instructions* inInstructions, Node* head){
+        types result;
+        add(left, head)->FLVMCodeGen(inInstructions, head);
+        add(right, head)->FLVMCodeGen(inInstructions, head);
         //Push back the instruction for >
-        inInstructions.push_back(Instruction(greater));
+        result.operation[0] = Operation::greater;
+        inInstructions->push(result);
     }
 
 
@@ -1168,15 +1156,19 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    void ::ToString(std::string inLeft, std::string inRight){
-        return left->ToString(inLeft, inRight) + " >= " + right->ToString(inLeft, inRight);
+    void GreaterThanOr::ToString(std::string inLeft, std::string inRight, Node* head){
+        add(left, head)->ToString(inLeft, inRight, head);
+        std::cout << " >= ";
+        add(right, head)->ToString(inLeft, inRight, head);
     }
 
-    void GreaterThanOr::FLVMCodeGen(Instructions* inInstructions){
-        left->FLVMCodeGen(inInstructions);
-        right->FLVMCodeGen(inInstructions);
+    void GreaterThanOr::FLVMCodeGen(Instructions* inInstructions, Node* head){
+        types result;   
+        add(left, head)->FLVMCodeGen(inInstructions, head);
+        add(right, head)->FLVMCodeGen(inInstructions, head);
         //Push back the instruction for >=
-        inInstructions.push_back(Instruction(greateror));
+        result.operation[0] = Operation::greateror;
+        inInstructions->push(result);
     }
 
 
@@ -1186,15 +1178,19 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    void ::ToString(std::string inLeft, std::string inRight){
-        return left->ToString(inLeft, inRight) + " < " + right->ToString(inLeft, inRight);
+    void LessThan::ToString(std::string inLeft, std::string inRight, Node* head){
+        add(left, head)->ToString(inLeft, inRight, head);
+        std::cout << " < ";
+        add(right, head)->ToString(inLeft, inRight, head);
     }
 
-    void LessThan::FLVMCodeGen(Instructions* inInstructions){
-        left->FLVMCodeGen(inInstructions);
-        right->FLVMCodeGen(inInstructions);
+    void LessThan::FLVMCodeGen(Instructions* inInstructions, Node* head){
+        types result;
+        add(left, head)->FLVMCodeGen(inInstructions, head);
+        add(right, head)->FLVMCodeGen(inInstructions, head);
         //Push back the instruction for <
-        inInstructions.push_back(Instruction(lesser));
+        result.operation[0] = Operation::lesser;
+        inInstructions->push(result);
     }
 
 
@@ -1204,15 +1200,19 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    void ::ToString(std::string inLeft, std::string inRight){
-        return left->ToString(inLeft, inRight) + " <= " + right->ToString(inLeft, inRight);
+    void LessThanOr::ToString(std::string inLeft, std::string inRight, Node* head){
+        add(left, head)->ToString(inLeft, inRight, head);
+        std::cout << " <= ";
+        add(right, head)->ToString(inLeft, inRight, head);
     }
 
-    void LessThanOr::FLVMCodeGen(Instructions* inInstructions){
-        left->FLVMCodeGen(inInstructions);
-        right->FLVMCodeGen(inInstructions);
+    void LessThanOr::FLVMCodeGen(Instructions* inInstructions, Node* head){
+        types result;
+        left->FLVMCodeGen(inInstructions, head);
+        right->FLVMCodeGen(inInstructions, head);
         //Push back the instruction for <=
-        inInstructions.push_back(Instruction(lesseror));
+        result.operation[0] = Operation::lesseror;
+        inInstructions->push(result);
     }
 
 
@@ -1222,15 +1222,19 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     };
 
-    void ::ToString(std::string inLeft, std::string inRight){
-        return left->ToString(inLeft, inRight) + " OR " + right->ToString(inLeft, inRight);
+    void Or::ToString(std::string inLeft, std::string inRight, Node* head){
+        add(left, head)->ToString(inLeft, inRight, head);
+        std::cout << " OR ";
+        add(right, head)->ToString(inLeft, inRight, head);
     }
 
-    void Or::FLVMCodeGen(Instructions* inInstructions){
-        left->FLVMCodeGen(inInstructions);
-        right->FLVMCodeGen(inInstructions);
+    void Or::FLVMCodeGen(Instructions* inInstructions, Node* head){
+        types result;
+        add(left, head)->FLVMCodeGen(inInstructions, head);
+        add(right, head)->FLVMCodeGen(inInstructions, head);
         //Push back the instruction for OR
-        inInstructions.push_back(Instruction(ior));
+        result.operation[0] = Operation::ior;
+        inInstructions->push(result);
     }
 
 
@@ -1240,13 +1244,15 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    void ::ToString(std::string inLeft, std::string inRight){
-        return left->ToString(inLeft, inRight) + " AND " + right->ToString(inLeft, inRight);
+    void And::ToString(std::string inLeft, std::string inRight, Node* head){
+        add(left, head)->ToString(inLeft, inRight, head);
+        std::cout << " AND ";
+        add(right, head)->ToString(inLeft, inRight, head);
     }
 
-    void And::FLVMCodeGen(Instructions* inInstructions){
-        left->FLVMCodeGen(inInstructions);
-        right->FLVMCodeGen(inInstructions);
+    void And::FLVMCodeGen(Instructions* inInstructions, Node* head){
+        left->FLVMCodeGen(inInstructions, head);
+        right->FLVMCodeGen(inInstructions, head);
         //Push back the instruction for AND
         inInstructions.push_back(Instruction(iand));
     }
@@ -1258,12 +1264,13 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    void ::ToString(std::string inLeft, std::string inRight){
-        return "!" + right->ToString(inLeft, inRight);
+    void Not::ToString(std::string inLeft, std::string inRight, Node* head){
+        std::cout << "!";
+        right->ToString(inLeft, inRight);
     }
 
-    void Not::FLVMCodeGen(Instructions* inInstructions){
-        right->FLVMCodeGen(inInstructions);
+    void Not::FLVMCodeGen(Instructions* inInstructions, Node* head){
+        right->FLVMCodeGen(inInstructions, head);
         inInstructions.push_back(Instruction(inot));
     }
 
@@ -1274,38 +1281,43 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     };
 
-    void ::ToString(std::string inLeft, std::string inRight){
+    void IfClass::ToString(std::string inLeft, std::string inRight, Node* head){
         if(elseBody == nullptr){
-            return inLeft + "\x1b[36mif\x1b[0m(" + condition->ToString(inLeft, inRight) + "){\n" + 
-            ifBody->ToString("  " + inLeft, ";") + "\n" +
-            inLeft + "}";
+            std::cout << inLeft << "\x1b[36mif\x1b[0m(";
+            condition->ToString(inLeft, inRight);
+            std::cout << "){\n";
+                ifBody->ToString("  " + inLeft, ";");
+            std::cout << "\n" << inLeft << "}";
         } else {
-            return inLeft + "\x1b[36mif\x1b[0m(" + condition->ToString(inLeft, ";") + "){\n" + 
-            ifBody->ToString("  " + inLeft, inRight) + "\n" +
-            inLeft + "} else {\n" + elseBody->ToString("  " + inLeft, ";") + "\n" +
-            inLeft + "}";
+            std::cout << inLeft + "\x1b[36mif\x1b[0m(";
+            condition->ToString(inLeft, ";");
+            std::cout << "){\n";
+                ifBody->ToString("  " + inLeft, inRight);
+            std::cout << "\n" << inLeft << "} else {\n";
+                elseBody->ToString("  " + inLeft, ";");
+            std::cout << "\n" << inLeft << "}";
         }
     }
 
-    void IfClass::FLVMCodeGen(Instructions* inInstructions){
+    void IfClass::FLVMCodeGen(Instructions* inInstructions, Node* head){
         //If there is not an else statement, generate code for just an if statement.
         //otherwise, generate both bodies and cjumps as needed.
         if(elseBody == nullptr){
             //Generate the instructions for the if condition.
-            condition->FLVMCodeGen(inInstructions);
+            condition->FLVMCodeGen(inInstructions, head);
 
             //Mark where the conditional jump instruction will be.
             int64_t cjumpPosition = inInstructions.size();
 
             //Push a cjump instruction. This will be edited later.
             inInstructions.push_back(Instruction(Operation::cjump));
-            ifBody->FLVMCodeGen(inInstructions);
+            ifBody->FLVMCodeGen(inInstructions, head);
 
             //Adjust the conditional jump destination.
             inInstructions[cjumpPosition].literal.fixed8 = inInstructions.size() - cjumpPosition;
         } else {
             //Generate the instructions for the if condition.
-            condition->FLVMCodeGen(inInstructions);
+            condition->FLVMCodeGen(inInstructions, head);
 
             //Get the size of the instruction stack before the body.
             //This is also where the cjump instruction will be.
@@ -1313,7 +1325,7 @@ std::string assignPad(FloridaType input, char where){
 
             //Push a cjump instruction. This will be edited later.
             inInstructions.push_back(Instruction(Operation::cjump));
-            ifBody->FLVMCodeGen(inInstructions);
+            ifBody->FLVMCodeGen(inInstructions, head);
 
             //Push an unconditional jump to skip over the else statement.
             //This will only be reached if the first branch is taken.
@@ -1326,7 +1338,7 @@ std::string assignPad(FloridaType input, char where){
             inInstructions[cjumpPosition].literal.fixed8 = endIfSize - cjumpPosition;
             
             //Generate the bytecode for the else statement.
-            elseBody->FLVMCodeGen(inInstructions);
+            elseBody->FLVMCodeGen(inInstructions, head);
 
             //Adjust the unconditional jump destination.
             inInstructions[endIfSize - 1].literal.fixed8 = inInstructions.size();
@@ -1341,31 +1353,31 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     };
 
-    void ::ToString(std::string inLeft, std::string inRight){
-        std::string finalString = inLeft + "\x1b[34mfor\x1b[0m(";
+    void ForLoop::ToString(std::string inLeft, std::string inRight, Node* head){
+        std::cout << inLeft << "\x1b[34mfor\x1b[0m(";
         if(assign != nullptr){
-            finalString += assign->ToString("", ";");
+            assign->ToString("", ";");
         } else {
-            finalString += ";";
+            std::cout << ";";
         }
 
         if(condition != nullptr){
-            finalString += " " + condition->ToString("", ";");
+            condition->ToString("", ";");
         }
-        finalString += ";";
+        std::cout << ";";
 
         if(incrementer != nullptr){
-            finalString += " " + incrementer->ToString("", "");
+            incrementer->ToString("", "");
         }
-        finalString += "){\n";
-
-        return finalString + inLeft + body->ToString(inLeft, inRight) + inLeft + "\n" + inLeft + "}\n";
+        std::cout << "){\n";
+        body->ToString("  " + inLeft, inRight);
+        std::cout << inLeft << "}\n";
     }
 
-    void ForLoop::FLVMCodeGen(Instructions* inInstructions){
+    void ForLoop::FLVMCodeGen(Instructions* inInstructions, Node* head){
         //The initial value of a for loop.
         if(assign != nullptr){
-            assign->FLVMCodeGen(inInstructions);
+            assign->FLVMCodeGen(inInstructions, head);
         }
 
         //Start the scope, because we don't want to continually assign/initialize.
@@ -1377,7 +1389,7 @@ std::string assignPad(FloridaType input, char where){
         //The condition for a for loop to terminate.
         //If none is provided, then it will perpetually loop.
         if(condition != nullptr){
-            condition->FLVMCodeGen(inInstructions);
+            condition->FLVMCodeGen(inInstructions, head);
         } else {
             inInstructions.push_back(Instruction(Operation::push, false));
         }
@@ -1387,11 +1399,11 @@ std::string assignPad(FloridaType input, char where){
         inInstructions.push_back(Instruction(Operation::cjump));
 
         //Add the body of instructions.
-        body->body->FLVMCodeGen(inInstructions);
+        body->body->FLVMCodeGen(inInstructions, head);
 
         //Add another line of code for changes at the end of the loop.
         if(incrementer != nullptr){
-            incrementer->FLVMCodeGen(inInstructions);
+            incrementer->FLVMCodeGen(inInstructions, head);
         }
 
         //Place the unconditional jump instruction at the end.
@@ -1411,11 +1423,15 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     };
 
-    void ::ToString(std::string inLeft, std::string inRight){
-        return inLeft + "while(" + condition->ToString(inLeft, inRight) + "){\n" + body->ToString("  " + inLeft, inRight) + inLeft + "}";
+    void WhileLoop::ToString(std::string inLeft, std::string inRight, Node* head){
+        std::cout << inLeft << "while(";
+        condition->ToString(inLeft, inRight);
+        std::cout << "){\n";
+        body->ToString("  " + inLeft, inRight);
+        std::cout << inLeft << "}";
     }
 
-    void WhileLoop::FLVMCodeGen(Instructions* inInstructions){
+    void WhileLoop::FLVMCodeGen(Instructions* inInstructions, Node* head){
         Instruction result = Instruction();
         result.oper = Operation::push;
         result.literal.fixed8 = body->whichScope;
@@ -1427,13 +1443,13 @@ std::string assignPad(FloridaType input, char where){
         //Where the unconditional jump will always land.
         size_t start = inInstructions.size();
         //Generate the code for the condition, if any.
-        condition->FLVMCodeGen(inInstructions);
+        condition->FLVMCodeGen(inInstructions, head);
         //The location of the conditional jump statement.
         size_t here = inInstructions.size();
         //Lay down the conditional jump.
         inInstructions.push_back(Instruction(Operation::cjump));
         //Generate the code for the body.
-        body->body->FLVMCodeGen(inInstructions);
+        body->body->FLVMCodeGen(inInstructions, head);
         //Place an unconditional jump to restart the loop.
         inInstructions.push_back(Instruction(Operation::jump, start));
         //Adjust where the unconditional jump will land.
@@ -1449,31 +1465,25 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     };
 
-    void ::ToString(std::string inLeft, std::string inRight){
-        std::string varString = "";
+    void Function::ToString(std::string inLeft, std::string inRight, Node* head){
         Initialize* currInit = code->allInitializations;
 
+        std::cout << inLeft + "\x1b[36m" + typeString(type) + "\x1b[35m " + std::string(name) + "\x1b[0m(";
+        
         //Combine all the variables, if any.
         if(code->allInitializations != nullptr){
             //Stop right before the last variable to not append an extra comma.
             for(int i = 1; i < argumentCount; i++){
-                varString += "\x1b[36m" + typeString(currInit->thisVariable->thisToken.type) + "\x1b[0m " + currInit->thisVariable->thisToken.getName() + ", ";
+                std::cout << "\x1b[36m" + typeString(currInit->thisVariable->thisToken.type) << "\x1b[0m " << currInit->thisVariable->thisToken.getName() << ", ";
                 currInit = currInit->next;
             }
             //Append the last variable without an extra comma.
-            varString += "\x1b[36m" + typeString(currInit->thisVariable->thisToken.type) + "\x1b[0m " + currInit->thisVariable->thisToken.getName();
+            std::cout << "\x1b[36m" << typeString(currInit->thisVariable->thisToken.type) << "\x1b[0m " << currInit->thisVariable->thisToken.getName();
         }
         //Return the function printed in the only correct format.
-        std::string result = inLeft + "\x1b[36m" + typeString(type) + "\x1b[35m " + std::string(name) + "\x1b[0m(" + varString + "){\n" + 
-            code->ToString("  " + inLeft, ";") +
-        "\n" + inLeft + "}\n";
-
-        if(next != nullptr){
-            return result + next->ToString(inLeft, inRight);
-        } else {
-            return result;
-        }
-
+        std::cout << inLeft << "){\n";
+        code->ToString("  " + inLeft, ";");
+        std::cout << "\n" << inLeft + "}\n";
     }
 
     void Function::append(Initialize* input){
@@ -1488,15 +1498,15 @@ std::string assignPad(FloridaType input, char where){
         }
     }
 
-    void Function::FLVMCodeGen(Instructions* inInstructions){
+    void Function::FLVMCodeGen(Instructions* inInstructions, Node* head){
         //Change where this function starts in the program.
         if(!alreadyGenerated){
             position = inInstructions.size();
             if(code != nullptr){
-                code->body->FLVMCodeGen(inInstructions);
+                code->body->FLVMCodeGen(inInstructions, head);
             }
             if(allFunctions != nullptr){
-                allFunctions->FLVMCodeGen(inInstructions);
+                allFunctions->FLVMCodeGen(inInstructions, head);
             }
         }
     }
@@ -1512,13 +1522,13 @@ std::string assignPad(FloridaType input, char where){
         function = inFunction;
     }
 
-    void ::ToString(std::string inLeft, std::string inRight){
-        std::string theName = "\x1b[35m" + std::string(function->name) + "\x1b[0m";
-        std::string theArguments = arguments->ToString(inLeft, "");
-        return theName + "(" + theArguments + ")";
+    void Call::ToString(std::string inLeft, std::string inRight, Node* head){
+        std::cout << "\x1b[35m" + std::string(function->name) + "\x1b[0m(";
+        arguments->ToString(inLeft, "");
+        std::cout << ")";
     }
 
-    void Call::FLVMCodeGen(Instructions* inInstructions){
+    void Call::FLVMCodeGen(Instructions* inInstructions, Node* head){
         //This will allow the user to access classes and variables from
         //the most recently created version of this scope.
         Instruction newScopeOperation;
@@ -1530,7 +1540,7 @@ std::string assignPad(FloridaType input, char where){
         inInstructions.push_back(newScopeOperation);
         //Generate the arguments, if any.
         if(arguments != nullptr){
-            arguments->FLVMCodeGen(inInstructions);
+            arguments->FLVMCodeGen(inInstructions, head);
         }
 
         theCall.oper = Operation::call;
@@ -1548,25 +1558,23 @@ std::string assignPad(FloridaType input, char where){
         //The default settings are already in place.
     }
 
-    void ::ToString(std::string inLeft, std::string inRight){
+    void Arguments::ToString(std::string inLeft, std::string inRight, Node* head){
         if(next != nullptr){
-            return current->ToString(inLeft, "") + ", " + next->ToString(inLeft, "");
+            current->ToString(inLeft, "");
+            std::cout << ", ";
+            next->ToString(inLeft, "");
         } else {
             return current->ToString(inLeft, "");
         }
-
-        //Unreachable, just like uncountable infinity.
-        return "";
-
     }
 
-    void Arguments::FLVMCodeGen(Instructions* inInstructions){
+    void Arguments::FLVMCodeGen(Instructions* inInstructions, Node* head){
         Arguments* currArgs = this;
         while(currArgs->next != nullptr){
-            currArgs->current->FLVMCodeGen(inInstructions);
+            currArgs->current->FLVMCodeGen(inInstructions, head);
             currArgs = currArgs->next;
         }
-        currArgs->current->FLVMCodeGen(inInstructions);
+        currArgs->current->FLVMCodeGen(inInstructions, head);
     }
 
 
@@ -1576,13 +1584,15 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    void ::ToString(std::string inLeft, std::string inRight){
-        return inLeft + "\x1b[34mreturn\x1b[0m " + statement->ToString(inLeft, inRight) + inRight;
+    void ReturnClass::ToString(std::string inLeft, std::string inRight, Node* head){
+        std::cout << inLeft << "\x1b[34mreturn\x1b[0m ";
+        statement->ToString(inLeft, inRight);
+        std::cout << inRight;
     }
 
-    void ReturnClass::FLVMCodeGen(Instructions* inInstructions){
+    void ReturnClass::FLVMCodeGen(Instructions* inInstructions, Node* head){
         //There will be code with the return statement.
-        statement->FLVMCodeGen(inInstructions);
+        statement->FLVMCodeGen(inInstructions, head);
         Instruction result = Instruction();
         result.oper = Operation::ireturn;
         //This determines how many scopes to exit.
@@ -1597,15 +1607,13 @@ std::string assignPad(FloridaType input, char where){
         type = FloridaType::Object;
     }
 
-    void ::ToString(std::string inLeft, std::string inRight){
-        std::string theInitialize = "";
-
-        return "object " + std::string(name) + "{\n" + 
-            code->body->ToString("  " + inLeft, inRight) + "\n" +
-        inLeft + "}\n";
+    void ObjectClass::ToString(std::string inLeft, std::string inRight, Node* head){
+        std::cout << "object " + std::string(name) + "{\n";
+            code->body->ToString("  " + inLeft, inRight);
+        std::cout << "\n" << inLeft << "}\n";
     }
 
-    void ObjectClass::FLVMCodeGen(Instructions* inInstructions){
+    void ObjectClass::FLVMCodeGen(Instructions* inInstructions, Node* head){
         //TO DO
     }
 
@@ -1616,11 +1624,13 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    void ::ToString(std::string inLeft, std::string inRight){
-        return left->ToString(inLeft, inRight) + "." + right->ToString(inLeft, inRight);
+    void MemberAccess::ToString(std::string inLeft, std::string inRight, Node* head){
+        left->ToString(inLeft, inRight);
+        std::cout << ".";
+        right->ToString(inLeft, inRight);
     }
 
-    void MemberAccess::FLVMCodeGen(Instructions* inInstructions){
+    void MemberAccess::FLVMCodeGen(Instructions* inInstructions, Node* head){
         Variable* theVariable = nullptr;
         MemberAccess* theAccess = nullptr;
         Dereference* theDereference = nullptr;
@@ -1629,7 +1639,7 @@ std::string assignPad(FloridaType input, char where){
         //This will create a push instruction or adjust the literal of the instruction.
         theAccess = dynamic_cast<MemberAccess*>(currentNode);
         if(theAccess != nullptr){
-            theAccess->left->FLVMCodeGen(inInstructions);
+            theAccess->left->FLVMCodeGen(inInstructions, head);
             if(inInstructions.back().oper == Operation::push){
                 inInstructions.back().literal.fixed8 += theAccess->right->stackBytePosition;
             } else {
@@ -1642,14 +1652,14 @@ std::string assignPad(FloridaType input, char where){
         //This will create a dereference instruction for the object.
         theDereference = dynamic_cast<Dereference*>(currentNode);
         if(theDereference != nullptr){
-            theDereference->left->FLVMCodeGen(inInstructions);  
+            theDereference->left->FLVMCodeGen(inInstructions, head);  
             //The instructions for this don't exist yet.
         }
 
         //Reaching a variable means that the chain has ended.
         theVariable = dynamic_cast<Variable*>(currentNode);
         if(theVariable != nullptr){
-            theVariable->FLVMCodeGen(inInstructions);
+            theVariable->FLVMCodeGen(inInstructions, head);
         }
     }
 
@@ -1660,11 +1670,13 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    void ::ToString(std::string inLeft, std::string inRight){
-        return left->ToString(inLeft, inRight) + "->" + right->ToString(inLeft, inRight);
+    void Dereference::ToString(std::string inLeft, std::string inRight, Node* head){
+        left->ToString(inLeft, inRight);
+        std::cout << "->";
+        right->ToString(inLeft, inRight);
     }
 
-    void Dereference::FLVMCodeGen(Instructions* inInstructions){
+    void Dereference::FLVMCodeGen(Instructions* inInstructions, Node* head){
         Variable* theVariable = nullptr;
         MemberAccess* theAccess = nullptr;
         Dereference* theDereference = nullptr;
@@ -1672,7 +1684,7 @@ std::string assignPad(FloridaType input, char where){
 
         theAccess = dynamic_cast<MemberAccess*>(currentNode);
         if(theAccess != nullptr){
-            theAccess->left->FLVMCodeGen(inInstructions);
+            theAccess->left->FLVMCodeGen(inInstructions, head);
             if(inInstructions.back().oper == Operation::push){
                 inInstructions.back().literal.fixed8 += theAccess->right->stackBytePosition;
             } else {
@@ -1684,13 +1696,13 @@ std::string assignPad(FloridaType input, char where){
 
         theDereference = dynamic_cast<Dereference*>(currentNode);
         if(theDereference != nullptr){
-            theDereference->left->FLVMCodeGen(inInstructions);
+            theDereference->left->FLVMCodeGen(inInstructions, head);
             //The instructions for this don't exist yet.
         }
 
         //Reaching a variable means that the chain has ended.
         theVariable = dynamic_cast<Variable*>(currentNode);
         if(theVariable != nullptr){
-            theVariable->FLVMCodeGen(inInstructions);
+            theVariable->FLVMCodeGen(inInstructions, head);
         }
     }
