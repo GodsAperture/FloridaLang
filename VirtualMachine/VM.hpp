@@ -10,6 +10,12 @@
 #include <iostream>
 #include <math.h>
 
+//This allows me to find where in memory the pointer is supposed to exist given some `head`.
+//`add(body, head)`
+inline Node* add(void* left, void* right){
+    return (Node*) ((int64_t) left + (int64_t) right);
+}
+
 class FloridaVM{
 public:
     //This will handle relative scopes.
@@ -93,7 +99,7 @@ public:
     FloridaVM(Parser input, int64_t stackSize){
         //Generate the function bytecode.
         if(input.stack->allFunctions != nullptr){
-            input.stack->allFunctions->FLVMCodeGen(programInstructions);
+            add(input.stack->allFunctions, input.stack->head)->FLVMCodeGen(programInstructions, (Node*) input.stack->head);
         }
         //The base pointer stack. The stack for the base pointers and their respective scope.
         BPStack = (uint64_t*) malloc(2 * 100 * sizeof(uint64_t));
@@ -114,9 +120,9 @@ public:
         //Generate the rest of the instructions.
         //This is always a `Scope`.
         
-        dynamic_cast<Scope*>(input.stack->AST)->body->FLVMCodeGen(programInstructions);
+        dynamic_cast<Scope*>(input.stack->AST)->body->FLVMCodeGen(programInstructions, (Node*) input.stack->head);
         //Obtain the abstract syntax tree.
-        AST = input.stack->AST;
+        AST = (Node*) add(input.stack->AST, input.stack->head);
         //Obtain all function definitions
         allFunctions = input.stack->allFunctions;
     }

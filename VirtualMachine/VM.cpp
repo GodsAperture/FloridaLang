@@ -31,8 +31,7 @@ inline void FloridaVM::edit(types input){
 
 void FloridaVM::infoPrint(){
     std::cout << "--Instruction number: " << instructionNumber << "\n";
-    std::cout << "--Literal: " << programInstructions[instructionNumber].literal.fixed8 << "\n";
-    std::cout << "--Secondary: " << programInstructions[instructionNumber].secondary << "\n";
+    std::cout << "--Literal: " << programInstructions->instructionSet[instructionNumber].fixed8 << "\n";
     std::cout << "--Stack size: " << stackSize << "\n";
     std::cout << "--Call Stack count: " << BPStackSize / 2 << "\n";
     std::cout << "\n";
@@ -134,8 +133,6 @@ inline types add(types left, types right, types theType){
     return result;
 }
 
-
-
 //Subtract the two numbers in question.
 inline types subtract(types left, types right, types theType){
     types result;
@@ -165,8 +162,6 @@ inline types subtract(types left, types right, types theType){
     return result;
 }
 
-
-
 //Multiply the two numbers in question.
 inline types multiply(types left, types right, types theType){
     types result;
@@ -195,8 +190,6 @@ inline types multiply(types left, types right, types theType){
     }
     return result;
 }
-
-
 
 //Divide the two numbers in question.
 inline types divide(types left, types right, types theType){
@@ -258,7 +251,7 @@ char FloridaVM::next(){
     const int64_t bitmask1 = 7;
 
     //Check to see if all of instructions have been executed.
-    if(instructionNumber >= programInstructions->maxByteCount >> 3){
+    if(instructionNumber >= programInstructions->instructionCount){
         return false;
     }
 
@@ -280,17 +273,15 @@ char FloridaVM::next(){
             return true;
         case Operation::newScope:
             //Use left to get the correct UniqueScope.
-            whichScope = current.secondary;
+            whichScope = programInstructions->next().fixed8;
             //Move the CurrentInfo value to the BPStack.
             BPPush(whichScope, CurrentBP[whichScope]);
             //Adjust CurrentBP.
             CurrentBP[whichScope] = reference;
-            //Initialize all the empty spots for variables.
-            stackSize += current.literal.fixed8;
             //Adjust the VM's current reference to be the new size of the vector.
             reference = stackSize - 1;
-            //Pop the information used to adjust the proper unique scope.
-            pop();
+            //Initialize all the empty spots for variables.
+            stackSize += programInstructions->next().fixed8;
             break;
         case Operation::deleteScope:
             //Readjust the reference to be the prior reference.
@@ -306,7 +297,8 @@ char FloridaVM::next(){
             //Grab the resulting value that is to be returned from the scope.
             result = top();
             //The return instruction has to exit scope a particular number of times.
-            for(int i = 0; i < current.literal.fixed8; i++){
+            result = programInstructions->next();
+            for(int i = 0; i < result.fixed8; i++){
                 //Readjust the reference to be the prior reference.
                 reference = CurrentBP[BPTopScope()];
                 //Readjust the most recent scope reference.
@@ -323,11 +315,11 @@ char FloridaVM::next(){
             break;
         case Operation::cjump:
             //If it's true, then don't skip.
-            instructionNumber += !top().boolean[0] * (current.literal.fixed8 - 1) + 1;
+            instructionNumber += !(top().boolean[0]) * (programInstructions->next().fixed8);
             pop();
             return true;
         case Operation::jump:
-            instructionNumber = current.literal.fixed8;
+            instructionNumber = programInstructions->next().fixed8;
             break;
 
 
@@ -345,30 +337,38 @@ char FloridaVM::next(){
         //Bitmasking an int64_t using 2^N-1 is the equivalent to doing int64_t % 2^N.
         //These hold true for when N is natural number.
         case Operation::fetch1:
-            stackOffset = current.literal.fixed8 >> 3;
-            byteOffset = (bitmask1 & current.literal.fixed8);
-            whichScope = (uint64_t) current.secondary;
+            whichScope = programInstructions->next().ufixed8;
+            result = programInstructions->next();
+            stackOffset = result.fixed8 >> 3;
+            byteOffset = (bitmask1 & result.fixed8);
 
-            //Determine the correct scope.
-            whichScope = CurrentBP[whichScope];
-            //Assign the result to the correct position.
-            computationStack[whichScope + stackOffset].fixed1[byteOffset] = top().fixed1[0];
-            //Remove the top.
-            pop();
+            result.fixed1[0] = computationStack[CurrentBP[whichScope] + stackOffset].fixed1[byteOffset];
+            push(result);
             break;
         case Operation::fetch2:
-            stackOffset = current.literal.fixed8 >> 3;
-            byteOffset = (bitmask2 & current.literal.fixed8) >> 1;
-            whichScope = current.secondary;
+            whichScope = programInstructions->next().ufixed8;
+            result = programInstructions->next();
+            stackOffset = result.fixed8 >> 3;
+            byteOffset = (bitmask2 & result.fixed8) >> 1;
+
+            result.fixed2[0] = computationStack[CurrentBP[whichScope] + stackOffset].fixed1[byteOffset];
+            push(result);
             break;
         case Operation::fetch4:
-            stackOffset = current.literal.fixed8 >> 3;
-            byteOffset = (bitmask4 & current.literal.fixed8) >> 2;
-            whichScope = current.secondary;
+            whichScope = programInstructions->next().ufixed8;
+            result = programInstructions->next();
+            stackOffset = result.fixed8 >> 3;
+            byteOffset = (bitmask4 & result.fixed8) >> 2;
+
+            result.fixed4[0] = computationStack[CurrentBP[whichScope] + stackOffset].fixed4[byteOffset];
+            push(result);
             break;
         case Operation::fetch8:
-            stackOffset = current.literal.fixed8 >> 3;
-            whichScope = current.secondary;
+            whichScope = programInstructions->next().ufixed8;
+            stackOffset = programInstructions->next().fixed8 >> 3;
+
+            result.fixed8 = computationStack[CurrentBP[whichScope] + stackOffset].fixed8;
+            push(result);
             break;
 
 
@@ -378,25 +378,34 @@ char FloridaVM::next(){
         //Bitmasking an int64_t using 2^N-1 is the equivalent to doing int64_t % 2^N.
         //These hold true for when N is natural number.
         case Operation::assign1:
-            stackOffset = current.literal.fixed8 >> 3;
-            byteOffset = (bitmask1 & current.literal.fixed8);
-            whichScope = current.secondary;
+            whichScope = programInstructions->next().ufixed8;
+            result = programInstructions->next();
+            stackOffset = result.fixed8 >> 3;
+            byteOffset = (bitmask1 & result.fixed8);
 
-
+            computationStack[CurrentBP[whichScope] + stackOffset].fixed1[byteOffset] = top().fixed1[0];
             break;
         case Operation::assign2:
-            stackOffset = current.literal.fixed8 >> 3;
-            byteOffset = (bitmask2 & current.literal.fixed8) >> 1;
-            whichScope = current.secondary;
+            whichScope = programInstructions->next().ufixed8;
+            result = programInstructions->next();
+            stackOffset = result.fixed8 >> 3;
+            byteOffset = (bitmask2 & result.fixed8) >> 1;
+
+            computationStack[CurrentBP[whichScope] + stackOffset].fixed1[byteOffset] = top().fixed2[0];
             break;
         case Operation::assign4:
-            stackOffset = current.literal.fixed8 >> 3;
-            byteOffset = (bitmask4 & current.literal.fixed8) >> 2;
-            whichScope = current.secondary;
+            whichScope = programInstructions->next().ufixed8;
+            result = programInstructions->next();
+            stackOffset = result.fixed8 >> 3;
+            byteOffset = (bitmask4 & result.fixed8) >> 2;
+
+            computationStack[CurrentBP[whichScope] + stackOffset].fixed4[byteOffset] = top().fixed4[0];
             break;
         case Operation::assign8:
-            stackOffset = current.literal.fixed8 >> 3;
-            whichScope = current.secondary;
+            whichScope = programInstructions->next().ufixed8;
+            stackOffset = programInstructions->next().fixed8 >> 3;
+
+            computationStack[CurrentBP[whichScope] + stackOffset] = top();
             break;
 
 
@@ -814,56 +823,8 @@ char FloridaVM::next(){
 
 
 
-////fixed8 mathematical instructions.
-        case Operation::fixed8add:
-            //Get the right operand;
-            right = top();
-            pop();
-            //Get the left operand;
-            left = top();
-            //Operate and edit;
-            result.fixed8 = left.fixed8 + right.fixed8;
-            edit(result);
-            break;
-        case Operation::fixed8subtract:
-            //Get the right operand;
-            right = top();
-            pop();
-            //Get the left operand;
-            left = top();
-            //Operate and edit;
-            result.fixed8 = left.fixed8 - right.fixed8;
-            edit(result);
-            break;
-        case Operation::fixed8negate:
-            //Negate the value;
-            computationStack[stackSize - 1].fixed8 = -computationStack[stackSize - 1].fixed8;
-            break;
-        case Operation::fixed8multiply:
-            //Get the right operand;
-            right = top();
-            pop();
-            //Get the left operand;
-            left = top();
-            //Operate and push;
-            result.fixed8 = left.fixed8 * right.fixed8;
-            edit(result);
-            break;
-        case Operation::fixed8divide:
-            //Get the right operand;
-            right = top();
-            pop();
-            //Get the left operand;
-            left = top();
-            //Operate and push;
-            result.fixed8 = left.fixed8 / right.fixed8;
-            edit(result);
-            break;
-
-
-
-////float8 mathematical operations
-            case Operation::float8add:
+////Basic math operations
+        case Operation::add:
             //Get the right operand;
             right = top();
             pop();
@@ -871,10 +832,10 @@ char FloridaVM::next(){
             left = top();
             pop();
             //Operate and push;
-            result.float8 = left.float8 + right.float8;
+            result = add(left, right, programInstructions->next());
             push(result);
             break;
-        case Operation::float8subtract:
+        case Operation::subtract:
             //Get the right operand;
             right = top();
             pop();
@@ -882,14 +843,10 @@ char FloridaVM::next(){
             left = top();
             pop();
             //Operate and push;
-            result.float8 = left.float8 - right.float8;
+            result = subtract(left, right, programInstructions->next());
             push(result);
             break;
-        case Operation::float8negate:
-            //Negate the value;
-            computationStack[stackSize - 1].float8 = -computationStack[stackSize - 1].float8;
-            break;
-        case Operation::float8multiply:
+        case Operation::multiply:
             //Get the right operand;
             right = top();
             pop();
@@ -897,10 +854,10 @@ char FloridaVM::next(){
             left = top();
             pop();
             //Operate and push;
-            result.float8 = left.float8 * right.float8;
+            result = multiply(left, right, programInstructions->next());
             push(result);
             break;
-        case Operation::float8divide:
+        case Operation::divide:
             //Get the right operand;
             right = top();
             pop();
@@ -908,11 +865,9 @@ char FloridaVM::next(){
             left = top();
             pop();
             //Operate and push;
-            result.float8 = left.float8 / right.float8;
+            result = divide(left, right, programInstructions->next());
             push(result);
             break;
-
-
 
 ////Comparison instructions.
         case equals:
@@ -1016,11 +971,10 @@ char FloridaVM::next(){
             push(result);
             break;
         default:
-            std::cout << "Error: Unknown instruction given.\nThe instruction number is " + std::to_string(programInstructions[instructionNumber].oper);
+            std::cout << "Error: Unknown instruction given.\nThe instruction number is " + std::to_string(current);
             return false;
     }
-    instructionNumber++;
-    return true;
+    return 1;
 }
 
 bool FloridaVM::debuggerNext(){

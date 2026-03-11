@@ -11,13 +11,15 @@ class Scope;
 enum Operation : int16_t {
     //`newScope`, `whichScope`, `variableSlotSize`
     newScope,
-    //`deleteScope`, `whichScope`
+    //`deleteScope`, `fixed8`
     deleteScope,
+    //`call`, `fixed8`
     call,
+    //`ireturn`, `fixed8`
     ireturn,
-    //`cjump`, offset
+    //`cjump`, `fixed8`
     cjump,
-    //`jump`, location
+    //`jump`, `fixed8`
     jump,
 
     //`fetch1`, `whichScope`, `stackOffset`
@@ -38,9 +40,9 @@ enum Operation : int16_t {
     //`assign8`, `whichScope`, `stackOffset`
     assign8,
 
-    //`Push`, primitive.
+    //`Push`, `primitive`
     push,
-    //`pop`, fixed8.
+    //`pop`, `fixed8`.
     //The fixed8 determines how many elements are popped.
     pop,
 
@@ -177,8 +179,7 @@ enum Operation : int16_t {
 
     //All math instructions are also organized as such so I
     //can use a math trick to get the correct instruction.
-
-    //Takes the form `Operation::multiply` followed by the type.
+    
     //`multiply`, type
     multiply,
     //`divide`, type
@@ -191,78 +192,6 @@ enum Operation : int16_t {
     negate,
     //`exponent`
     exponent,
-
-    //ufixed1 math instructions
-    ufixed1multiply,
-    ufixed1divide,
-    ufixed1add,
-    ufixed1subtract,
-    ufixed1negate,
-
-    //ufixed2 math instructions
-    ufixed2multiply,
-    ufixed2divide,
-    ufixed2add,
-    ufixed2subtract,
-    ufixed2negate,
-
-    //ufixed4 math instructions
-    ufixed4multiply,
-    ufixed4divide,
-    ufixed4add,
-    ufixed4subtract,
-    ufixed4negate,
-
-    //ufixed8 math instructions
-    ufixed8multiply,
-    ufixed8divide,
-    ufixed8add,
-    ufixed8subtract,
-    ufixed8negate,
-
-    //fixed1 math instructions
-    fixed1multiply,
-    fixed1divide,
-    fixed1add,
-    fixed1subtract,
-    fixed1negate,
-
-    //fixed2 math instructions
-    fixed2multiply,
-    fixed2divide,
-    fixed2add,
-    fixed2subtract,
-    fixed2negate,
-
-    //fixed4 math instructions
-    fixed4multiply,
-    fixed4divide,
-    fixed4add,
-    fixed4subtract,
-    fixed4negate,
-
-    //fixed8 math instructions
-    fixed8multiply,
-    fixed8divide,
-    fixed8add,
-    fixed8subtract,
-    fixed8negate,
-
-    //float4 math isntuctions
-    float4multiply,
-    float4divide,
-    float4add,
-    float4subtract,
-    float4negate,
-
-    //float8 math instructions
-    float8multiply,
-    float8divide,
-    float8add,
-    float8subtract,
-    float8negate,
-
-
 
     //Object comparisons
     equals,

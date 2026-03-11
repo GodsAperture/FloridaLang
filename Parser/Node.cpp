@@ -246,8 +246,10 @@ std::string assignPad(FloridaType input, char where){
 
 //This allows me to find where in memory the pointer is supposed to exist given some `head`.
 //`add(body, head)`
-inline Node* add(void* left, void* right){
-    return (Node*) ((int64_t) left + (int64_t) right);
+//The return type is always the left argument.
+template<typename T, typename U>
+inline T* add(T* left, U* right){
+    return (T*) ((U*) left + right);
 }
 
 
@@ -258,11 +260,11 @@ inline Node* add(void* left, void* right){
         type = FloridaType::Typecast;
     }
 
-    void TypecastClass::ToString(std::string inLeft, std::string inRight, Node* head){
+    void TypecastClass::ToString(std::string inLeft, std::string inRight, void* head){
         add(body, head)->ToString(inLeft, inRight, head);
     }
 
-    void TypecastClass::FLVMCodeGen(Instructions* inInstructions, Node* head){
+    void TypecastClass::FLVMCodeGen(Instructions* inInstructions, void* head){
         types result;
         add(body, head)->FLVMCodeGen(inInstructions, head);   
         //Once again, I abuse the integer nature to get the correct operation.
@@ -350,7 +352,9 @@ inline Node* add(void* left, void* right){
 
     //Add the Initialization to the two linked lists that sort
     //them by order found and size in bytes.
-    void Scope::push(Initialize* input){
+    void Scope::push(Initialize* input, void* head){
+        //Adjust `input` for simplicity.
+        input = add(input, head);
         int64_t byteSize = allocationSize(input->thisVariable->type);
         int64_t theirSize = 0;
         //If there are no initializations, then just slap the variable onto the list.
@@ -359,27 +363,27 @@ inline Node* add(void* left, void* right){
             sortedInitializations = input;
             return;
         }
-        Initialize* currentInitialize = allInitializations;
+        Initialize* currentInitialize = add(allInitializations, head);
         Initialize* previousInitialize = nullptr;
         //Reach the tail end of the "linked list" of initializations.
         while(currentInitialize->next != nullptr){
-            currentInitialize = currentInitialize->next;
+            currentInitialize = add(currentInitialize->next, head);
         }
 
         //Append the initialization to the tail end of the "linked list."
         currentInitialize->next = input;
 
         //Reach the end of the sorted list.
-        currentInitialize = sortedInitializations;
+        currentInitialize = add(sortedInitializations, head);
         while(currentInitialize->memoryOrder != nullptr){
-            currentInitialize = currentInitialize->memoryOrder;
+            currentInitialize = add(currentInitialize->memoryOrder, head);
         }
         //If the input is some object, then place it
         //with the other variables whose memory sizes
-        //are multiples of 8.
-        if(input->thisVariable->objectType != nullptr){
+        //are multiples of the architecture's size (x32, x64, x128, etc.).
+        if(add(add(input, head)->thisVariable, head)->objectType != nullptr){
             while(currentInitialize->thisVariable->objectType != nullptr){
-                currentInitialize = currentInitialize->memoryOrder;
+                currentInitialize = add(currentInitialize->memoryOrder, head);
             }
 
             input->memoryOrder = currentInitialize->memoryOrder;
@@ -409,24 +413,24 @@ inline Node* add(void* left, void* right){
         }
     }
 
-    void Scope::push(Function* input){
+    void Scope::push(Function* input, void* head){
         //If there are no functions, then just slap the function onto the list.
         if(functions == nullptr){
-            functions = input;
+            functions = add(input, head);
             return;
         }
         Function* currFun = functions;
         //Reach the tail end of the "linked list" of functions.
-        while(currFun->next != nullptr){
-            currFun = currFun->next;
+        while(add(currFun, head)->next != nullptr){
+            currFun = add(currFun, head)->next;
         }
 
         //Append the function to the tail end of the "linked list."
-        currFun->next = input;
+        add(currFun, head)->next = input;
 
     }
 
-    void Scope::push(ObjectClass* input){
+    void Scope::push(ObjectClass* input, void* head){
         //If there are no objects, then this is the first defined class in the scope.
         if(allObjects == nullptr){
             allObjects = input;
@@ -441,7 +445,7 @@ inline Node* add(void* left, void* right){
         currObj->next = input;
     }
 
-    void Scope::byteAssign(){
+    void Scope::byteAssign(void* head){
         if(allInitializations == nullptr){
             return;
         }
@@ -450,16 +454,16 @@ inline Node* add(void* left, void* right){
         const int64_t bitmask = 7;
         while(currentInitialization != nullptr){
             //Determine the size of the variable's allocation.
-            if(currentInitialization->thisVariable->objectType == nullptr){
-                byteSize = allocationSize(currentInitialization->thisVariable->type);
+            if(add(add(currentInitialization, head)->thisVariable, head)->objectType == nullptr){
+                byteSize = allocationSize(add(add(currentInitialization, head)->thisVariable, head)->type);
             } else {
-                byteSize = currentInitialization->thisVariable->objectType->memorySize;
+                byteSize = add(add(add(currentInitialization, head)->thisVariable, head)->objectType, head)->memorySize;
             }
             //Assign the current size to the variable's position in memory.
-            currentInitialization->thisVariable->stackBytePosition = variableSlotSize;
+            add(add(currentInitialization, head)->thisVariable, head)->stackBytePosition = variableSlotSize;
             //Increase the size of the stack for the next variable's placement.
             variableSlotSize += byteSize;
-            currentInitialization = currentInitialization->memoryOrder;
+            currentInitialization = add(currentInitialization, head)->memoryOrder;
         }
         //In case the memory used isn't an exact multiple of 8, pad it.
         variableSlotSize += bitmask & (8 - (bitmask & variableSlotSize));
@@ -467,13 +471,13 @@ inline Node* add(void* left, void* right){
 
 
     
-    void Scope::ToString(std::string inLeft, std::string inRight, Node* head){
+    void Scope::ToString(std::string inLeft, std::string inRight, void* head){
         if(body != nullptr){
             add(body, head)->ToString(inLeft, ";", head);
         }
     }
 
-    void Scope::FLVMCodeGen(Instructions* inInstructions, Node* head){
+    void Scope::FLVMCodeGen(Instructions* inInstructions, void* head){
         types result;
 
         //The new scope will use the last value to pick the proper scope and adjust its value.
@@ -498,144 +502,144 @@ inline Node* add(void* left, void* right){
 
 
 
-    bool Scope::hasVariable(std::string_view input){
+    bool Scope::hasVariable(std::string_view input, void* head){
         //Go through all scopes as needed.
         Scope* currentScope = this;
         Initialize* currentInitialize = nullptr;
         while(currentScope != nullptr){
-            currentInitialize = currentScope->allInitializations;
+            currentInitialize = add(currentScope, head)->allInitializations;
             //Check all of the initializations in the scope.
             while(currentInitialize != nullptr){
-                if(currentInitialize->thisVariable->thisToken.name == input){
+                if(add(add(currentInitialize, head)->thisVariable, head)->thisToken.name == input){
                     return true;
                 } else {
-                    currentInitialize = currentInitialize->next;
+                    currentInitialize = add(currentInitialize, head)->next;
                 }
             }
-            currentScope = currentScope->parent;
+            currentScope = add(currentScope, head)->parent;
         }
 
         return false;
     }
 
-    bool Scope::hasObject(std::string_view input){
+    bool Scope::hasObject(std::string_view input, void* head){
         //Go through all scopes as needed.
         Scope* currentScope = this;
         ObjectClass* currentObject = nullptr;
         while(currentScope != nullptr){
-            currentObject = currentScope->allObjects;
+            currentObject = add(currentScope, head)->allObjects;
             //Check all of the objects in the scope.
             while(currentObject != nullptr){
-                if(currentObject->name == input){
+                if(add(currentObject, head)->name == input){
                     return true;
                 } else {
-                    currentObject = currentObject->next;
+                    currentObject = add(currentObject, head)->next;
                 }
             }
-            currentScope = currentScope->parent;
+            currentScope = add(currentScope, head)->parent;
         }
 
         return false;
     }
 
-    bool Scope::hasFunction(std::string_view input){
+    bool Scope::hasFunction(std::string_view input, void* head){
         //Go through all scopes as needed.
         Scope* currentScope = this;
         Function* currentFunction = nullptr;
         while(currentScope != nullptr){
-            currentFunction = currentScope->functions;
+            currentFunction = add(currentScope, head)->functions;
             //Check all of the initializations in the scope.
             while(currentFunction != nullptr){
-                if(currentFunction->name == input){
+                if(add(currentFunction, head)->name == input){
                     return true;
                 } else {
-                    currentFunction = currentFunction->next;
+                    currentFunction = add(currentFunction, head)->next;
                 }
             }
-            currentScope = currentScope->parent;
+            currentScope = add(currentScope, head)->parent;
         }
 
         return false;
     }
 
-    Variable* Scope::getVariable(std::string_view input){
+    Variable* Scope::getVariable(std::string_view input, void* head){
         //Go through all scopes as needed.
         Scope* currentScope = this;
         Initialize* currentInitialize = nullptr;
         while(currentScope != nullptr){
-            currentInitialize = currentScope->allInitializations;
+            currentInitialize = add(currentScope, head)->allInitializations;
             //Check all of the initializations in the scope.
             while(currentInitialize != nullptr){
-                if(currentInitialize->thisVariable->thisToken.name == input){
-                    return currentInitialize->thisVariable;
+                if(add(add(currentInitialize, head)->thisVariable, head)->thisToken.name == input){
+                    return add(currentInitialize, head)->thisVariable;
                 } else {
-                    currentInitialize = currentInitialize->next;
+                    currentInitialize = add(currentInitialize, head)->next;
                 }
             }
-            currentScope = currentScope->parent;
+            currentScope = add(currentScope, head)->parent;
         }
 
         return nullptr;
     }
 
-    ObjectClass* Scope::getObject(std::string_view input){
+    ObjectClass* Scope::getObject(std::string_view input, void* head){
         //Go through all scopes as needed.
         Scope* currentScope = this;
         ObjectClass* currentObject = nullptr;
         while(currentScope != nullptr){
-            currentObject = currentScope->allObjects;
+            currentObject = add(currentScope, head)->allObjects;
             //Check all of the objects in the scope.
             while(currentObject != nullptr){
-                if(currentObject->name == input){
+                if(add(currentObject, head)->name == input){
                     return currentObject;
                 } else {
-                    currentObject = currentObject->next;
+                    currentObject = add(currentObject, head)->next;
                 }
             }
-            currentScope = currentScope->parent;
+            currentScope = add(currentScope, head)->parent;
         }
 
         return nullptr;
     }
 
-    Function* Scope::getFunction(std::string_view input){
+    Function* Scope::getFunction(std::string_view input, void* head){
         //Go through all scopes as needed.
         Scope* currentScope = this;
         Function* currentFunction = nullptr;
         while(currentScope != nullptr){
-            currentFunction = currentScope->functions;
+            currentFunction = add(currentScope, head)->functions;
             //Check all of the initializations in the scope.
             while(currentFunction != nullptr){
-                if(currentFunction->name == input){
+                if(add(currentFunction, head)->name == input){
                     return currentFunction;
                 } else {
-                    currentFunction = currentFunction->next;
+                    currentFunction = add(currentFunction, head)->next;
                 }
             }
-            currentScope = currentScope->parent;
+            currentScope = add(currentScope, head)->parent;
         }
 
         return nullptr;
     }
 
-    char Scope::whereVariable(std::string_view input){
+    char Scope::whereVariable(std::string_view input, void* head){
         Scope* currentScope = this;
         Variable* currentVariable = nullptr;
         bool found = false;
         while(currentScope != nullptr){
-            currentVariable = currentScope->allInitializations->thisVariable;
+            currentVariable = add(add(currentScope, head)->allInitializations, head)->thisVariable;
             while(currentVariable != nullptr){
-                if(currentVariable->thisToken.name == input){
+                if(add(currentVariable, head)->thisToken.name == input){
                     found = true;
                     break;
                 } else {
-                    currentVariable = currentVariable->next;
+                    currentVariable = add(currentVariable, head)->next;
                 }
             }
             if(found){
                 break;
             }
-            currentScope = currentScope->parent;
+            currentScope = add(currentScope, head)->parent;
         }
 
         if(currentScope == nullptr){
@@ -644,12 +648,12 @@ inline Node* add(void* left, void* right){
         }
 
         //Local scope
-        if(currentScope->parent == nullptr){
+        if(add(currentScope, head)->parent == nullptr){
             return 0;
         }
 
         //Middle scope
-        if((currentScope->parent != nullptr) and (currentScope != this)){
+        if((add(currentScope, head)->parent != nullptr) and (currentScope != this)){
             return 1;
         }
 
@@ -670,7 +674,7 @@ inline Node* add(void* left, void* right){
         //The type will be determined after a Primitive is created.
     }
 
-    void Primitive::ToString(std::string inLeft, std::string inRight, Node* head){
+    void Primitive::ToString(std::string inLeft, std::string inRight, void* head){
         switch(type){
             case ufixed1:
                 std::cout << std::to_string(value.ufixed1[0]);
@@ -715,7 +719,7 @@ inline Node* add(void* left, void* right){
         }
     }
 
-    void Primitive::FLVMCodeGen(Instructions* inInstructions, Node* head){
+    void Primitive::FLVMCodeGen(Instructions* inInstructions, void* head){
         types result;
         //Generate a push instruction.
         result.operation[0] = Operation::push;
@@ -734,15 +738,15 @@ inline Node* add(void* left, void* right){
     }
 
     //Append the body to the end of the linked list.
-    Body* Body::append(Body* input){
+    Body* Body::append(Body* input, void* head){
         if(current == nullptr){
             current = input;
             return this;
         }
 
         Body* currBody = this;
-        while(currBody->next != nullptr){
-            currBody = currBody->next;
+        while(add(currBody, head)->next != nullptr){
+            currBody = add(currBody, head)->next;
         }
 
         currBody->next = input;
@@ -750,7 +754,7 @@ inline Node* add(void* left, void* right){
 
     }
 
-    void Body::ToString(std::string inLeft, std::string inRight, Node* head){
+    void Body::ToString(std::string inLeft, std::string inRight, void* head){
         add(current, head)->ToString(inLeft, inRight, head);
         std::cout << "\n";
         if(next != nullptr){
@@ -758,7 +762,7 @@ inline Node* add(void* left, void* right){
         }
     }
 
-    void Body::FLVMCodeGen(Instructions* inInstructions, Node* head){
+    void Body::FLVMCodeGen(Instructions* inInstructions, void* head){
         //Add the current chunk of code if it is not a function.
         if(dynamic_cast<Function*>(current) == nullptr){
             add(current, head)->FLVMCodeGen(inInstructions, head);
@@ -778,10 +782,10 @@ inline Node* add(void* left, void* right){
         //Do nothing. It's not a problem.
     }
 
-    void Variable::append(Variable* input){
+    void Variable::append(Variable* input, void* head){
         Variable* currVar = this;
-        if(currVar->next != nullptr){
-            while(currVar->next != nullptr){
+        if(add(currVar, head)->next != nullptr){
+            while(add(currVar, head)->next != nullptr){
                 currVar = currVar->next;
             }
         }
@@ -790,17 +794,17 @@ inline Node* add(void* left, void* right){
 
     }
 
-    void Variable::ToString(std::string inLeft, std::string inRight, Node* head){
+    void Variable::ToString(std::string inLeft, std::string inRight, void* head){
         std::cout << thisToken.getName();
     }
 
-    void Variable::FLVMCodeGen(Instructions* inInstructions, Node* head){
+    void Variable::FLVMCodeGen(Instructions* inInstructions, void* head){
         types result;
         //Check if the variable is an object.
         //If it is, fetch everything.
         if(objectType != nullptr){
             //This will fetch the full object.
-            for(uint64_t i = 0; i < objectType->memorySize / 8; i++){
+            for(uint64_t i = 0; i < add(objectType, head)->memorySize / 8; i++){
                 result.operation[0] = Operation::fetch8;
                 inInstructions->push(result);
                 result.fixed8 = stackBytePosition + i * 8;
@@ -830,7 +834,7 @@ inline Node* add(void* left, void* right){
         //Do nothing.
     };
 
-    void Initialize::ToString(std::string inLeft, std::string inRight, Node* head){ 
+    void Initialize::ToString(std::string inLeft, std::string inRight, void* head){ 
         if(thisVariable->objectType != nullptr){
             if(code != nullptr){
                 std::cout <<  inLeft << std::string(thisVariable->objectType->name) << " " << thisVariable->thisToken.getName() << " = ";
@@ -847,7 +851,7 @@ inline Node* add(void* left, void* right){
         std::cout << inLeft << typeString(thisVariable->thisToken.type) << " " << thisVariable->thisToken.getName() << inRight;
     }
 
-    void Initialize::FLVMCodeGen(Instructions* inInstructions, Node* head){
+    void Initialize::FLVMCodeGen(Instructions* inInstructions, void* head){
         //If there's code, then generate it.
         if(code != nullptr){
             //Generate the code for the right hand side.
@@ -880,21 +884,21 @@ inline Node* add(void* left, void* right){
     }
 
     //Append the `input` to the end of the linked list of Initializations.
-    void Initialize::append(Initialize* input){
+    void Initialize::append(Initialize* input, void* head){
         Initialize* current = this;
-        while(current->next != nullptr){
-            current = current->next;
+        while(add(current, head)->next != nullptr){
+            current = add(current, head)->next;
         }
-        current->next = input;
+        add(current, head)->next = input;
     }
 
     //Append `input` to the end of the `memoryOrder` linked list.
-    void Initialize::memoryAppend(Initialize* input){
+    void Initialize::memoryAppend(Initialize* input, void* head){
         Initialize* current = this;
-        while(current->memoryOrder != nullptr){
-            current = current->memoryOrder;
+        while(add(current, head)->memoryOrder != nullptr){
+            current = add(current, head)->memoryOrder;
         }
-        current->memoryOrder = input;
+        add(current, head)->memoryOrder = input;
     }
 
 
@@ -904,7 +908,7 @@ inline Node* add(void* left, void* right){
         //Do nothing
     };
 
-    void Assignment::ToString(std::string inLeft, std::string inRight, Node* head){
+    void Assignment::ToString(std::string inLeft, std::string inRight, void* head){
         std::cout << inLeft;
         add(left, head)->ToString(inLeft, inRight, head);
         std::cout << " = ";
@@ -912,10 +916,10 @@ inline Node* add(void* left, void* right){
         std::cout << inRight;
     }
 
-    void Assignment::FLVMCodeGen(Instructions* inInstructions, Node* head){
+    void Assignment::FLVMCodeGen(Instructions* inInstructions, void* head){
         //Evaluate the right hand side before assigning.
         if(right != nullptr){
-            add(right, add)->FLVMCodeGen(inInstructions, head);
+            add(right, head)->FLVMCodeGen(inInstructions, head);
         }
         //Generate the fetch instructions for this object.
         //These will be changed to assignment instructions.
@@ -923,19 +927,19 @@ inline Node* add(void* left, void* right){
 
         Variable* theVariable = dynamic_cast<Variable*>(left);
         if(theVariable != nullptr){
-            theVariable->AssignCodeGen(inInstructions);
+            add(theVariable, head)->AssignCodeGen(inInstructions, head);
             return;
         }
 
         MemberAccess* theAccess = dynamic_cast<MemberAccess*>(left);
         if(theAccess != nullptr){
-            theAccess->AssignCodeGen(inInstructions);
+            add(theAccess, head)->AssignCodeGen(inInstructions, head);
             return;
         }
 
         Dereference* theDereference = dynamic_cast<Dereference*>(left);
         if(theDereference != nullptr){
-            theDereference->AssignCodeGen(inInstructions);
+            add(theDereference, head)->AssignCodeGen(inInstructions, head);
             return;
         }
     }
@@ -947,13 +951,13 @@ inline Node* add(void* left, void* right){
         //Do nothing
     }
 
-    void Add::ToString(std::string inLeft, std::string inRight, Node* head){
+    void Add::ToString(std::string inLeft, std::string inRight, void* head){
         add(left, head)->ToString(inLeft, inRight, head);
         std::cout << " + ";
         add(right, head)->ToString(inLeft, inRight, head);
     }
 
-    void Add::FLVMCodeGen(Instructions* inInstructions, Node* head){
+    void Add::FLVMCodeGen(Instructions* inInstructions, void* head){
         types result;
         add(left, head)->FLVMCodeGen(inInstructions, head);
         add(right, head)->FLVMCodeGen(inInstructions, head);
@@ -973,13 +977,13 @@ inline Node* add(void* left, void* right){
         //Do nothing
     }
 
-    void Subtract::ToString(std::string inLeft, std::string inRight, Node* head){
+    void Subtract::ToString(std::string inLeft, std::string inRight, void* head){
         add(left, head)->ToString(inLeft, inRight, head);
         std::cout << " - ";
         add(right, head)->ToString(inLeft, inRight, head);
     }
 
-    void Subtract::FLVMCodeGen(Instructions* inInstructions, Node* head){
+    void Subtract::FLVMCodeGen(Instructions* inInstructions, void* head){
         types result;
 
         add(left, head)->FLVMCodeGen(inInstructions, head);
@@ -999,13 +1003,13 @@ inline Node* add(void* left, void* right){
         //Do nothing
     }
 
-    void Multiply::ToString(std::string inLeft, std::string inRight, Node* head){
+    void Multiply::ToString(std::string inLeft, std::string inRight, void* head){
         add(left, head)->ToString(inLeft, inRight, head);
         std::cout << " * ";
         add(right, head)->ToString(inLeft, inRight, head);
     }
 
-    void Multiply::FLVMCodeGen(Instructions* inInstructions, Node* head){
+    void Multiply::FLVMCodeGen(Instructions* inInstructions, void* head){
         types result;
 
         add(left, head)->FLVMCodeGen(inInstructions, head);
@@ -1025,13 +1029,13 @@ inline Node* add(void* left, void* right){
         //Do nothing
     };
 
-    void Divide::ToString(std::string inLeft, std::string inRight, Node* head){
+    void Divide::ToString(std::string inLeft, std::string inRight, void* head){
         add(left, head)->ToString(inLeft, inRight, head);
         std::cout << " / ";
         add(right, head)->ToString(inLeft, inRight, head);
     }
 
-    void Divide::FLVMCodeGen(Instructions* inInstructions, Node* head){
+    void Divide::FLVMCodeGen(Instructions* inInstructions, void* head){
         FloridaType theType = left->type;
         types result;
 
@@ -1052,13 +1056,13 @@ inline Node* add(void* left, void* right){
         //Do nothing
     }
 
-    void Parentheses::ToString(std::string inLeft, std::string inRight, Node* head){
+    void Parentheses::ToString(std::string inLeft, std::string inRight, void* head){
         std::cout << "(";
         add(subexpression, head)->ToString(inLeft, inRight, head);
         std::cout << ")";
     }
 
-    void Parentheses::FLVMCodeGen(Instructions* inInstructions, Node* head){
+    void Parentheses::FLVMCodeGen(Instructions* inInstructions, void* head){
         add(subexpression, head)->FLVMCodeGen(inInstructions, head);
     }
 
@@ -1069,12 +1073,12 @@ inline Node* add(void* left, void* right){
         //Do nothing;
     }
 
-    void Negative::ToString(std::string inLeft, std::string inRight, Node* head){
+    void Negative::ToString(std::string inLeft, std::string inRight, void* head){
         std::cout << "-";
         add(right, head)->ToString(inLeft, inRight, head);
     }
 
-    void Negative::FLVMCodeGen(Instructions* inInstructions, Node* head){
+    void Negative::FLVMCodeGen(Instructions* inInstructions, void* head){
         types result;
 
         add(right, head)->FLVMCodeGen(inInstructions, head);
@@ -1090,13 +1094,13 @@ inline Node* add(void* left, void* right){
         //Do nothing
     }
 
-    void Equal::ToString(std::string inLeft, std::string inRight, Node* head){
+    void Equal::ToString(std::string inLeft, std::string inRight, void* head){
         add(left, head)->ToString(inLeft, inRight, head);
         std::cout << " == ";
         add(right, head)->ToString(inLeft, inRight, head);
     }
 
-    void Equal::FLVMCodeGen(Instructions* inInstructions, Node* head){
+    void Equal::FLVMCodeGen(Instructions* inInstructions, void* head){
         types result;
         add(left, head)->FLVMCodeGen(inInstructions, head);
         add(right, head)->FLVMCodeGen(inInstructions, head);
@@ -1112,13 +1116,13 @@ inline Node* add(void* left, void* right){
         //Do nothing
     }
 
-    void NotEqual::ToString(std::string inLeft, std::string inRight, Node* head){
+    void NotEqual::ToString(std::string inLeft, std::string inRight, void* head){
         add(left, head)->ToString(inLeft, inRight, head);
         std::cout << " != ";
         add(right, head)->ToString(inLeft, inRight, head);
     }
 
-    void NotEqual::FLVMCodeGen(Instructions* inInstructions, Node* head){
+    void NotEqual::FLVMCodeGen(Instructions* inInstructions, void* head){
         types result;
         left->FLVMCodeGen(inInstructions, head);
         right->FLVMCodeGen(inInstructions, head);
@@ -1134,13 +1138,13 @@ inline Node* add(void* left, void* right){
         //Do nothing
     }
 
-    void GreaterThan::ToString(std::string inLeft, std::string inRight, Node* head){
+    void GreaterThan::ToString(std::string inLeft, std::string inRight, void* head){
         add(left, head)->ToString(inLeft, inRight, head);
         std::cout << " > ";
         add(right, head)->ToString(inLeft, inRight, head);
     }
 
-    void GreaterThan::FLVMCodeGen(Instructions* inInstructions, Node* head){
+    void GreaterThan::FLVMCodeGen(Instructions* inInstructions, void* head){
         types result;
         add(left, head)->FLVMCodeGen(inInstructions, head);
         add(right, head)->FLVMCodeGen(inInstructions, head);
@@ -1156,13 +1160,13 @@ inline Node* add(void* left, void* right){
         //Do nothing
     }
 
-    void GreaterThanOr::ToString(std::string inLeft, std::string inRight, Node* head){
+    void GreaterThanOr::ToString(std::string inLeft, std::string inRight, void* head){
         add(left, head)->ToString(inLeft, inRight, head);
         std::cout << " >= ";
         add(right, head)->ToString(inLeft, inRight, head);
     }
 
-    void GreaterThanOr::FLVMCodeGen(Instructions* inInstructions, Node* head){
+    void GreaterThanOr::FLVMCodeGen(Instructions* inInstructions, void* head){
         types result;   
         add(left, head)->FLVMCodeGen(inInstructions, head);
         add(right, head)->FLVMCodeGen(inInstructions, head);
@@ -1178,13 +1182,13 @@ inline Node* add(void* left, void* right){
         //Do nothing
     }
 
-    void LessThan::ToString(std::string inLeft, std::string inRight, Node* head){
+    void LessThan::ToString(std::string inLeft, std::string inRight, void* head){
         add(left, head)->ToString(inLeft, inRight, head);
         std::cout << " < ";
         add(right, head)->ToString(inLeft, inRight, head);
     }
 
-    void LessThan::FLVMCodeGen(Instructions* inInstructions, Node* head){
+    void LessThan::FLVMCodeGen(Instructions* inInstructions, void* head){
         types result;
         add(left, head)->FLVMCodeGen(inInstructions, head);
         add(right, head)->FLVMCodeGen(inInstructions, head);
@@ -1200,13 +1204,13 @@ inline Node* add(void* left, void* right){
         //Do nothing
     }
 
-    void LessThanOr::ToString(std::string inLeft, std::string inRight, Node* head){
+    void LessThanOr::ToString(std::string inLeft, std::string inRight, void* head){
         add(left, head)->ToString(inLeft, inRight, head);
         std::cout << " <= ";
         add(right, head)->ToString(inLeft, inRight, head);
     }
 
-    void LessThanOr::FLVMCodeGen(Instructions* inInstructions, Node* head){
+    void LessThanOr::FLVMCodeGen(Instructions* inInstructions, void* head){
         types result;
         left->FLVMCodeGen(inInstructions, head);
         right->FLVMCodeGen(inInstructions, head);
@@ -1222,13 +1226,13 @@ inline Node* add(void* left, void* right){
         //Do nothing
     };
 
-    void Or::ToString(std::string inLeft, std::string inRight, Node* head){
+    void Or::ToString(std::string inLeft, std::string inRight, void* head){
         add(left, head)->ToString(inLeft, inRight, head);
         std::cout << " OR ";
         add(right, head)->ToString(inLeft, inRight, head);
     }
 
-    void Or::FLVMCodeGen(Instructions* inInstructions, Node* head){
+    void Or::FLVMCodeGen(Instructions* inInstructions, void* head){
         types result;
         add(left, head)->FLVMCodeGen(inInstructions, head);
         add(right, head)->FLVMCodeGen(inInstructions, head);
@@ -1244,13 +1248,13 @@ inline Node* add(void* left, void* right){
         //Do nothing
     }
 
-    void And::ToString(std::string inLeft, std::string inRight, Node* head){
+    void And::ToString(std::string inLeft, std::string inRight, void* head){
         add(left, head)->ToString(inLeft, inRight, head);
         std::cout << " AND ";
         add(right, head)->ToString(inLeft, inRight, head);
     }
 
-    void And::FLVMCodeGen(Instructions* inInstructions, Node* head){
+    void And::FLVMCodeGen(Instructions* inInstructions, void* head){
         types result;
         add(left, head)->FLVMCodeGen(inInstructions, head);
         add(right, head)->FLVMCodeGen(inInstructions, head);
@@ -1266,12 +1270,12 @@ inline Node* add(void* left, void* right){
         //Do nothing
     }
 
-    void Not::ToString(std::string inLeft, std::string inRight, Node* head){
+    void Not::ToString(std::string inLeft, std::string inRight, void* head){
         std::cout << "!";
         add(right, head)->ToString(inLeft, inRight, head);
     }
 
-    void Not::FLVMCodeGen(Instructions* inInstructions, Node* head){
+    void Not::FLVMCodeGen(Instructions* inInstructions, void* head){
         types result;
         add(right, head)->FLVMCodeGen(inInstructions, head);
         //Push back the operation for !
@@ -1286,7 +1290,7 @@ inline Node* add(void* left, void* right){
         //Do nothing
     };
 
-    void IfClass::ToString(std::string inLeft, std::string inRight, Node* head){
+    void IfClass::ToString(std::string inLeft, std::string inRight, void* head){
         if(elseBody == nullptr){
             std::cout << inLeft << "\x1b[36mif\x1b[0m(";
             add(condition, head)->ToString(inLeft, inRight, head);
@@ -1304,7 +1308,7 @@ inline Node* add(void* left, void* right){
         }
     }
 
-    void IfClass::FLVMCodeGen(Instructions* inInstructions, Node* head){
+    void IfClass::FLVMCodeGen(Instructions* inInstructions, void* head){
         types result;
         //If there is not an else statement, generate code for just an if statement.
         //otherwise, generate both bodies and cjumps as needed.
@@ -1361,7 +1365,7 @@ inline Node* add(void* left, void* right){
         //Do nothing
     };
 
-    void ForLoop::ToString(std::string inLeft, std::string inRight, Node* head){
+    void ForLoop::ToString(std::string inLeft, std::string inRight, void* head){
         std::cout << inLeft << "\x1b[34mfor\x1b[0m(";
         if(assign != nullptr){
             add(assign, head)->ToString("", ";", head);
@@ -1382,7 +1386,7 @@ inline Node* add(void* left, void* right){
         std::cout << inLeft << "}\n";
     }
 
-    void ForLoop::FLVMCodeGen(Instructions* inInstructions, Node* head){
+    void ForLoop::FLVMCodeGen(Instructions* inInstructions, void* head){
         types result;
         //The initial value of a for loop.
         if(assign != nullptr){
@@ -1450,15 +1454,19 @@ inline Node* add(void* left, void* right){
         //Do nothing
     };
 
-    void WhileLoop::ToString(std::string inLeft, std::string inRight, Node* head){
+    void WhileLoop::ToString(std::string inLeft, std::string inRight, void* head){
         std::cout << inLeft << "while(";
-        condition->ToString(inLeft, inRight);
+        if(condition != nullptr){
+            add(condition, head)->ToString(inLeft, inRight, head);
+        }
         std::cout << "){\n";
-        body->ToString("  " + inLeft, inRight);
+        if(body != nullptr){
+            body->ToString("  " + inLeft, inRight, head);
+        }
         std::cout << inLeft << "}";
     }
 
-    void WhileLoop::FLVMCodeGen(Instructions* inInstructions, Node* head){
+    void WhileLoop::FLVMCodeGen(Instructions* inInstructions, void* head){
         types result;
         //Generate the push instruction.
         result.operation[0] = Operation::push;
@@ -1500,7 +1508,7 @@ inline Node* add(void* left, void* right){
         inInstructions->push(result);
         //Adjust where the unconditional jump will land.
         inInstructions->instructionSet[here].fixed8 = inInstructions->instructionCount - here;
-        
+
         //End the scope.
         result.operation[0] = Operation::deleteScope;
         inInstructions->push(result);
@@ -1516,7 +1524,7 @@ inline Node* add(void* left, void* right){
         //Do nothing
     };
 
-    void Function::ToString(std::string inLeft, std::string inRight, Node* head){
+    void Function::ToString(std::string inLeft, std::string inRight, void* head){
         Initialize* currInit = code->allInitializations;
 
         std::cout << inLeft + "\x1b[36m" + typeString(type) + "\x1b[35m " + std::string(name) + "\x1b[0m(";
@@ -1533,31 +1541,31 @@ inline Node* add(void* left, void* right){
         }
         //Return the function printed in the only correct format.
         std::cout << inLeft << "){\n";
-        code->ToString("  " + inLeft, ";");
+        add(code, head)->ToString("  " + inLeft, ";", head);
         std::cout << "\n" << inLeft + "}\n";
     }
 
-    void Function::append(Initialize* input){
-        Initialize* currInit = code->allInitializations;
+    void Function::append(Initialize* input, void* head){
+        Initialize* currInit = add(code, head)->allInitializations;
         if(currInit != nullptr){
-            while(currInit->next != nullptr){
-                currInit = currInit->next;
+            while(add(currInit, head)->next != nullptr){
+                currInit = add(currInit, head)->next;
             }
-            currInit->next = input;
+            add(currInit, head)->next = input;
         } else {
-            code->allInitializations = input;
+            add(code, head)->allInitializations = input;
         }
     }
 
-    void Function::FLVMCodeGen(Instructions* inInstructions, Node* head){
+    void Function::FLVMCodeGen(Instructions* inInstructions, void* head){
         //Change where this function starts in the program.
         if(!alreadyGenerated){
-            position = inInstructions.size();
+            position = inInstructions->currentInstruction;
             if(code != nullptr){
-                code->body->FLVMCodeGen(inInstructions, head);
+                add(((Scope*) add(code, head))->body, head)->FLVMCodeGen(inInstructions, head);
             }
             if(allFunctions != nullptr){
-                allFunctions->FLVMCodeGen(inInstructions, head);
+                add(allFunctions, head)->FLVMCodeGen(inInstructions, head);
             }
         }
     }
@@ -1569,36 +1577,34 @@ inline Node* add(void* left, void* right){
         //Do nothing
     }
 
-    Call::Call(Function* inFunction){
-        function = inFunction;
-    }
-
-    void Call::ToString(std::string inLeft, std::string inRight, Node* head){
+    void Call::ToString(std::string inLeft, std::string inRight, void* head){
         std::cout << "\x1b[35m" + std::string(function->name) + "\x1b[0m(";
-        arguments->ToString(inLeft, "");
+        add(arguments, head)->ToString(inLeft, "", head);
         std::cout << ")";
     }
 
-    void Call::FLVMCodeGen(Instructions* inInstructions, Node* head){
-        //This will allow the user to access classes and variables from
-        //the most recently created version of this scope.
-        Instruction newScopeOperation;
-        Instruction theCall;
-        newScopeOperation.literal.fixed8 = function->code->variableSlotSize;
-        newScopeOperation.secondary = function->code->whichScope;
-        
-        //Push the necessary scope reference onto the stack.
-        inInstructions.push_back(newScopeOperation);
+    void Call::FLVMCodeGen(Instructions* inInstructions, void* head){
+        types result;
+        //Create a new scope
+        result.operation[0] = Operation::newScope;
+        inInstructions->push(result);
+        //Push which scope this is.
+        result.fixed8 = ((Scope*) add(((Function*) add(function, head))->code, head))->whichScope;
+        //Push how many slots are needed by this scope.
+        result.fixed8 = ((Scope*) add(((Function*) add(function, head))->code, head))->variableSlotSize;
+        inInstructions->push(result);
+
         //Generate the arguments, if any.
         if(arguments != nullptr){
             arguments->FLVMCodeGen(inInstructions, head);
         }
 
-        theCall.oper = Operation::call;
-        theCall.literal.fixed8 = function->position;
-
-        //Make the function call after the function's arguments are created.
-        inInstructions.push_back(theCall);
+        //Push the call operation.
+        result.operation[0] = Operation::call;
+        inInstructions->push(result);
+        //This is where in the instruction set the function exists.
+        result.fixed8 = ((Function*) add(function, head))->position;
+        inInstructions->push(result);
     }
 
 
@@ -1609,23 +1615,23 @@ inline Node* add(void* left, void* right){
         //The default settings are already in place.
     }
 
-    void Arguments::ToString(std::string inLeft, std::string inRight, Node* head){
+    void Arguments::ToString(std::string inLeft, std::string inRight, void* head){
         if(next != nullptr){
-            current->ToString(inLeft, "");
+            add(current, head)->ToString(inLeft, "", head);
             std::cout << ", ";
-            next->ToString(inLeft, "");
+            add(next, head)->ToString(inLeft, "", head);
         } else {
-            return current->ToString(inLeft, "");
+            return add(current, head)->ToString(inLeft, "", head);
         }
     }
 
-    void Arguments::FLVMCodeGen(Instructions* inInstructions, Node* head){
+    void Arguments::FLVMCodeGen(Instructions* inInstructions, void* head){
         Arguments* currArgs = this;
-        while(currArgs->next != nullptr){
-            currArgs->current->FLVMCodeGen(inInstructions, head);
-            currArgs = currArgs->next;
+        while(((Arguments*) add(currArgs, head))->next != nullptr){
+            add(((Arguments*) add(currArgs, head))->current, head)->FLVMCodeGen(inInstructions, head);
+            currArgs = ((Arguments*) add(currArgs, head))->next;
         }
-        currArgs->current->FLVMCodeGen(inInstructions, head);
+        add(((Arguments*) add(currArgs, head))->current, head)->FLVMCodeGen(inInstructions, head);
     }
 
 
@@ -1635,20 +1641,21 @@ inline Node* add(void* left, void* right){
         //Do nothing
     }
 
-    void ReturnClass::ToString(std::string inLeft, std::string inRight, Node* head){
+    void ReturnClass::ToString(std::string inLeft, std::string inRight, void* head){
         std::cout << inLeft << "\x1b[34mreturn\x1b[0m ";
-        statement->ToString(inLeft, inRight);
+        add(statement, head)->ToString(inLeft, inRight, head);
         std::cout << inRight;
     }
 
-    void ReturnClass::FLVMCodeGen(Instructions* inInstructions, Node* head){
+    void ReturnClass::FLVMCodeGen(Instructions* inInstructions, void* head){
+        types result;
         //There will be code with the return statement.
-        statement->FLVMCodeGen(inInstructions, head);
-        Instruction result = Instruction();
-        result.oper = Operation::ireturn;
+        add(statement, head)->FLVMCodeGen(inInstructions, head);
+        //Generate the return instruction and how many scopes to exit.
+        result.operation[0] = Operation::ireturn;
         //This determines how many scopes to exit.
-        result.literal.fixed8 = returnCount;
-        inInstructions.push_back(result);
+        result.fixed8 = returnCount;
+        inInstructions->push(result);
     }
 
 
@@ -1658,13 +1665,15 @@ inline Node* add(void* left, void* right){
         type = FloridaType::Object;
     }
 
-    void ObjectClass::ToString(std::string inLeft, std::string inRight, Node* head){
+    void ObjectClass::ToString(std::string inLeft, std::string inRight, void* head){
         std::cout << "object " + std::string(name) + "{\n";
-            code->body->ToString("  " + inLeft, inRight);
+        if(code != nullptr){
+            add(((Scope*) add(code, head))->body, head)->ToString("  " + inLeft, inRight, head);
+        }
         std::cout << "\n" << inLeft << "}\n";
     }
 
-    void ObjectClass::FLVMCodeGen(Instructions* inInstructions, Node* head){
+    void ObjectClass::FLVMCodeGen(Instructions* inInstructions, void* head){
         //TO DO
     }
 
@@ -1675,43 +1684,41 @@ inline Node* add(void* left, void* right){
         //Do nothing
     }
 
-    void MemberAccess::ToString(std::string inLeft, std::string inRight, Node* head){
-        left->ToString(inLeft, inRight);
+    void MemberAccess::ToString(std::string inLeft, std::string inRight, void* head){
+        add(left, head)->ToString(inLeft, inRight, head);
         std::cout << ".";
-        right->ToString(inLeft, inRight);
+        add(right, head)->ToString(inLeft, inRight, head);
     }
 
-    void MemberAccess::FLVMCodeGen(Instructions* inInstructions, Node* head){
-        Variable* theVariable = nullptr;
-        MemberAccess* theAccess = nullptr;
-        Dereference* theDereference = nullptr;
-        Node* currentNode = left;
+    void MemberAccess::FLVMCodeGen(Instructions* inInstructions, void* head){
+        // types result;
+        // Node* currentNode = left;
 
-        //This will create a push instruction or adjust the literal of the instruction.
-        theAccess = dynamic_cast<MemberAccess*>(currentNode);
-        if(theAccess != nullptr){
-            theAccess->left->FLVMCodeGen(inInstructions, head);
-            if(inInstructions.back().oper == Operation::push){
-                inInstructions.back().literal.fixed8 += theAccess->right->stackBytePosition;
-            } else {
-                Instruction thePush;
-                thePush.oper = Operation::push;
-                inInstructions.push_back(thePush);
-            }
-        }
+        // //This will create a push instruction or adjust the literal of the instruction.
+        // MemberAccess* theAccess = dynamic_cast<MemberAccess*>(currentNode);
+        // if(theAccess != nullptr){
+        //     theAccess->left->FLVMCodeGen(inInstructions, head);
+        //     if(inInstructions.back().oper == Operation::push){
+        //         inInstructions.back().literal.fixed8 += theAccess->right->stackBytePosition;
+        //     } else {
+        //         Instruction thePush;
+        //         thePush.oper = Operation::push;
+        //         inInstructions.push_back(thePush);
+        //     }
+        // }
 
-        //This will create a dereference instruction for the object.
-        theDereference = dynamic_cast<Dereference*>(currentNode);
-        if(theDereference != nullptr){
-            theDereference->left->FLVMCodeGen(inInstructions, head);  
-            //The instructions for this don't exist yet.
-        }
+        // //This will create a dereference instruction for the object.
+        // Dereference* theDereference = dynamic_cast<Dereference*>(currentNode);
+        // if(theDereference != nullptr){
+        //     theDereference->left->FLVMCodeGen(inInstructions, head);  
+        //     //The instructions for this don't exist yet.
+        // }
 
-        //Reaching a variable means that the chain has ended.
-        theVariable = dynamic_cast<Variable*>(currentNode);
-        if(theVariable != nullptr){
-            theVariable->FLVMCodeGen(inInstructions, head);
-        }
+        // //Reaching a variable means that the chain has ended.
+        // Variable* theVariable = dynamic_cast<Variable*>(currentNode);
+        // if(theVariable != nullptr){
+        //     theVariable->FLVMCodeGen(inInstructions, head);
+        // }
     }
 
 
@@ -1721,39 +1728,39 @@ inline Node* add(void* left, void* right){
         //Do nothing
     }
 
-    void Dereference::ToString(std::string inLeft, std::string inRight, Node* head){
-        left->ToString(inLeft, inRight);
-        std::cout << "->";
-        right->ToString(inLeft, inRight);
-    }
+    void Dereference::ToString(std::string inLeft, std::string inRight, void* head){
+    //     add(left, head)->ToString(inLeft, inRight, head);
+    //     std::cout << "->";
+    //     add(right, head)->ToString(inLeft, inRight, head);
+    // }
 
-    void Dereference::FLVMCodeGen(Instructions* inInstructions, Node* head){
-        Variable* theVariable = nullptr;
-        MemberAccess* theAccess = nullptr;
-        Dereference* theDereference = nullptr;
-        Node* currentNode = left;
+    // void Dereference::FLVMCodeGen(Instructions* inInstructions, void* head){
+    //     types result;
+    //     Node* currentNode = left;
 
-        theAccess = dynamic_cast<MemberAccess*>(currentNode);
-        if(theAccess != nullptr){
-            theAccess->left->FLVMCodeGen(inInstructions, head);
-            if(inInstructions.back().oper == Operation::push){
-                inInstructions.back().literal.fixed8 += theAccess->right->stackBytePosition;
-            } else {
-                Instruction thePush;
-                thePush.oper = Operation::push;
-                inInstructions.push_back(thePush);
-            }
-        }
+    //     //This will create a push instruction or adjust the literal of the instruction.
+    //     MemberAccess* theAccess = dynamic_cast<MemberAccess*>(currentNode);
+    //     if(theAccess != nullptr){
+    //         theAccess->left->FLVMCodeGen(inInstructions, head);
+    //         if(inInstructions.back().oper == Operation::push){
+    //             inInstructions.back().literal.fixed8 += theAccess->right->stackBytePosition;
+    //         } else {
+    //             Instruction thePush;
+    //             thePush.oper = Operation::push;
+    //             inInstructions.push_back(thePush);
+    //         }
+    //     }
 
-        theDereference = dynamic_cast<Dereference*>(currentNode);
-        if(theDereference != nullptr){
-            theDereference->left->FLVMCodeGen(inInstructions, head);
-            //The instructions for this don't exist yet.
-        }
+    //     //This will create a dereference instruction for the object.
+    //     Dereference* theDereference = dynamic_cast<Dereference*>(currentNode);
+    //     if(theDereference != nullptr){
+    //         theDereference->left->FLVMCodeGen(inInstructions, head);  
+    //         //The instructions for this don't exist yet.
+    //     }
 
-        //Reaching a variable means that the chain has ended.
-        theVariable = dynamic_cast<Variable*>(currentNode);
-        if(theVariable != nullptr){
-            theVariable->FLVMCodeGen(inInstructions, head);
-        }
+    //     //Reaching a variable means that the chain has ended.
+    //     Variable* theVariable = dynamic_cast<Variable*>(currentNode);
+    //     if(theVariable != nullptr){
+    //         theVariable->FLVMCodeGen(inInstructions, head);
+    //     }
     }
