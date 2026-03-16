@@ -79,8 +79,6 @@ public:
     void append(Variable* input, void* head);
     void ToString(std::string inLeft, std::string inRight, void* head) override;
     void FLVMCodeGen(Instructions* inInstructions, void* head) override;
-    //Generates the appropriate assignment instruction. 
-    void AssignCodeGen(Instructions* inInstructions, void* head);
 };
 
 class Scope : public Node{

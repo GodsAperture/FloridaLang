@@ -286,7 +286,7 @@ public:
     //excess memory will be freed up.
     Instructions(uint64_t input){
         //This guarantees that maxByteCount is a multiple of 8.
-        maxInstructionCount = 7L & (8 - (7L & input)) + input;
+        maxInstructionCount = (7L & (8 - (7L & input))) + input;
         //Generate a region for the bytecode.
         instructionSet = (types*) malloc(maxInstructionCount);
     }

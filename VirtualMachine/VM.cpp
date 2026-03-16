@@ -105,7 +105,7 @@ uint64_t FloridaVM::INPop(){
 
 
 //Add the two numbers in question.
-inline types add(types left, types right, types theType){
+inline types VMadd(types left, types right, types theType){
     types result;
     switch(theType.type[0]){
         case FloridaType::ufixed8:
@@ -134,7 +134,7 @@ inline types add(types left, types right, types theType){
 }
 
 //Subtract the two numbers in question.
-inline types subtract(types left, types right, types theType){
+inline types VMsubtract(types left, types right, types theType){
     types result;
     switch(theType.type[0]){
         case FloridaType::ufixed8:
@@ -163,7 +163,7 @@ inline types subtract(types left, types right, types theType){
 }
 
 //Multiply the two numbers in question.
-inline types multiply(types left, types right, types theType){
+inline types VMmultiply(types left, types right, types theType){
     types result;
     switch(theType.type[0]){
         case FloridaType::ufixed8:
@@ -192,7 +192,7 @@ inline types multiply(types left, types right, types theType){
 }
 
 //Divide the two numbers in question.
-inline types divide(types left, types right, types theType){
+inline types VMdivide(types left, types right, types theType){
     types result;
     switch(theType.type[0]){
         case FloridaType::ufixed8:
@@ -223,15 +223,7 @@ inline types divide(types left, types right, types theType){
 
 
 void FloridaVM::printAll(){
-    std::cout << "\n    ====Instruction set debugger====\n\n";
-    std::string result = "";
-    if(allFunctions != nullptr){
-        result += allFunctions->printAll();
-    }
-
-    result += "\t(*MAIN SCRIPT*)\n";
-
-    std::cout << result + dynamic_cast<Scope*>(AST)->body->printAll();
+    //TO DO
 }
 
 char FloridaVM::next(){
@@ -832,7 +824,7 @@ char FloridaVM::next(){
             left = top();
             pop();
             //Operate and push;
-            result = add(left, right, programInstructions->next());
+            result = VMadd(left, right, programInstructions->next());
             push(result);
             break;
         case Operation::subtract:
@@ -843,7 +835,7 @@ char FloridaVM::next(){
             left = top();
             pop();
             //Operate and push;
-            result = subtract(left, right, programInstructions->next());
+            result = VMsubtract(left, right, programInstructions->next());
             push(result);
             break;
         case Operation::multiply:
@@ -854,7 +846,7 @@ char FloridaVM::next(){
             left = top();
             pop();
             //Operate and push;
-            result = multiply(left, right, programInstructions->next());
+            result = VMmultiply(left, right, programInstructions->next());
             push(result);
             break;
         case Operation::divide:
@@ -865,7 +857,7 @@ char FloridaVM::next(){
             left = top();
             pop();
             //Operate and push;
-            result = divide(left, right, programInstructions->next());
+            result = VMdivide(left, right, programInstructions->next());
             push(result);
             break;
 

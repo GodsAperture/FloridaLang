@@ -1,3 +1,23 @@
+float8 fun(float8 x){
+    for(fixed8 i = 0; i < 3; i = i + 1){
+        x = x + 1;
+    }
+
+    return x;
+}
+
+float8 fun2(float8 x){
+    if(x < 0){
+        x = -x;
+    }
+
+    while(x < 5.0){
+        x = 2 * x;
+    }
+    
+    return x;
+}
+
 object thing1{
     float8 first;
 }
@@ -5,7 +25,6 @@ object thing1{
 object thing2{
     thing1 first;
     float4 second;
-    float4 third;
 }
 
 object thing3{
@@ -14,5 +33,3 @@ object thing3{
 }
 
 thing3 x;
-
-x.second.first.first = 3.0;

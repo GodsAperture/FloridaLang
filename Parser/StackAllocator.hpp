@@ -93,7 +93,5 @@ public:
         return (T*) current;
     }
 
-    //For the statement `StackAllocator.copy(input)`, `input` is made a copy of `StackAllocator`.
-    void copy(StackAllocator& input);
 };
 #endif

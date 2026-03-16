@@ -58,6 +58,8 @@ public:
     void parse();
     //Generate the code.
     void FLVMCodeGen();
+    //Print out the tree for debugging purposes.
+    void ToString();
 
 //Variables and related operations
 
