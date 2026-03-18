@@ -105,26 +105,6 @@ FloridaType typeReturn(std::string inString){
     return FloridaType::Null;
 }
 
-bool typeCheck(FloridaType inType){
-    switch(inType){
-        case FloridaType::ufixed1:
-        case FloridaType::ufixed2:
-        case FloridaType::ufixed4:
-        case FloridaType::ufixed8:
-        case FloridaType::fixed1:
-        case FloridaType::fixed2:
-        case FloridaType::fixed4:
-        case FloridaType::fixed8:
-        case FloridaType::float4:
-        case FloridaType::float8:
-        case FloridaType::Bool:
-            return true;
-        default:
-            return false;
-
-    }
-}
-
 int64_t allocationSize(FloridaType input){
         switch(input){
             case FloridaType::Bool:
@@ -1398,7 +1378,7 @@ inline T* difference(T* left, U* right){
         }
         std::cout << "){\n";
         addOffset(body, head)->ToString("  " + inLeft, inRight, head);
-        std::cout << inLeft << "\n}\n";
+        std::cout << "\n" << inLeft << "}\n";
     }
 
     void ForLoop::FLVMCodeGen(Instructions* inInstructions, void* head){
@@ -1478,7 +1458,7 @@ inline T* difference(T* left, U* right){
         if(body != nullptr){
             addOffset(body, head)->ToString("  " + inLeft, inRight, head);
         }
-        std::cout << inLeft << "\n}\n";
+        std::cout << "\n" << inLeft << "}\n";
     }
 
     void WhileLoop::FLVMCodeGen(Instructions* inInstructions, void* head){

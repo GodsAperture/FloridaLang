@@ -17,11 +17,6 @@
 	bool Lexer::isEOF() { return file.length() + 1 == count; }
 
 	char Lexer::get(){
-
-		if(count >= file.length()){
-			return EOF;
-		}
-
 		char currChar = file[count];
 		count++;
 
@@ -82,14 +77,6 @@
 	}
 
 	void Lexer::get(char& inChar){
-		//If we have reached the end of the file,
-		//then return the EOF character.
-		if(count == file.length()){
-			column++;
-			inChar = EOF;
-			return;
-		}
-
 		char currChar = file[count];
 		count++;
 
@@ -116,9 +103,10 @@
 
 	Token Lexer::next() {
 		uint64_t start = count;
+
 		//Check for particular keywords.
 		if(compare("object")){
-			return Token(FloridaType::Object, std::string_view(file.data() + start, count - start), row, column - 6);
+			return Token(FloridaType::Adjective, std::string_view(file.data() + start, count - start), row, column - 6);
 		}
 		if(compare("for")){
 			return Token(FloridaType::For, std::string_view(file.data() + start, count - start), row, column - 3);
@@ -133,47 +121,47 @@
 		}
 		
 		if(compare("ufixed1")){
-			return Token(FloridaType::ufixed1, std::string_view(file.data() + start, count - start), row, column - 7);
+			return Token(FloridaType::Adjective, std::string_view(file.data() + start, count - start), row, column - 7);
 		}
 
 		if(compare("ufixed2")){
-			return Token(FloridaType::ufixed2, std::string_view(file.data() + start, count - start), row, column - 7);
+			return Token(FloridaType::Adjective, std::string_view(file.data() + start, count - start), row, column - 7);
 		}
 
 		if(compare("ufixed4")){
-			return Token(FloridaType::ufixed4, std::string_view(file.data() + start, count - start), row, column - 7);
+			return Token(FloridaType::Adjective, std::string_view(file.data() + start, count - start), row, column - 7);
 		}
 
 		if(compare("ufixed8")){
-			return Token(FloridaType::ufixed8, std::string_view(file.data() + start, count - start), row, column - 7);
+			return Token(FloridaType::Adjective, std::string_view(file.data() + start, count - start), row, column - 7);
 		}
 
 		if(compare("fixed1")){
-			return Token(FloridaType::fixed1, std::string_view(file.data() + start, count - start), row, column - 6);
+			return Token(FloridaType::Adjective, std::string_view(file.data() + start, count - start), row, column - 6);
 		}
 
 		if(compare("fixed2")){
-			return Token(FloridaType::fixed2, std::string_view(file.data() + start, count - start), row, column - 6);
+			return Token(FloridaType::Adjective, std::string_view(file.data() + start, count - start), row, column - 6);
 		}
 
 		if(compare("fixed4")){
-			return Token(FloridaType::fixed4, std::string_view(file.data() + start, count - start), row, column - 6);
+			return Token(FloridaType::Adjective, std::string_view(file.data() + start, count - start), row, column - 6);
 		}
 
 		if(compare("fixed8")){
-			return Token(FloridaType::fixed8, std::string_view(file.data() + start, count - start), row, column - 6);
+			return Token(FloridaType::Adjective, std::string_view(file.data() + start, count - start), row, column - 6);
 		}
 
 		if(compare("float4")){
-			return Token(FloridaType::float4, std::string_view(file.data() + start, count - start), row, column - 6);
+			return Token(FloridaType::Adjective, std::string_view(file.data() + start, count - start), row, column - 6);
 		}
 
 		if(compare("float8")){
-			return Token(FloridaType::float8, std::string_view(file.data() + start, count - start), row, column - 6);
+			return Token(FloridaType::Adjective, std::string_view(file.data() + start, count - start), row, column - 6);
 		}
 
 		if(compare("boolean")){
-			return Token(FloridaType::Bool, std::string_view(file.data() + start, count - start), row, column - 7);
+			return Token(FloridaType::Adjective, std::string_view(file.data() + start, count - start), row, column - 7);
 		}
 
 		if(compare("true")){
@@ -191,14 +179,18 @@
 		// Grab the first character, and then decide what to do with it.
 		char currChar;
 		FloridaType currType;
-		this->get(currChar);
-		
+
 		//Catch EOF token, first and foremost.
 		//Just check to see if we've reached the end
 		//of the file.
-		if(currChar == EOF){
+		if(count == file.length()){
 			return Token(FloridaType::eof, EOF, row, column);
 		}
+
+		this->get(currChar);
+
+
+		
 		// Catch and delete page related characters.
 		// Whitespaces, tabs, and newlines.
 		if (PagerQ(currChar)) {

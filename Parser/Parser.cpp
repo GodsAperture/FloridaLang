@@ -118,10 +118,6 @@ inline FloridaType returnType(FloridaType left, FloridaType right){
 
 //Mathy stuff
 Node* Parser::AddSub(){
-    if(!hasTokens(2)){
-        return nullptr;
-    }
-    
     Start start = currInfo();
     Node* left = nullptr;
     Node* right = nullptr;
@@ -130,6 +126,10 @@ Node* Parser::AddSub(){
     left = MulDiv();
     if(left == nullptr){
         return nullptr;
+    }
+
+    if(!hasTokens(2)){
+        return left;
     }
 
     std::string current = given[iter].getName();
@@ -188,16 +188,16 @@ Node* Parser::AddSub(){
 }
 
 Node* Parser::MulDiv(){
-    if(!hasTokens(1)){
-        return nullptr;
-    }
-
     Start start = currInfo();
     Node* left = nullptr;
     Node* right = nullptr;
 
     left = primitive();
     if(left == nullptr){
+        return nullptr;
+    }
+
+    if(!hasTokens(2)){
         return left;
     }
 
@@ -259,6 +259,10 @@ Node* Parser::MulDiv(){
 
 
 Node* Parser::primitive(){
+    if(!hasTokens(1)){
+        return nullptr;
+    }
+
     //Check for negations
     std::string current = given[iter].getName();
     if(check("-")){
@@ -402,7 +406,6 @@ Node* Parser::equal(){
     if(!hasTokens(3)){
         return nullptr;
     }
-
     Start start = currInfo();
     Node* left = nullptr;
     Node* right = nullptr;
@@ -779,6 +782,10 @@ Node* Parser::OR(){
         return nullptr;
     }
 
+    if(!hasTokens(2)){
+        return left;
+    }
+
     while(check("OR")){
         right = AND();
         if(right == nullptr){
@@ -810,6 +817,10 @@ Node* Parser::AND(){
     left = compare();
     if(left == nullptr){
         return nullptr;
+    }
+
+    if(!hasTokens(2)){
+        return left;
     }
 
     while(check("AND")){
@@ -927,7 +938,9 @@ Node* Parser::commonExpressions(){
     if(result != nullptr){
         if(!check(";")){
             error = true;
-            std::cout << "Missing ';' expected at [" + std::to_string(given[iter].row) + ", " + std::to_string(given[iter].column) +"]\n";
+            std::cout << "Warning: Missing ';' expected at [Line: " + std::to_string(given[iter - 1].row) + "] for the expression:\n\t ";
+            addOffset(result, stack->head)->ToString("", "", stack->head);
+            std::cout << "\n\n";
         }
         return result;
     }
@@ -936,7 +949,9 @@ Node* Parser::commonExpressions(){
     if(result != nullptr){
         if(!check(";")){
             error = true;
-            std::cout << "Missing ';' expected at [" + std::to_string(given[iter].row) + ", " + std::to_string(given[iter].column) +"]\n";
+            std::cout << "Warning: Missing ';' expected at [Line: " + std::to_string(given[iter - 1].row) + "] for the expression:\n\t ";
+            addOffset(result, stack->head)->ToString("", "", stack->head);
+            std::cout << "\n\n";
         }
         return result;
     }
@@ -1231,7 +1246,7 @@ Initialize* Parser::initialize(){
     }
     
     //Check to see if this matches a valid initialization.
-    bool bool1 = typeCheck(given[iter].getType()) or addOffset(stack->currentScope, stack->head)->hasObject(given[iter].name, stack->head);
+    bool bool1 = (given[iter].getType() == FloridaType::Adjective) or addOffset(stack->currentScope, stack->head)->hasObject(given[iter].name, stack->head);
     std::string_view typeName = given[iter].name;
     FloridaType theType = typeReturn(given[iter].getName());
     bool bool2 = given[iter + 1].getType() == FloridaType::Identifier;
@@ -1366,22 +1381,22 @@ Node* Parser::memberAccess(){
         return thisVariable;
     }
     //Determine if the `v2` part of `v1.v2` or `v1->v2` is a member of the object.
-    bool bool2 = addOffset(thisObject->code, stack->head)->hasVariable(given[iter + 1].name, stack->head);
+    bool bool2 = addOffset(addOffset(thisObject, stack->head)->code, stack->head)->hasVariable(given[iter + 1].name, stack->head);
 
     //If this is not satisfied, then it is a not an access.
     if(bool2){
-        Node* result = thisVariable;
+        Node* result = addOffset(thisVariable, stack->head);
 
         while(true){
             //Check for the pattern `v1.v2`.
             if(check(".")){
                 MemberAccess* theAccess = stack->alloc<MemberAccess>();
-                theAccess->left = result;
+                theAccess->left = difference(result, stack->head);
                 result = theAccess;
-                theAccess->right = addOffset(thisObject->code, stack->head)->getVariable(given[iter].name, stack->head);
+                theAccess->right = addOffset(addOffset(thisObject, stack->head)->code, stack->head)->getVariable(given[iter].name, stack->head);
                 theAccess->thisObject = thisObject;
                 //Change to the next object in the chain.
-                thisObject = thisObject->code->getVariable(given[iter].name, stack->head)->objectType;
+                thisObject = addOffset(addOffset(addOffset(thisObject, stack->head)->code, stack->head)->getVariable(given[iter].name, stack->head), stack->head)->objectType;
                 iter++;
 
                 continue;
@@ -1390,12 +1405,12 @@ Node* Parser::memberAccess(){
             //Check for the pattern `v1->v2`.
             if(check("->")){
                 Dereference* theDereference = stack->alloc<Dereference>();
-                theDereference->left = result;
+                theDereference->left = difference(result, stack->head);
                 result = theDereference;
-                theDereference->right = addOffset(thisObject->code, stack->head)->getVariable(given[iter].name, stack->head);
+                theDereference->right = addOffset(addOffset(thisObject, stack->head)->code, stack->head)->getVariable(given[iter].name, stack->head);
                 theDereference->thisObject = thisObject;
                 //Change to the next object in the chain.
-                thisObject = addOffset(thisObject->code, stack->head)->getVariable(given[iter].name, stack->head)->objectType;
+                thisObject = addOffset(addOffset(addOffset(thisObject, stack->head)->code, stack->head)->getVariable(given[iter].name, stack->head), stack->head)->objectType;
                 iter++;
 
                 continue;
@@ -1423,7 +1438,7 @@ Function* Parser::function(){
     //Check if the function has a non-void return statement.
     bool returnable = given[iter].getName() != "void";
     FloridaType returnType = typeReturn(given[iter].getName());
-    bool bool1 = typeCheck(given[iter].getType());
+    bool bool1 = (given[iter].getType() == FloridaType::Adjective) or addOffset(stack->currentScope, stack->head)->hasObject(given[iter].name, stack->head);
     //Grab the function's name as a string_view.
     std::string_view name = given[iter + 1].name;
     bool bool2 = given[iter + 1].getType() == FloridaType::Identifier;
