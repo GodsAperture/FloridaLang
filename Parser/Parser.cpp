@@ -1290,7 +1290,7 @@ Initialize* Parser::initialize(){
 
 Assignment* Parser::assignment(){
     Start start = currInfo();
-    Node* left = memberAccess();
+    Node* left = chainAccess(stack->currentScope);
     if(left == nullptr){
         return nullptr;
     }
@@ -1361,70 +1361,55 @@ ObjectClass* Parser::object(){
 
 }
 
-Node* Parser::memberAccess(){
-    Start start = Start();
+Node* Parser::chainAccess(Scope* input){
+    Start start = currInfo();
     if(!hasTokens(3)){
         return nullptr;
     }
 
     //Start by finding a variable.
-    Variable* thisVariable = variable();
+    Variable* thisVariable = addOffset(input, stack->head)->getVariable(given[iter].name, stack->head);
+    iter++;
     if(thisVariable == nullptr){
+        reset(start);
         return nullptr;
     }
-    ObjectClass* thisObject = addOffset(thisVariable, stack->head)->objectType;
+    ObjectClass* theClass = addOffset(thisVariable, stack->head)->objectType;   
 
+    if(theClass != nullptr){
+        if(check(".")){
+            MemberAccess* result = stack->alloc<MemberAccess>();
+            result->left = thisVariable;
+            result->right = chainAccess(addOffset(addOffset(thisVariable, stack->head)->objectType, stack->head)->code);
 
-    //Determine if the code takes the shape `v1.v2` or `v1->v2`.
-    bool bool1 = (given[iter].name == ".") or (given[iter].name == "->");
-    if(!bool1){
-        return thisVariable;
-    }
-    //Determine if the `v2` part of `v1.v2` or `v1->v2` is a member of the object.
-    bool bool2 = addOffset(addOffset(thisObject, stack->head)->code, stack->head)->hasVariable(given[iter + 1].name, stack->head);
-
-    //If this is not satisfied, then it is a not an access.
-    if(bool2){
-        Node* result = addOffset(thisVariable, stack->head);
-
-        while(true){
-            //Check for the pattern `v1.v2`.
-            if(check(".")){
-                MemberAccess* theAccess = stack->alloc<MemberAccess>();
-                theAccess->left = difference(result, stack->head);
-                result = theAccess;
-                theAccess->right = addOffset(addOffset(thisObject, stack->head)->code, stack->head)->getVariable(given[iter].name, stack->head);
-                theAccess->thisObject = thisObject;
-                //Change to the next object in the chain.
-                thisObject = addOffset(addOffset(addOffset(thisObject, stack->head)->code, stack->head)->getVariable(given[iter].name, stack->head), stack->head)->objectType;
-                iter++;
-
-                continue;
+            //This is not an error, just that this is not a member access.
+            if(result->right == nullptr){
+                reset(start);
+                return nullptr;
             }
 
-            //Check for the pattern `v1->v2`.
-            if(check("->")){
-                Dereference* theDereference = stack->alloc<Dereference>();
-                theDereference->left = difference(result, stack->head);
-                result = theDereference;
-                theDereference->right = addOffset(addOffset(thisObject, stack->head)->code, stack->head)->getVariable(given[iter].name, stack->head);
-                theDereference->thisObject = thisObject;
-                //Change to the next object in the chain.
-                thisObject = addOffset(addOffset(addOffset(thisObject, stack->head)->code, stack->head)->getVariable(given[iter].name, stack->head), stack->head)->objectType;
-                iter++;
-
-                continue;
-            }
-            //This means the access chain has ended.
-            break;
+            return difference(result, stack->head);
         }
 
-        //Return the completed chain access.
-        return difference(result, stack->head);
-    }
+        if(check("->")){
+            Dereference* result = stack->alloc<Dereference>();
+            result->left = thisVariable;
+            result->right = chainAccess(addOffset(addOffset(thisVariable, stack->head)->objectType, stack->head)->code);
 
-    reset(start);
-    return nullptr;
+            //This is not an error, just that this is not a member access.
+            if(result->right == nullptr){
+                reset(start);
+                return nullptr;
+            }
+
+            return difference(result, stack->head);
+        }
+
+        //If there are no more accesses/dereferences then it's just asking for an object.
+        return thisVariable;
+    }
+    
+    return thisVariable;
 
 }
 
@@ -1577,7 +1562,7 @@ Call* Parser::call(){
         //Readjust the scope to the previous scope.
         stack->currentScope = oldScope;
 
-        return (Call*) ((Call*) stack->head - result);
+        return difference(result, stack->head);
 
     }
 

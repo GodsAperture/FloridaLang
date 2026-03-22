@@ -1288,7 +1288,7 @@ inline T* difference(T* left, U* right){
             addOffset(condition, head)->ToString(inLeft, inRight, head);
             std::cout << "){\n";
                 addOffset(ifBody, head)->ToString("  " + inLeft, ";", head);
-            std::cout << "\n" << inLeft << "}";
+            std::cout << "\n" << inLeft << "}\n";
         } else {
             std::cout << inLeft + "\x1b[36mif\x1b[0m(";
             addOffset(condition, head)->ToString(inLeft, ";", head);
@@ -1296,7 +1296,7 @@ inline T* difference(T* left, U* right){
                 addOffset(ifBody, head)->ToString("  " + inLeft, inRight, head);
             std::cout << "\n" << inLeft << "} else {\n";
                 addOffset(elseBody, head)->ToString("  " + inLeft, ";", head);
-            std::cout << "\n" << inLeft << "}";
+            std::cout << "\n" << inLeft << "}\n";
         }
     }
 

@@ -183,7 +183,7 @@
 		//Catch EOF token, first and foremost.
 		//Just check to see if we've reached the end
 		//of the file.
-		if(count == file.length()){
+		if(count > file.length() - 1){
 			return Token(FloridaType::eof, EOF, row, column);
 		}
 

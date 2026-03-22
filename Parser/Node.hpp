@@ -510,29 +510,25 @@ public:
 class MemberAccess : public Node{
 public:
     //`left` will only be a `Variable`, `MemberAccess`, or a `Dereference`.
-    Node* left = nullptr;
-    Variable* right = nullptr;
-    ObjectClass* thisObject = nullptr;
+    Variable* left = nullptr;
+    Node* right = nullptr;
     
     MemberAccess();
     void ToString(std::string inLeft, std::string inRight, void* head) override;
     void FLVMCodeGen(Instructions* inInstructions, void* head) override;
     void AssignCodeGen(Instructions* inInstructions, Node* head);
-    Variable* getBaseVariable();
 };
 
 class Dereference : public Node{
 public:
     //`left` will only be a `Variable`, `MemberAccess`, or a `Dereference`.
-    Node* left = nullptr;
-    Variable* right = nullptr;
-    ObjectClass* thisObject = nullptr;
+    Variable* left = nullptr;
+    Node* right = nullptr;
     
     Dereference();
     void ToString(std::string inLeft, std::string inRight, void* head) override;
     void FLVMCodeGen(Instructions* inInstructions, void* head) override;
     void AssignCodeGen(Instructions* inInstructions, Node* head);
-    Variable* getBaseVariable();
 };
 
 #endif
