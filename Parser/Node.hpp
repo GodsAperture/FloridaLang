@@ -103,6 +103,11 @@ class Scope : public Node{
         //This is measured in bytes.
         int64_t variableSlotSize = 0;
 
+        //If these scopes are associated with a function or class definition,
+        //then these will not be a nullptr.
+        Function* associatedFunction = nullptr;
+        ObjectClass* associatedClass = nullptr;
+
         //Find where in some given Scope a particular variable lies.
         //If it does not exist in the scope, it returns -1.
         int64_t whereVariable(std::string input);
@@ -118,6 +123,7 @@ class Scope : public Node{
         void push(Function* input, void* head);
         //Push a new class into the scope's class stack.
         void push(ObjectClass* input, void* head);
+
         //Assigns each variable a byte value that will be used to
         //determine where in the stack or heap a packed variable is.
         void byteAssign(void* head);
@@ -127,14 +133,14 @@ class Scope : public Node{
         bool hasObject(std::string_view input, void* head);
         //Checks if a function is accessible in the current scope.
         bool hasFunction(std::string_view input, void* head);
+        
         //Gets the pointer to the variable in question.
         Variable* getVariable(std::string_view input, void* head);
         //Gets the pointer to the object in question.
         ObjectClass* getObject(std::string_view input, void* head);
         //Gets the pointer to the function in question.
         Function* getFunction(std::string_view input, void* head);
-        //Determine if the variable in question is global, middle, local, or in the heap.
-        char whereVariable(std::string_view input, void* head);
+
         //Standard methods.
         Scope();
         void ToString(std::string inLeft, std::string inRight, void* head) override;
@@ -195,7 +201,15 @@ public:
     void FLVMCodeGen(Instructions* inInstructions, void* head) override;
 };
 
+class QuietMultiply : public Node{
+public:
+    Node* left = nullptr;
+    Node* right = nullptr;
 
+    QuietMultiply();
+    void ToString(std::string inLeft, std::string inRight, void* head) override;
+    void FLVMCodeGen(Instructions* inInstructions, void* head) override;
+};
 
 class Multiply : public Node{
 public: 
@@ -512,6 +526,7 @@ public:
     //`left` will only be a `Variable`, `MemberAccess`, or a `Dereference`.
     Variable* left = nullptr;
     Node* right = nullptr;
+    ObjectClass* objecType = nullptr;
     
     MemberAccess();
     void ToString(std::string inLeft, std::string inRight, void* head) override;
@@ -524,11 +539,22 @@ public:
     //`left` will only be a `Variable`, `MemberAccess`, or a `Dereference`.
     Variable* left = nullptr;
     Node* right = nullptr;
+    ObjectClass* objectType = nullptr;
     
     Dereference();
     void ToString(std::string inLeft, std::string inRight, void* head) override;
     void FLVMCodeGen(Instructions* inInstructions, void* head) override;
     void AssignCodeGen(Instructions* inInstructions, Node* head);
+};
+
+
+
+//This class is for convenience.
+template<typename T, typename U>
+class Pair{
+public:
+    T* first = nullptr;
+    U* second = nullptr;
 };
 
 #endif

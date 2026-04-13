@@ -612,50 +612,6 @@ inline T* difference(T* left, U* right){
         return nullptr;
     }
 
-    char Scope::whereVariable(std::string_view input, void* head){
-        Scope* currentScope = this;
-        Variable* currentVariable = nullptr;
-        bool found = false;
-        while(currentScope != nullptr){
-            currentVariable = addOffset(addOffset(currentScope, head)->allInitializations, head)->thisVariable;
-            while(currentVariable != nullptr){
-                if(addOffset(currentVariable, head)->thisToken.name == input){
-                    found = true;
-                    break;
-                } else {
-                    currentVariable = addOffset(currentVariable, head)->next;
-                }
-            }
-            if(found){
-                break;
-            }
-            currentScope = addOffset(currentScope, head)->parent;
-        }
-
-        if(currentScope == nullptr){
-            std::cout << "Error: Where could not be determined.\n";
-            return -1;
-        }
-
-        //Local scope
-        if(addOffset(currentScope, head)->parent == nullptr){
-            return 0;
-        }
-
-        //Middle scope
-        if((addOffset(currentScope, head)->parent != nullptr) and (currentScope != this)){
-            return 1;
-        }
-
-        //Global scope
-        if(currentScope == this){
-            return 2;
-        }
-
-        //Not sure how to determine heap yet.
-
-        return 4;
-    }
 
 
 //Primitive
@@ -991,6 +947,33 @@ inline T* difference(T* left, U* right){
 
 
 
+//Quiet multiply does not have a character
+    QuietMultiply::QuietMultiply(){
+        //Do nothing
+    }
+
+    void QuietMultiply::ToString(std::string inLeft, std::string inRight, void* head){
+        addOffset(left, head)->ToString(inLeft, inRight, head);
+        std::cout << " ";
+        addOffset(right, head)->ToString(inLeft, inRight, head);
+    }
+
+    void QuietMultiply::FLVMCodeGen(Instructions* inInstructions, void* head){
+        types result;
+
+        //Generate the code for the left hand object.
+        addOffset(left, head)->FLVMCodeGen(inInstructions, head);
+        //Generate the code for the right hand object.
+        addOffset(right, head)->FLVMCodeGen(inInstructions, head);
+        //Push the operation
+        result.operation[0] = Operation::multiply;
+        inInstructions->push(result);
+        //Push the data type
+        result.type[0] = left->type;
+        inInstructions->push(result);
+    }
+
+
 //Multiply *
     Multiply::Multiply(){
         //Do nothing
@@ -1004,8 +987,10 @@ inline T* difference(T* left, U* right){
 
     void Multiply::FLVMCodeGen(Instructions* inInstructions, void* head){
         types result;
-
+        
+        //Generate the code for the left hand object.
         addOffset(left, head)->FLVMCodeGen(inInstructions, head);
+        //Generate the code for the right hand object.
         addOffset(right, head)->FLVMCodeGen(inInstructions, head);
         //Push the operation
         result.operation[0] = Operation::multiply;

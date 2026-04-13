@@ -91,14 +91,10 @@ public:
 
 //Mathematical expressions.
 //Technically, all mathematical expressions are subexpressions of boolean expressions.
-
-    //0 priority
-    //Addition and subtraction.
-    Node* AddSub();
-
-    //1 priority
-    //Multiplication and division.
-    Node* MulDiv();
+    Node* Addition();
+    Node* Subtraction();
+    Node* Multiplication();
+    Node* Division();
 
     //2 priority
     Node* primitive();      //numbers, booleans.

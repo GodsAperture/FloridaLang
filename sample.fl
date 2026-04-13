@@ -13,4 +13,4 @@ object thing3{
 }
 
 thing3 y;
-y.second.second = 3.14;
+y.second.second = 2 3.14;
