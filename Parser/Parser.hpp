@@ -73,8 +73,10 @@ public:
     ObjectClass* object();
     //Determine the size of an object.
     uint64_t allocationSize(FloridaType input);
-    //Convenient method for getting a variable.
-    Node* chainAccess(Scope* input);
+    //Convenient method for getting a dereference or a member access.
+    Pair<Node, Scope> dereference(Scope* input);
+    //Convenient method for getting a member access.
+    Pair<Node, Scope> memberAccess(Scope* input);
 
 //Tree related functions.
 

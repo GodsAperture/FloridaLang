@@ -524,7 +524,7 @@ public:
 class MemberAccess : public Node{
 public:
     //`left` will only be a `Variable`, `MemberAccess`, or a `Dereference`.
-    Variable* left = nullptr;
+    Node* left = nullptr;
     Node* right = nullptr;
     ObjectClass* objecType = nullptr;
     
@@ -537,7 +537,7 @@ public:
 class Dereference : public Node{
 public:
     //`left` will only be a `Variable`, `MemberAccess`, or a `Dereference`.
-    Variable* left = nullptr;
+    Node* left = nullptr;
     Node* right = nullptr;
     ObjectClass* objectType = nullptr;
     

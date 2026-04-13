@@ -185,8 +185,6 @@ Node* Parser::Multiplication(){
 
     //Failing here is not an error.
     if(!check("*")){
-        return left;
-    } else {
         right = Multiplication();
         if(right != nullptr){
             QuietMultiply* newResult = stack->alloc<QuietMultiply>();
@@ -194,7 +192,9 @@ Node* Parser::Multiplication(){
             newResult->right = right;
             newResult->type = returnType(addOffset(left, stack->head)->type, addOffset(right, stack->head)->type);
 
-            return newResult;
+            return difference(newResult, stack->head);
+        } else {
+            return left;
         }
     }
 
@@ -1272,7 +1272,7 @@ Initialize* Parser::initialize(){
 
 Assignment* Parser::assignment(){
     Start start = currInfo();
-    Node* left = chainAccess(stack->currentScope);
+    Node* left = dereference(stack->currentScope).first;
     if(left == nullptr){
         return nullptr;
     }
@@ -1344,55 +1344,76 @@ ObjectClass* Parser::object(){
 
 }
 
-Node* Parser::chainAccess(Scope* input){
-    Start start = currInfo();
-    if(!hasTokens(3)){
-        return nullptr;
+Pair<Node, Scope> Parser::dereference(Scope* input){
+    Pair<Node, Scope> left;
+    Pair<Node, Scope> right;
+    Pair<Node, Scope> result;
+    Dereference* subresult = nullptr;
+
+    left = memberAccess(input);
+    if(left.first == nullptr){
+        return result;
     }
 
-    //Start by finding a variable.
-    Variable* thisVariable = addOffset(input, stack->head)->getVariable(given[iter].name, stack->head);
-    iter++;
-    if(thisVariable == nullptr){
-        reset(start);
-        return nullptr;
+    if(!check("->")){
+        return left;
     }
-    ObjectClass* theClass = addOffset(thisVariable, stack->head)->objectType;   
 
-    if(theClass != nullptr){
-        if(check(".")){
-            MemberAccess* result = stack->alloc<MemberAccess>();
-            result->left = thisVariable;
-            result->right = chainAccess(addOffset(addOffset(thisVariable, stack->head)->objectType, stack->head)->code);
+    right = dereference(left.second);
+    if(right.first == nullptr){
+        //Error
+    }
 
-            //This is not an error, just that this is not a member access.
-            if(result->right == nullptr){
-                reset(start);
-                return nullptr;
-            }
+    subresult = stack->alloc<Dereference>();
+    subresult->left = left.first;
+    subresult->right = right.first;
 
-            return difference(result, stack->head);
+    result.first = subresult;
+    result.second = right.second;
+    if(result.first != nullptr){
+        result.first->type = addOffset(left.first, stack->head)->type;
+    }
+
+    return result;
+
+}
+
+Pair<Node, Scope> Parser::memberAccess(Scope* input){
+    Variable* left;
+    Pair<Node, Scope> right;
+    Pair<Node, Scope> result;
+    MemberAccess* subresult = nullptr;
+
+    if(addOffset(input, stack->head)->hasVariable(given[iter].name, stack->head)){
+        left = addOffset(input, stack->head)->getVariable(given[iter].name, stack->head);
+        if(left == nullptr){
+            return result;
+        }
+        iter++;
+
+        if(!check(".")){
+            right.first = left;
+            right.second = addOffset(addOffset(left, stack->head)->objectType, stack->head)->code;
+
+            return right;
         }
 
-        if(check("->")){
-            Dereference* result = stack->alloc<Dereference>();
-            result->left = thisVariable;
-            result->right = chainAccess(addOffset(addOffset(thisVariable, stack->head)->objectType, stack->head)->code);
-
-            //This is not an error, just that this is not a member access.
-            if(result->right == nullptr){
-                reset(start);
-                return nullptr;
-            }
-
-            return difference(result, stack->head);
+        right = memberAccess(addOffset(addOffset(left, stack->head)->objectType, stack->head)->code);
+        if(right.first == nullptr){
+            //Error
         }
 
-        //If there are no more accesses/dereferences then it's just asking for an object.
-        return thisVariable;
+        subresult = stack->alloc<MemberAccess>();
+        subresult->left = left;
+        subresult->right = right.first;
+
+        result.first = subresult;
+        result.second = right.second;
+
+        return result;
     }
-    
-    return thisVariable;
+
+    return result;
 
 }
 
