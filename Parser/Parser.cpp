@@ -1344,13 +1344,13 @@ ObjectClass* Parser::object(){
 
 }
 
-Pair<Node, Scope> Parser::dereference(Scope* input){
+Pair<Node, Scope> Parser::dereference(Scope* inputOffset){
     Pair<Node, Scope> left;
     Pair<Node, Scope> right;
     Pair<Node, Scope> result;
     Dereference* subresult = nullptr;
 
-    left = memberAccess(input);
+    left = memberAccess(inputOffset);
     if(left.first == nullptr){
         return result;
     }
@@ -1368,7 +1368,7 @@ Pair<Node, Scope> Parser::dereference(Scope* input){
     subresult->left = left.first;
     subresult->right = right.first;
 
-    result.first = subresult;
+    result.first = difference(subresult, stack->head);
     result.second = right.second;
     if(result.first != nullptr){
         result.first->type = addOffset(left.first, stack->head)->type;
@@ -1378,14 +1378,14 @@ Pair<Node, Scope> Parser::dereference(Scope* input){
 
 }
 
-Pair<Node, Scope> Parser::memberAccess(Scope* input){
+Pair<Node, Scope> Parser::memberAccess(Scope* inputOffset){
     Variable* left;
     Pair<Node, Scope> right;
     Pair<Node, Scope> result;
     MemberAccess* subresult = nullptr;
 
-    if(addOffset(input, stack->head)->hasVariable(given[iter].name, stack->head)){
-        left = addOffset(input, stack->head)->getVariable(given[iter].name, stack->head);
+    if(addOffset(inputOffset, stack->head)->hasVariable(given[iter].name, stack->head)){
+        left = addOffset(inputOffset, stack->head)->getVariable(given[iter].name, stack->head);
         if(left == nullptr){
             return result;
         }
@@ -1393,7 +1393,10 @@ Pair<Node, Scope> Parser::memberAccess(Scope* input){
 
         if(!check(".")){
             right.first = left;
-            right.second = addOffset(addOffset(left, stack->head)->objectType, stack->head)->code;
+            if(addOffset(left, stack->head)->objectType != nullptr){
+                right.second = addOffset(addOffset(left, stack->head)->objectType, stack->head)->code;
+            }
+            addOffset(right.first, stack->head)->type = addOffset(left, stack->head)->type;
 
             return right;
         }
@@ -1407,7 +1410,7 @@ Pair<Node, Scope> Parser::memberAccess(Scope* input){
         subresult->left = left;
         subresult->right = right.first;
 
-        result.first = subresult;
+        result.first = difference(subresult, stack->head);
         result.second = right.second;
 
         return result;
