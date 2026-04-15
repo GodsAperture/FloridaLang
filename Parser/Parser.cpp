@@ -4,26 +4,6 @@
 #include <cstring>
 #include <iostream>
 
-/** @brief This allows me to find where in memory the pointer is supposed to exist given some `head`.
- *  @param left T
- *  @param right U
- *  @return T
- */
-template<typename T, typename U>
-inline T* addOffset(T* left, U* right){
-    return (T*) ((int64_t) left + (char*) right);
-}
-
-/** @brief This allows me to create an offset for a pointer given some `head`.
- *  @param left T
- *  @param right U
- *  @return T
- */
-template<typename T, typename U>
-inline T* difference(T* left, U* right){
-    return (T*) ((char*) left - (char*) right);
-}
-
 uint64_t Parser::allocationSize(FloridaType input){
     switch(input){
         case FloridaType::Bool:
@@ -63,7 +43,7 @@ void Parser::parse(){
 };
 
 void Parser::ToString(){
-    addOffset(stack->AST, stack->head)->ToString("", "", stack->head);
+    stack->AST->ToString("", "");
     std::cout << "\n";
 }
 
@@ -140,9 +120,9 @@ Node* Parser::Addition(){
     result = stack->alloc<Add>();
     result->left = left;
     result->right = right;
-    result->type = returnType(addOffset(left, stack->head)->type, addOffset(right, stack->head)->type);
+    result->type = returnType(left->type, right->type);
 
-    return difference(result, stack->head);
+    return result;
 }
 
 Node* Parser::Subtraction(){
@@ -168,9 +148,9 @@ Node* Parser::Subtraction(){
     result = stack->alloc<Subtract>();
     result->left = left;
     result->right = right;
-    result->type = returnType(addOffset(left, stack->head)->type, addOffset(right, stack->head)->type);
+    result->type = returnType(left->type, right->type);
 
-    return difference(result, stack->head);
+    return result;
 }
 
 Node* Parser::Multiplication(){
@@ -190,9 +170,9 @@ Node* Parser::Multiplication(){
             QuietMultiply* newResult = stack->alloc<QuietMultiply>();
             newResult->left = left;
             newResult->right = right;
-            newResult->type = returnType(addOffset(left, stack->head)->type, addOffset(right, stack->head)->type);
+            newResult->type = returnType(left->type, right->type);
 
-            return difference(newResult, stack->head);
+            return newResult;
         } else {
             return left;
         }
@@ -206,9 +186,9 @@ Node* Parser::Multiplication(){
     result = stack->alloc<Multiply>();
     result->left = left;
     result->right = right;
-    result->type = returnType(addOffset(left, stack->head)->type, addOffset(right, stack->head)->type);
+    result->type = returnType(left->type, right->type);
 
-    return difference(result, stack->head);
+    return result;
 }
 
 Node* Parser::Division(){
@@ -234,9 +214,9 @@ Node* Parser::Division(){
     result = stack->alloc<Divide>();
     result->left = left;
     result->right = right;
-    result->type = returnType(addOffset(left, stack->head)->type, addOffset(right, stack->head)->type);
+    result->type = returnType(left->type, right->type);
 
-    return difference(result, stack->head);
+    return result;
 }
 
 
@@ -251,7 +231,7 @@ Node* Parser::primitive(){
         Negative* expression = stack->alloc<Negative>();
         expression->right = Multiplication();
 
-        return difference(expression, stack->head);
+        return expression;
     }
     //Check for expression within parentheses.
     if(check("(")){
@@ -263,7 +243,7 @@ Node* Parser::primitive(){
             errorStack.push_back("Missing ')' on line " + std::to_string(given[iter].row));
         }
 
-        return difference(expression, stack->head);
+        return expression;
     }
 
 
@@ -275,7 +255,7 @@ Node* Parser::primitive(){
         number->type = FloridaType::ufixed8;
         iter++;
 
-        return difference(number, stack->head);
+        return number;
     }
     if((given[iter].type == FloridaType::ufixed4) and (given[iter].getName() != "ufixed4")){
         Primitive* number = stack->alloc<Primitive>();
@@ -283,7 +263,7 @@ Node* Parser::primitive(){
         number->type = FloridaType::ufixed4;
         iter++;
 
-        return difference(number, stack->head);
+        return number;
     }
     if((given[iter].type == FloridaType::ufixed2) and (given[iter].getName() != "ufixed2")){
         Primitive* number = stack->alloc<Primitive>();
@@ -291,7 +271,7 @@ Node* Parser::primitive(){
         number->type = FloridaType::ufixed2;
         iter++;
 
-        return difference(number, stack->head);
+        return number;
     }
     if((given[iter].type == FloridaType::ufixed1) and (given[iter].getName() != "ufixed1")){
         Primitive* number = stack->alloc<Primitive>();
@@ -299,7 +279,7 @@ Node* Parser::primitive(){
         number->type = FloridaType::ufixed1;
         iter++;
 
-        return difference(number, stack->head);
+        return number;
     }
     if((given[iter].type == FloridaType::fixed8) and (given[iter].getName() != "fixed8")){
         Primitive* number = stack->alloc<Primitive>();
@@ -307,7 +287,7 @@ Node* Parser::primitive(){
         number->type = FloridaType::fixed8;
         iter++;
 
-        return difference(number, stack->head);
+        return number;
     }
     if((given[iter].type == FloridaType::fixed4) and (given[iter].getName() != "fixed4")){
         Primitive* number = stack->alloc<Primitive>();
@@ -315,7 +295,7 @@ Node* Parser::primitive(){
         number->type = FloridaType::fixed4;
         iter++;
 
-       return difference(number, stack->head);
+       return number;
     }
     if((given[iter].type == FloridaType::fixed2) and (given[iter].getName() != "fixed2")){
         Primitive* number = stack->alloc<Primitive>();
@@ -323,7 +303,7 @@ Node* Parser::primitive(){
         number->type = FloridaType::fixed2;
         iter++;
 
-        return difference(number, stack->head);
+        return number;
     }
     if((given[iter].type == FloridaType::fixed1) and (given[iter].getName() != "fixed1")){
         Primitive* number = stack->alloc<Primitive>();
@@ -331,7 +311,7 @@ Node* Parser::primitive(){
         number->type = FloridaType::fixed1;
         iter++;
 
-        return difference(number, stack->head);
+        return number;
     }
     if((given[iter].type == FloridaType::float8) and (given[iter].getName() != "float8")){
         Primitive* number = stack->alloc<Primitive>();
@@ -339,7 +319,7 @@ Node* Parser::primitive(){
         number->type = FloridaType::float8;
         iter++;
 
-        return difference(number, stack->head);
+        return number;
     }
     if((given[iter].type == FloridaType::float4) and (given[iter].getName() != "float4")){
         Primitive* number = stack->alloc<Primitive>();
@@ -347,7 +327,7 @@ Node* Parser::primitive(){
         number->type = FloridaType::float4;
         iter++;
 
-        return difference(number, stack->head);
+        return number;
     }
 
 
@@ -360,13 +340,13 @@ Node* Parser::primitive(){
             result->type = FloridaType::Bool;
             iter++;
 
-            return difference(result, stack->head);
+            return result;
         } else {
             result->value.boolean[0] = false;
             result->type = FloridaType::Bool;
             iter++;
             
-            return difference(result, stack->head);
+            return result;
         }
     }
     Call* thisCall = call();
@@ -411,7 +391,7 @@ Node* Parser::equal(){
         return nullptr;
     }
 
-    FloridaType resultType = returnType(addOffset(left, stack->head)->type, addOffset(right, stack->head)->type);
+    FloridaType resultType = returnType(left->type, right->type);
     //Determine if either the left or the right need to be typecasted.
     if(left->type != resultType){
         TypecastClass* that = stack->alloc<TypecastClass>();
@@ -433,7 +413,7 @@ Node* Parser::equal(){
     result->right = right;
     result->type = FloridaType::Bool;
 
-    return difference(result, stack->head);
+    return result;
 
 }
 
@@ -467,7 +447,7 @@ Node* Parser::notEqual(){
         return nullptr;
     }
 
-    FloridaType resultType = returnType(addOffset(left, stack->head)->type, addOffset(right, stack->head)->type);
+    FloridaType resultType = returnType(left->type, right->type);
     //Determine if either the left or the right need to be typecasted.
     if(left->type != resultType){
         TypecastClass* that = stack->alloc<TypecastClass>();
@@ -489,7 +469,7 @@ Node* Parser::notEqual(){
     result->right = right;
     result->type = FloridaType::Bool;
 
-    return difference(result, stack->head);
+    return result;
 
 }
 
@@ -521,7 +501,7 @@ Node* Parser::greaterThan(){
         return nullptr;
     }
 
-    FloridaType resultType = returnType(addOffset(left, stack->head)->type, addOffset(right, stack->head)->type);
+    FloridaType resultType = returnType(left->type, right->type);
     //Determine if either the left or the right need to be typecasted.
     if(left->type != resultType){
         TypecastClass* that = stack->alloc<TypecastClass>();
@@ -543,7 +523,7 @@ Node* Parser::greaterThan(){
     result->right = right;
     result->type = FloridaType::Bool;
 
-    return difference(result, stack->head);
+    return result;
 
 }
 
@@ -575,7 +555,7 @@ Node* Parser::greaterThanOr(){
         return nullptr;
     }
 
-    FloridaType resultType = returnType(addOffset(left, stack->head)->type, addOffset(right, stack->head)->type);
+    FloridaType resultType = returnType(left->type, right->type);
     //Determine if either the left or the right need to be typecasted.
     if(left->type != resultType){
         TypecastClass* that = stack->alloc<TypecastClass>();
@@ -597,7 +577,7 @@ Node* Parser::greaterThanOr(){
     result->right = right;
     result->type = FloridaType::Bool;
 
-    return difference(result, stack->head);
+    return result;
 
 }
 
@@ -629,21 +609,21 @@ Node* Parser::lessThan(){
         return nullptr;
     }
 
-    FloridaType resultType = returnType(addOffset(left, stack->head)->type, addOffset(right, stack->head)->type);
+    FloridaType resultType = returnType(left->type, right->type);
     //Determine if either the left or the right need to be typecasted.
-    if(addOffset(left, stack->head)->type != resultType){
+    if(left->type != resultType){
         TypecastClass* that = stack->alloc<TypecastClass>();
         that->body = left;
         that->type = resultType;
 
-        left = difference(that, stack->head);     
+        left = that;     
     }
-    if(addOffset(right, stack->head)->type != resultType){
+    if(right->type != resultType){
         TypecastClass* that = stack->alloc<TypecastClass>();
         that->body = right;
         that->type = resultType;
 
-        right = difference(that, stack->head);
+        right = that;
     }
 
     result = stack->alloc<LessThan>();
@@ -651,7 +631,7 @@ Node* Parser::lessThan(){
     result->right = right;
     result->type = FloridaType::Bool;
 
-    return difference(result, stack->head);
+    return result;
 
 }
 
@@ -683,7 +663,7 @@ Node* Parser::lessThanOr(){
         return nullptr;
     }
 
-    FloridaType resultType = returnType(addOffset(left, stack->head)->type, addOffset(right, stack->head)->type);
+    FloridaType resultType = returnType(left->type, right->type);
     //Determine if either the left or the right need to be typecasted.
     if(left->type != resultType){
         TypecastClass* that = stack->alloc<TypecastClass>();
@@ -705,7 +685,7 @@ Node* Parser::lessThanOr(){
     result->right = right;
     result->type = FloridaType::Bool;
 
-    return difference(result, stack->head);
+    return result;
 
 }
 
@@ -782,7 +762,7 @@ Node* Parser::OR(){
         result->right = right;
         result->type = FloridaType::Bool;
 
-        left = difference(result, stack->head);
+        left = result;
 
     }
 
@@ -819,7 +799,7 @@ Node* Parser::AND(){
         result->right = right;
         result->type = FloridaType::Bool;
 
-        left = difference(result, stack->head);
+        left = result;
 
     }
 
@@ -829,7 +809,6 @@ Node* Parser::AND(){
 
 
 //Scopes
-////DOUBLE CHECK
 Scope* Parser::scope(){
     //Create a new scope for the object.
     Scope* newScope = stack->alloc<Scope>();
@@ -842,7 +821,7 @@ Scope* Parser::scope(){
     //Assign the current scope as the parent of the new scope.
     newScope->parent = stack->currentScope;
     //Assign the newest scope to be the current scope.
-    stack->currentScope = difference(newScope, stack->head);
+    stack->currentScope = newScope;
     //If there is no other scope, then make it the global scope.
     if(stack->globalScope == nullptr){
         stack->globalScope = stack->currentScope;
@@ -851,11 +830,11 @@ Scope* Parser::scope(){
     //Get the body of code and attach it to the scope.
     newScope->body = body();
     //Return to the outerscope.
-    stack->currentScope = addOffset(stack->currentScope, stack->head)->parent;
+    stack->currentScope = stack->currentScope->parent;
     //Make sure to assign each variable an appropriate size.
-    newScope->byteAssign(stack->head);
+    newScope->byteAssign();
 
-    return difference(newScope, stack->head);
+    return newScope;
 }
 
 Body* Parser::body(){
@@ -870,7 +849,7 @@ Body* Parser::body(){
     }
     Body* tempBody = stack->alloc<Body>();
     tempBody->current = current;
-    bodyStart->append(difference(tempBody, stack->head), stack->head);
+    bodyStart->append(tempBody);
     //std::cout << current->ToString(">>", ";") << "\n";
     //Treat the Body* as a "linked list."
     currentBody = bodyStart;
@@ -880,16 +859,16 @@ Body* Parser::body(){
     while(hasTokens() & (currentBody != nullptr)){
         current = commonExpressions();
         if(current == nullptr){
-            return difference(bodyStart, stack->head);
+            return bodyStart;
         }
         //Append code to the "linked list" of expressions.
         currentBody = stack->alloc<Body>();
         currentBody->current = current;
         //Move down the "linked list."
-        bodyStart->append(difference(currentBody, stack->head), stack->head);
+        bodyStart->append(currentBody);
     }
 
-    return difference(bodyStart, stack->head);
+    return bodyStart;
 }
 
 //Convenient method
@@ -921,7 +900,7 @@ Node* Parser::commonExpressions(){
         if(!check(";")){
             error = true;
             std::cout << "Warning: Missing ';' expected at [Line: " + std::to_string(given[iter - 1].row) + "] for the expression:\n\t ";
-            addOffset(result, stack->head)->ToString("", "", stack->head);
+            result->ToString("", "");
             std::cout << "\n\n";
         }
         return result;
@@ -932,7 +911,7 @@ Node* Parser::commonExpressions(){
         if(!check(";")){
             error = true;
             std::cout << "Warning: Missing ';' expected at [Line: " + std::to_string(given[iter - 1].row) + "] for the expression:\n\t ";
-            addOffset(result, stack->head)->ToString("", "", stack->head);
+            result->ToString("", "");
             std::cout << "\n\n";
         }
         return result;
@@ -997,9 +976,9 @@ IfClass* Parser::IF(){
         //Check for the end of the condition and the start of the body.
         if((condition != nullptr) & check(")") & check("{")){
             ifScope = scope();
-            addOffset(ifScope, stack->head)->name = given[ifPosition].name;
+            ifScope->name = given[ifPosition].name;
             //Assign each variable a placement in the pack.
-            addOffset(ifScope, stack->head)->byteAssign(stack->head);
+            ifScope->byteAssign();
         } else {
             error = true;
             //Error here
@@ -1018,13 +997,13 @@ IfClass* Parser::IF(){
             elseScope = scope();
             elseScope->name = given[elsePosition].name;
             //Assign each variable a placement on the stack.
-            addOffset(elseScope, stack->head)->byteAssign(stack->head);
+            elseScope->byteAssign();
         } else {
             result = stack->alloc<IfClass>();
             result->condition = condition;
             result->ifBody = ifScope;
             result->elseBody = elseScope;
-            return difference(result, stack->head);
+            return result;
         }
 
         if(!check("}")){
@@ -1036,7 +1015,7 @@ IfClass* Parser::IF(){
         result->condition = condition;
         result->ifBody = ifScope;
         result->elseBody = elseScope;
-        return difference(result, stack->head);
+        return result;
 
     }
 
@@ -1063,7 +1042,7 @@ ForLoop* Parser::FOR(){
 
         //Make the current scope the new one.
         thisScope->parent = stack->currentScope;
-        stack->currentScope = difference(thisScope, stack->head);
+        stack->currentScope = thisScope;
 
         //Get an assignment, if any.
         if(!check(";")){
@@ -1111,15 +1090,15 @@ ForLoop* Parser::FOR(){
         result->assign = initializeAssignVar;
         result->condition = condition;
         result->incrementer = incrementer;
-        result->body = difference(thisScope, stack->head);
+        result->body = thisScope;
 
         //Return to the outer scope.
-        stack->currentScope = addOffset(stack->currentScope, stack->head)->parent;
+        stack->currentScope = stack->currentScope->parent;
 
         //Assign each variable a placement in the pack.
-        addOffset(result->body, stack->head)->byteAssign(stack->head);
+        result->body->byteAssign();
 
-        return difference(result, stack->head);
+        return result;
 
     }
 
@@ -1161,12 +1140,12 @@ WhileLoop* Parser::WHILE(){
         result = stack->alloc<WhileLoop>();
         result->condition = condition;
         result->body = theScope;
-        addOffset(theScope, stack->head)->name = name;
+        theScope->name = name;
 
         //Assign each variable a placement in the pack.
-        addOffset(result->body, stack->head)->byteAssign(stack->head);
+        result->body->byteAssign();
 
-        return difference(result, stack->head);
+        return result;
 
     }
 
@@ -1180,42 +1159,9 @@ Variable* Parser::variable(){
     }
 
     //Check to see if the variable is accessible from the current scope.
-    if(addOffset(stack->currentScope, stack->head)->hasVariable(given[iter].name, stack->head)){
-        // Scope* thisScope = stack->currentScope;
-        // int64_t stackBytePosition = -1;
-        // //Find what scope the variable resides in.
-        // while(stackBytePosition == -1){
-        //     //If we have gone through all scopes, the variable doesn't exist.
-        //     if(thisScope == nullptr){
-        //         std::cout << "Unknown variable '" << given[iter].getName() << "' was not found in any reachable scope.\n";
-        //         return nullptr;
-        //     } else {
-        //         //If a value other than -1 is returned, then we break from the loop.
-        //         stackBytePosition = thisScope->whereVariable(given[iter].getName());
-        //         if(stackBytePosition == -1){
-        //             thisScope = thisScope->parent;
-        //         } else {
-        //             break;
-        //         }
-        //     }
-        // }
-        
-        // FloridaType theType = thisScope->getInit(given[iter].getName())->thisVariable->type;
-        
-        // //Assign the location of the variable in the scope.
-        // Variable* newVariable = stack->alloc<Variable>();
-        // newVariable->thisToken = given[iter];
-        // newVariable->stackBytePosition = stackBytePosition;
-        // newVariable->owner = thisScope;
-        // newVariable->type = theType;
-        // if(theType == FloridaType::Null){
-        //     newVariable->objectType = addOffset(addOffset(stack->currentScope, stack->head)->getVariable(given[iter].name, stack->head), stack->head)->objectType;
-        // }
+    if(stack->currentScope->hasVariable(given[iter].name)){
         iter++;
-        return addOffset(stack->currentScope, stack->head)->getVariable(given[iter - 1].name, stack->head);
-
-        // iter++;
-        // return difference(newVariable, stack->head);
+        return stack->currentScope->getVariable(given[iter - 1].name);
     }
 
     //This isn't an error, just that a variable wasn't found.
@@ -1228,7 +1174,7 @@ Initialize* Parser::initialize(){
     }
     
     //Check to see if this matches a valid initialization.
-    bool bool1 = (given[iter].getType() == FloridaType::Adjective) or addOffset(stack->currentScope, stack->head)->hasObject(given[iter].name, stack->head);
+    bool bool1 = (given[iter].getType() == FloridaType::Adjective) or stack->currentScope->hasObject(given[iter].name);
     std::string_view typeName = given[iter].name;
     FloridaType theType = typeReturn(given[iter].getName());
     bool bool2 = given[iter + 1].getType() == FloridaType::Identifier;
@@ -1248,13 +1194,13 @@ Initialize* Parser::initialize(){
         newVariable->type = theType;
         
         //The expected stack size will be larger because of the new variable.
-        result->thisVariable = difference(newVariable, stack->head);
+        result->thisVariable = newVariable;
         //Add the variable to `allInitializations` and `sortedInitalizations`.
-        addOffset(stack->currentScope, stack->head)->push(difference(result, stack->head), stack->head);
+        stack->currentScope->push(result);
 
         //Check if it is a user defined object. If so, assign its object type.
         if(theType == FloridaType::Null){
-            addOffset(result->thisVariable, stack->head)->objectType = addOffset(stack->currentScope, stack->head)->getObject(typeName, stack->head);
+            result->thisVariable->objectType = stack->currentScope->getObject(typeName);
         }
 
         //If there's an assignment operator, then there should be a statement that follows.
@@ -1263,7 +1209,7 @@ Initialize* Parser::initialize(){
             result->code = commonStatements();
         }
 
-        return difference(result, stack->head);
+        return result;
     }
 
     //This isn't an error, just that an initialization wasn't found.
@@ -1284,7 +1230,7 @@ Assignment* Parser::assignment(){
             result = stack->alloc<Assignment>();
             result->left = left;
             result->right = right;
-            return difference(result, stack->head);
+            return result;
         }
 
         reset(start);
@@ -1312,45 +1258,45 @@ ObjectClass* Parser::object(){
         result->type = FloridaType::Object;
         result->name = name;
         result->code = scope();
-        addOffset(result->code, stack->head)->associatedClass = difference(result, stack->head);
+        result->code->associatedClass = result;
 
         if(!check("}")){
             //TO DO, debugging.
         }
-        addOffset(stack->currentScope, stack->head)->push(difference(result, stack->head), stack->head);
+        stack->currentScope->push(result);
 
-        Initialize* currentInitialize = addOffset(result->code, stack->head)->allInitializations;
+        Initialize* currentInitialize = result->code->allInitializations;
         //Use this to determine the size of the object in memory.
         if(currentInitialize != nullptr){
             //The tail end of `memoryOrder` will have the the variable
             //with the highest `stackBytePosition`. If I addOffset its
             //stackBytePosition to its size in memory, then I know
             //how large this object will be.
-            while(addOffset(currentInitialize, stack->head)->memoryOrder != nullptr){
-                currentInitialize = addOffset(currentInitialize, stack->head)->memoryOrder;
+            while(currentInitialize->memoryOrder != nullptr){
+                currentInitialize = currentInitialize->memoryOrder;
             }
 
             //Determine the size of the object allocation.
-            if(addOffset(addOffset(currentInitialize, stack->head)->thisVariable, stack->head)->objectType == nullptr){
-                result->memorySize = addOffset(addOffset(currentInitialize, stack->head)->thisVariable, stack->head)->stackBytePosition + allocationSize(addOffset(addOffset(currentInitialize, stack->head)->thisVariable, stack->head)->type);
+            if(currentInitialize->thisVariable->objectType == nullptr){
+                result->memorySize = currentInitialize->thisVariable->stackBytePosition + allocationSize(currentInitialize->thisVariable->type);
             } else {
-                result->memorySize = addOffset(addOffset(currentInitialize, stack->head)->thisVariable, stack->head)->stackBytePosition + addOffset(addOffset(addOffset(currentInitialize, stack->head)->thisVariable, stack->head)->objectType, stack->head)->memorySize;
+                result->memorySize = currentInitialize->thisVariable->stackBytePosition + currentInitialize->thisVariable->objectType->memorySize;
             }
         }
-        return difference(result, stack->head);
+        return result;
     }
 
     return nullptr;
 
 }
 
-Pair<Node, Scope> Parser::dereference(Scope* inputOffset){
+Pair<Node, Scope> Parser::dereference(Scope* input){
     Pair<Node, Scope> left;
     Pair<Node, Scope> right;
     Pair<Node, Scope> result;
     Dereference* subresult = nullptr;
 
-    left = memberAccess(inputOffset);
+    left = memberAccess(input);
     if(left.first == nullptr){
         return result;
     }
@@ -1368,10 +1314,10 @@ Pair<Node, Scope> Parser::dereference(Scope* inputOffset){
     subresult->left = left.first;
     subresult->right = right.first;
 
-    result.first = difference(subresult, stack->head);
+    result.first = subresult;
     result.second = right.second;
     if(result.first != nullptr){
-        result.first->type = addOffset(left.first, stack->head)->type;
+        result.first->type = left.first->type;
     }
 
     return result;
@@ -1384,8 +1330,8 @@ Pair<Node, Scope> Parser::memberAccess(Scope* inputOffset){
     Pair<Node, Scope> result;
     MemberAccess* subresult = nullptr;
 
-    if(addOffset(inputOffset, stack->head)->hasVariable(given[iter].name, stack->head)){
-        left = addOffset(inputOffset, stack->head)->getVariable(given[iter].name, stack->head);
+    if(inputOffset->hasVariable(given[iter].name)){
+        left = inputOffset->getVariable(given[iter].name);
         if(left == nullptr){
             return result;
         }
@@ -1393,15 +1339,15 @@ Pair<Node, Scope> Parser::memberAccess(Scope* inputOffset){
 
         if(!check(".")){
             right.first = left;
-            if(addOffset(left, stack->head)->objectType != nullptr){
-                right.second = addOffset(addOffset(left, stack->head)->objectType, stack->head)->code;
+            if(left->objectType != nullptr){
+                right.second = left->objectType->code;
             }
-            addOffset(right.first, stack->head)->type = addOffset(left, stack->head)->type;
+            right.first->type = left->type;
 
             return right;
         }
 
-        right = memberAccess(addOffset(addOffset(left, stack->head)->objectType, stack->head)->code);
+        right = memberAccess(left->objectType->code);
         if(right.first == nullptr){
             //Error
         }
@@ -1410,7 +1356,7 @@ Pair<Node, Scope> Parser::memberAccess(Scope* inputOffset){
         subresult->left = left;
         subresult->right = right.first;
 
-        result.first = difference(subresult, stack->head);
+        result.first = subresult;
         result.second = right.second;
 
         return result;
@@ -1430,7 +1376,7 @@ Function* Parser::function(){
     //Check if the function has a non-void return statement.
     bool returnable = given[iter].getName() != "void";
     FloridaType returnType = typeReturn(given[iter].getName());
-    bool bool1 = (given[iter].getType() == FloridaType::Adjective) or addOffset(stack->currentScope, stack->head)->hasObject(given[iter].name, stack->head);
+    bool bool1 = (given[iter].getType() == FloridaType::Adjective) or stack->currentScope->hasObject(given[iter].name);
     //Grab the function's name as a string_view.
     std::string_view name = given[iter + 1].name;
     bool bool2 = given[iter + 1].getType() == FloridaType::Identifier;
@@ -1440,22 +1386,22 @@ Function* Parser::function(){
         Function* result = stack->alloc<Function>();
         int64_t firstHalfStackSize = 0;
         result->previous = stack->currentFunction;  
-        stack->currentFunction = difference(result, stack->head);
+        stack->currentFunction = result;
         result->returnable = returnable;
         result->name = name;
 
         //Include the function for use in the original scope.
-        result->next = addOffset(stack->currentScope, stack->head)->functions;
-        addOffset(stack->currentScope, stack->head)->functions = difference(result, stack->head);
+        result->next = stack->currentScope->functions;
+        stack->currentScope->functions = result;
 
         //Include the function in the allFunctions chain for the VM.
         result->allFunctions = stack->allFunctions;
-        stack->allFunctions = difference(result, stack->head);
+        stack->allFunctions = result;
 
         result->type = returnType;
         int64_t variableCount = 0;
         Scope* newScope = stack->alloc<Scope>();
-        newScope->associatedFunction = difference(result, stack->head);
+        newScope->associatedFunction = result;
         newScope->name = name;
         
         //Assign the scope its own unqiue value.
@@ -1465,17 +1411,17 @@ Function* Parser::function(){
 
         //Adjust the current scope to be that of the function.
         newScope->parent = stack->currentScope;
-        result->code = difference(newScope, stack->head);
-        stack->currentScope = difference(newScope, stack->head);
+        result->code = newScope;
+        stack->currentScope = newScope;
         iter++;
         iter++;
         iter++;
 
         Initialize* hasInitialization = initialize();
-        if(addOffset(addOffset(hasInitialization, stack->head)->thisVariable, stack->head)->objectType == nullptr){
-            firstHalfStackSize += allocationSize(addOffset(addOffset(hasInitialization, stack->head)->thisVariable, stack->head)->type);
+        if(hasInitialization->thisVariable->objectType == nullptr){
+            firstHalfStackSize += allocationSize(hasInitialization->thisVariable->type);
         } else {
-            firstHalfStackSize += addOffset(addOffset(addOffset(hasInitialization, stack->head)->thisVariable, stack->head)->objectType, stack->head)->memorySize;
+            firstHalfStackSize += hasInitialization->thisVariable->objectType->memorySize;
         }
         if(hasInitialization != nullptr){
             variableCount++;
@@ -1484,9 +1430,9 @@ Function* Parser::function(){
                 hasInitialization = initialize();
                 variableCount++;
                 if(hasInitialization->thisVariable->objectType == nullptr){
-                    firstHalfStackSize += allocationSize(addOffset(addOffset(hasInitialization, stack->head)->thisVariable, stack->head)->type);
+                    firstHalfStackSize += allocationSize(hasInitialization->thisVariable->type);
                 } else {
-                    firstHalfStackSize += addOffset(addOffset(addOffset(hasInitialization, stack->head)->thisVariable, stack->head)->objectType, stack->head)->memorySize;
+                    firstHalfStackSize += hasInitialization->thisVariable->objectType->memorySize;
                 }
             }
         }
@@ -1497,7 +1443,7 @@ Function* Parser::function(){
         }
 
         //It doesn't matter if this is a nullptr or not.
-        addOffset(result->code, stack->head)->body = body();
+        result->code->body = body();
         //How many arguments are expected in the function.
         result->argumentCount = variableCount;
 
@@ -1507,14 +1453,14 @@ Function* Parser::function(){
         }
 
         //Return the relevant function scope to the previous function.
-        stack->currentFunction = addOffset(stack->currentFunction, stack->head)->previous;
+        stack->currentFunction = stack->currentFunction->previous;
         //Return the scope to the previous scope.
         stack->currentScope = newScope->parent;
 
         //Assign each variable a placement in the pack.
-        addOffset(result->code, stack->head)->byteAssign(stack->head);
+        result->code->byteAssign();
 
-        return difference(result, stack->head);
+        return result;
 
     }
 
@@ -1570,7 +1516,7 @@ Call* Parser::call(){
         //Readjust the scope to the previous scope.
         stack->currentScope = oldScope;
 
-        return difference(result, stack->head);
+        return result;
 
     }
 
@@ -1591,12 +1537,12 @@ ReturnClass* Parser::Return(){
 
         //currentScope will always be a deeper scope or the same scope as currFunct.
         Scope* currentScope = stack->currentScope;
-        Scope* thisScope = addOffset(stack->currentFunction, stack->head)->code;
+        Scope* thisScope = stack->currentFunction->code;
 
         //The current function scope will always be in an outer scope if not the current one.
         while(currentScope != thisScope){
             returnCount++;
-            currentScope = addOffset(currentScope, stack->head)->parent;
+            currentScope = currentScope->parent;
         }
 
         //This is how many scopes to escape upon returning from the function.
@@ -1608,14 +1554,14 @@ ReturnClass* Parser::Return(){
         }
 
         //Check if the return type differs from what is on the return line.
-        if(addOffset(statement, stack->head)->type != addOffset(stack->currentFunction, stack->head)->type){
+        if(statement->type != stack->currentFunction->type){
             TypecastClass* thing = stack->alloc<TypecastClass>();
             thing->type = stack->currentFunction->type;
             thing->body = statement;
             result->statement = thing;
         }
 
-        return difference(result, stack->head);
+        return result;
     }
     //The ~~cake~~ return is a lie.
     return nullptr;

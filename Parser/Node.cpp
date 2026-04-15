@@ -224,25 +224,6 @@ std::string assignPad(FloridaType input, char where){
     return result;
 }
 
-/** @brief This allows me to find where in memory the pointer is supposed to exist given some `head`.
- *  @param left T
- *  @param right U
- *  @return T
- */
-template<typename T, typename U>
-inline T* addOffset(T* left, U* right){
-    return (T*) ((int64_t) left + (char*) right);
-}
-
-/** @brief This allows me to create an offset for a pointer given some `head`.
- *  @param left T
- *  @param right U
- *  @return T
- */
-template<typename T, typename U>
-inline T* difference(T* left, U* right){
-    return (T*) ((char*) left - (char*) right);
-}
 
 
 //TypecastClass
@@ -251,13 +232,13 @@ inline T* difference(T* left, U* right){
         type = FloridaType::Typecast;
     }
 
-    void TypecastClass::ToString(std::string inLeft, std::string inRight, void* head){
-        addOffset(body, head)->ToString(inLeft, inRight, head);
+    void TypecastClass::ToString(std::string inLeft, std::string inRight){
+        body->ToString(inLeft, inRight);
     }
 
-    void TypecastClass::FLVMCodeGen(Instructions* inInstructions, void* head){
+    void TypecastClass::FLVMCodeGen(Instructions* inInstructions){
         types result;
-        addOffset(body, head)->FLVMCodeGen(inInstructions, head);   
+        body->FLVMCodeGen(inInstructions);   
         //Once again, I abuse the integer nature to get the correct operation.
         //This will pick the correct one among 100 total options.
         //10 of those are redundant and only necessary to let the math work.
@@ -343,9 +324,9 @@ inline T* difference(T* left, U* right){
 
     //Add the Initialization to the two linked lists that sort
     //them by order found and size in bytes.
-    void Scope::push(Initialize* input, void* head){
+    void Scope::push(Initialize* input){
         //Adjust `input` for simplicity.
-        int64_t byteSize = allocationSize(addOffset(addOffset(input, head)->thisVariable, head)->type);
+        int64_t byteSize = allocationSize(input->thisVariable->type);
         int64_t theirSize = 0;
         //If there are no initializations, then just slap the variable onto the list.
         if(allInitializations == nullptr){
@@ -353,27 +334,27 @@ inline T* difference(T* left, U* right){
             sortedInitializations = input;
             return;
         }
-        Initialize* currentInitialize = addOffset(allInitializations, head);
+        Initialize* currentInitialize = allInitializations;
         Initialize* previousInitialize = nullptr;
         //Reach the tail end of the "linked list" of initializations.
         while(currentInitialize->next != nullptr){
-            currentInitialize = addOffset(currentInitialize->next, head);
+            currentInitialize = currentInitialize->next;
         }
 
         //Append the initialization to the tail end of the "linked list."
         currentInitialize->next = input;
 
         //Reach the end of the sorted list.
-        currentInitialize = addOffset(sortedInitializations, head);
+        currentInitialize = sortedInitializations;
         while(currentInitialize->memoryOrder != nullptr){
-            currentInitialize = addOffset(currentInitialize->memoryOrder, head);
+            currentInitialize = currentInitialize->memoryOrder;
         }
         //If the input is some object, then place it
         //with the other variables whose memory sizes
         //are multiples of the architecture's size (x32, x64, x128, etc.).
-        if(addOffset(addOffset(input, head)->thisVariable, head)->objectType != nullptr){
+        if(input->thisVariable->objectType != nullptr){
             while(currentInitialize->thisVariable->objectType != nullptr){
-                currentInitialize = addOffset(currentInitialize->memoryOrder, head);
+                currentInitialize = currentInitialize->memoryOrder;
             }
 
             input->memoryOrder = currentInitialize->memoryOrder;
@@ -384,10 +365,10 @@ inline T* difference(T* left, U* right){
         currentInitialize = sortedInitializations;
         //This will place input in a sorted place based on size in the linked list.
         while(currentInitialize != nullptr){
-            theirSize = allocationSize(addOffset(addOffset(currentInitialize, head)->thisVariable, head)->type);
+            theirSize = allocationSize(currentInitialize->thisVariable->type);
             if(byteSize <= theirSize){
                 previousInitialize = currentInitialize;
-                currentInitialize = addOffset(currentInitialize, head)->memoryOrder;
+                currentInitialize = currentInitialize->memoryOrder;
                 continue;
             } else {
                 break;
@@ -395,32 +376,32 @@ inline T* difference(T* left, U* right){
         }
 
         if(previousInitialize == nullptr){
-            addOffset(input, head)->memoryOrder = sortedInitializations;
+            input->memoryOrder = sortedInitializations;
             sortedInitializations = input;
         } else {
-            addOffset(previousInitialize, head)->memoryOrder = input;
-            addOffset(input, head)->memoryOrder = currentInitialize;
+            previousInitialize->memoryOrder = input;
+            input->memoryOrder = currentInitialize;
         }
     }
 
-    void Scope::push(Function* input, void* head){
+    void Scope::push(Function* input){
         //If there are no functions, then just slap the function onto the list.
         if(functions == nullptr){
-            functions = addOffset(input, head);
+            functions = input;
             return;
         }
         Function* currFun = functions;
         //Reach the tail end of the "linked list" of functions.
-        while(addOffset(currFun, head)->next != nullptr){
-            currFun = addOffset(currFun, head)->next;
+        while(currFun->next != nullptr){
+            currFun = currFun->next;
         }
 
         //Append the function to the tail end of the "linked list."
-        addOffset(currFun, head)->next = input;
+        currFun->next = input;
 
     }
 
-    void Scope::push(ObjectClass* input, void* head){
+    void Scope::push(ObjectClass* input){
         //If there are no objects, then this is the first defined class in the scope.
         if(allObjects == nullptr){
             allObjects = input;
@@ -428,14 +409,14 @@ inline T* difference(T* left, U* right){
         }
         ObjectClass* currObj = allObjects;
         //Find the last element of the linked list.
-        while(addOffset(currObj, head)->next != nullptr){
-            currObj = addOffset(currObj, head)->next;
+        while(currObj->next != nullptr){
+            currObj = currObj->next;
         }
 
-        addOffset(currObj, head)->next = input;
+        currObj->next = input;
     }
 
-    void Scope::byteAssign(void* head){
+    void Scope::byteAssign(){
         if(allInitializations == nullptr){
             return;
         }
@@ -444,16 +425,16 @@ inline T* difference(T* left, U* right){
         const int64_t bitmask = 7;
         while(currentInitialization != nullptr){
             //Determine the size of the variable's allocation.
-            if(addOffset(addOffset(currentInitialization, head)->thisVariable, head)->objectType == nullptr){
-                byteSize = allocationSize(addOffset(addOffset(currentInitialization, head)->thisVariable, head)->type);
+            if(currentInitialization->thisVariable->objectType == nullptr){
+                byteSize = allocationSize(currentInitialization->thisVariable->type);
             } else {
-                byteSize = addOffset(addOffset(addOffset(currentInitialization, head)->thisVariable, head)->objectType, head)->memorySize;
+                byteSize = currentInitialization->thisVariable->objectType->memorySize;
             }
             //Assign the current size to the variable's position in memory.
-            addOffset(addOffset(currentInitialization, head)->thisVariable, head)->stackBytePosition = variableSlotSize;
+            currentInitialization->thisVariable->stackBytePosition = variableSlotSize;
             //Increase the size of the stack for the next variable's placement.
             variableSlotSize += byteSize;
-            currentInitialization = addOffset(currentInitialization, head)->memoryOrder;
+            currentInitialization = currentInitialization->memoryOrder;
         }
         //In case the memory used isn't an exact multiple of 8, pad it.
         variableSlotSize += bitmask & (8 - (bitmask & variableSlotSize));
@@ -461,13 +442,13 @@ inline T* difference(T* left, U* right){
 
 
     
-    void Scope::ToString(std::string inLeft, std::string inRight, void* head){
+    void Scope::ToString(std::string inLeft, std::string inRight){
         if(body != nullptr){
-            addOffset(body, head)->ToString(inLeft, ";", head);
+            body->ToString(inLeft, ";");
         }
     }
 
-    void Scope::FLVMCodeGen(Instructions* inInstructions, void* head){
+    void Scope::FLVMCodeGen(Instructions* inInstructions){
         types result;
 
         //The new scope will use the last value to pick the proper scope and adjust its value.
@@ -480,7 +461,7 @@ inline T* difference(T* left, U* right){
         result.fixed8 = variableSlotSize;
         inInstructions->push(result);
         if(body != nullptr){
-            addOffset(body, head)->FLVMCodeGen(inInstructions, head);
+            body->FLVMCodeGen(inInstructions);
         }
         //Push the delete scope operation onto the stack.
         result.operation[0] = Operation::deleteScope;
@@ -492,121 +473,121 @@ inline T* difference(T* left, U* right){
 
 
 
-    bool Scope::hasVariable(std::string_view input, void* head){
+    bool Scope::hasVariable(std::string_view input){
         //Go through all scopes as needed.
-        Scope* currentScope = difference(this, head);
+        Scope* currentScope = this;
         Initialize* currentInitialize = nullptr;
         while(currentScope != nullptr){
-            currentInitialize = addOffset(currentScope, head)->allInitializations;
+            currentInitialize = currentScope->allInitializations;
             //Check all of the initializations in the scope.
             while(currentInitialize != nullptr){
-                if(addOffset(addOffset(currentInitialize, head)->thisVariable, head)->thisToken.name == input){
+                if(currentInitialize->thisVariable->thisToken.name == input){
                     return true;
                 } else {
-                    currentInitialize = addOffset(currentInitialize, head)->next;
+                    currentInitialize = currentInitialize->next;
                 }
             }
-            currentScope = addOffset(currentScope, head)->parent;
+            currentScope = currentScope->parent;
         }
 
         return false;
     }
 
-    bool Scope::hasObject(std::string_view input, void* head){
+    bool Scope::hasObject(std::string_view input){
         //Go through all scopes as needed.
-        Scope* currentScope = difference(this, head);
+        Scope* currentScope = this;
         ObjectClass* currentObject = nullptr;
         while(currentScope != nullptr){
-            currentObject = addOffset(currentScope, head)->allObjects;
+            currentObject = currentScope->allObjects;
             //Check all of the objects in the scope.
             while(currentObject != nullptr){
-                if(addOffset(currentObject, head)->name == input){
+                if(currentObject->name == input){
                     return true;
                 } else {
-                    currentObject = addOffset(currentObject, head)->next;
+                    currentObject = currentObject->next;
                 }
             }
-            currentScope = addOffset(currentScope, head)->parent;
+            currentScope = currentScope->parent;
         }
 
         return false;
     }
 
-    bool Scope::hasFunction(std::string_view input, void* head){
-        //Go through all scopes as needed.
-        Scope* currentScope = difference(this, head);
-        Function* currentFunction = nullptr;
-        while(currentScope != nullptr){
-            currentFunction = addOffset(currentScope, head)->functions;
-            //Check all of the initializations in the scope.
-            while(currentFunction != nullptr){
-                if(addOffset(currentFunction, head)->name == input){
-                    return true;
-                } else {
-                    currentFunction = addOffset(currentFunction, head)->next;
-                }
-            }
-            currentScope = addOffset(currentScope, head)->parent;
-        }
-
-        return false;
-    }
-
-    Variable* Scope::getVariable(std::string_view input, void* head){
-        //Go through all scopes as needed.
-        Scope* currentScope = difference(this, head);
-        Initialize* currentInitialize = nullptr;
-        while(currentScope != nullptr){
-            currentInitialize = addOffset(currentScope, head)->allInitializations;
-            //Check all of the initializations in the scope.
-            while(currentInitialize != nullptr){
-                if(addOffset(addOffset(currentInitialize, head)->thisVariable, head)->thisToken.name == input){
-                    return addOffset(currentInitialize, head)->thisVariable;
-                } else {
-                    currentInitialize = addOffset(currentInitialize, head)->next;
-                }
-            }
-            currentScope = addOffset(currentScope, head)->parent;
-        }
-
-        return nullptr;
-    }
-
-    ObjectClass* Scope::getObject(std::string_view input, void* head){
-        //Go through all scopes as needed.
-        Scope* currentScope = difference(this, head);
-        ObjectClass* currentObject = nullptr;
-        while(currentScope != head){
-            currentObject = addOffset(currentScope, head)->allObjects;
-            //Check all of the objects in the scope.
-            while(currentObject != nullptr){
-                if(addOffset(currentObject, head)->name == input){
-                    return currentObject;
-                } else {
-                    currentObject = addOffset(currentObject, head)->next;
-                }
-            }
-            currentScope = addOffset(currentScope, head)->parent;
-        }
-
-        return nullptr;
-    }
-
-    Function* Scope::getFunction(std::string_view input, void* head){
+    bool Scope::hasFunction(std::string_view input){
         //Go through all scopes as needed.
         Scope* currentScope = this;
         Function* currentFunction = nullptr;
         while(currentScope != nullptr){
-            currentFunction = addOffset(currentScope, head)->functions;
+            currentFunction = currentScope->functions;
             //Check all of the initializations in the scope.
             while(currentFunction != nullptr){
-                if(addOffset(currentFunction, head)->name == input){
-                    return currentFunction;
+                if(currentFunction->name == input){
+                    return true;
                 } else {
-                    currentFunction = addOffset(currentFunction, head)->next;
+                    currentFunction = currentFunction->next;
                 }
             }
-            currentScope = addOffset(currentScope, head)->parent;
+            currentScope = currentScope->parent;
+        }
+
+        return false;
+    }
+
+    Variable* Scope::getVariable(std::string_view input){
+        //Go through all scopes as needed.
+        Scope* currentScope = this;
+        Initialize* currentInitialize = nullptr;
+        while(currentScope != nullptr){
+            currentInitialize = currentScope->allInitializations;
+            //Check all of the initializations in the scope.
+            while(currentInitialize != nullptr){
+                if(currentInitialize->thisVariable->thisToken.name == input){
+                    return currentInitialize->thisVariable;
+                } else {
+                    currentInitialize = currentInitialize->next;
+                }
+            }
+            currentScope = currentScope->parent;
+        }
+
+        return nullptr;
+    }
+
+    ObjectClass* Scope::getObject(std::string_view input){
+        //Go through all scopes as needed.
+        Scope* currentScope = this;
+        ObjectClass* currentObject = nullptr;
+        while(currentScope != nullptr){
+            currentObject = currentScope->allObjects;
+            //Check all of the objects in the scope.
+            while(currentObject != nullptr){
+                if(currentObject->name == input){
+                    return currentObject;
+                } else {
+                    currentObject = currentObject->next;
+                }
+            }
+            currentScope = currentScope->parent;
+        }
+
+        return nullptr;
+    }
+
+    Function* Scope::getFunction(std::string_view input){
+        //Go through all scopes as needed.
+        Scope* currentScope = this;
+        Function* currentFunction = nullptr;
+        while(currentScope != nullptr){
+            currentFunction = currentScope->functions;
+            //Check all of the initializations in the scope.
+            while(currentFunction != nullptr){
+                if(currentFunction->name == input){
+                    return currentFunction;
+                } else {
+                    currentFunction = currentFunction->next;
+                }
+            }
+            currentScope = currentScope->parent;
         }
 
         return nullptr;
@@ -620,7 +601,7 @@ inline T* difference(T* left, U* right){
         //The type will be determined after a Primitive is created.
     }
 
-    void Primitive::ToString(std::string inLeft, std::string inRight, void* head){
+    void Primitive::ToString(std::string inLeft, std::string inRight){
         switch(type){
             case ufixed1:
                 std::cout << std::to_string(value.ufixed1[0]);
@@ -665,7 +646,7 @@ inline T* difference(T* left, U* right){
         }
     }
 
-    void Primitive::FLVMCodeGen(Instructions* inInstructions, void* head){
+    void Primitive::FLVMCodeGen(Instructions* inInstructions){
         types result;
         //Generate a push instruction.
         result.operation[0] = Operation::push;
@@ -684,12 +665,12 @@ inline T* difference(T* left, U* right){
     }
 
     //Append the body to the end of the linked list.
-    Body* Body::append(Body* input, void* head){
+    Body* Body::append(Body* input){
         if(current == nullptr){
             current = input;
         } else {
             if(next != nullptr){
-                addOffset(next, head)->append(input, head);
+                next->append(input);
             } else {
                 next = input;
             }
@@ -699,24 +680,24 @@ inline T* difference(T* left, U* right){
 
     }
 
-    void Body::ToString(std::string inLeft, std::string inRight, void* head){
-        addOffset(current, head)->ToString(inLeft, inRight, head);
+    void Body::ToString(std::string inLeft, std::string inRight){
+        current->ToString(inLeft, inRight);
         if(next != nullptr){
             std::cout << '\n';
-            addOffset(next, head)->ToString(inLeft, inRight, head);
+            next->ToString(inLeft, inRight);
         }
     }
 
-    void Body::FLVMCodeGen(Instructions* inInstructions, void* head){
+    void Body::FLVMCodeGen(Instructions* inInstructions){
         //Add the current chunk of code if it is not a function.
         if(dynamic_cast<Function*>(current) == nullptr){
-            addOffset(current, head)->FLVMCodeGen(inInstructions, head);
+            current->FLVMCodeGen(inInstructions);
             //After the line has finished execution, pop it from the stack.
             //inInstructions.push_back(Instruction(Operation::pop));
         }
         //If next isn't a nullptr, then generate code for it too.
         if(next != nullptr){
-            addOffset(next, head)->FLVMCodeGen(inInstructions, head);
+            next->FLVMCodeGen(inInstructions);
         }
     }
 
@@ -729,8 +710,8 @@ inline T* difference(T* left, U* right){
 
     void Variable::append(Variable* input, void* head){
         Variable* currVar = this;
-        if(addOffset(currVar, head)->next != nullptr){
-            while(addOffset(currVar, head)->next != nullptr){
+        if(currVar->next != nullptr){
+            while(currVar->next != nullptr){
                 currVar = currVar->next;
             }
         }
@@ -739,17 +720,17 @@ inline T* difference(T* left, U* right){
 
     }
 
-    void Variable::ToString(std::string inLeft, std::string inRight, void* head){
+    void Variable::ToString(std::string inLeft, std::string inRight){
         std::cout << thisToken.getName();
     }
 
-    void Variable::FLVMCodeGen(Instructions* inInstructions, void* head){
+    void Variable::FLVMCodeGen(Instructions* inInstructions){
         types result;
         //Check if the variable is an object.
         //If it is, fetch everything.
         if(objectType != nullptr){
             //This will fetch the full object.
-            for(uint64_t i = 0; i < addOffset(objectType, head)->memorySize / 8; i++){
+            for(uint64_t i = 0; i < objectType->memorySize / 8; i++){
                 result.operation[0] = Operation::fetch8;
                 inInstructions->push(result);
                 result.fixed8 = stackBytePosition + i * 8;
@@ -779,33 +760,33 @@ inline T* difference(T* left, U* right){
         //Do nothing.
     };
 
-    void Initialize::ToString(std::string inLeft, std::string inRight, void* head){
-        if(addOffset(thisVariable, head)->objectType != nullptr){
+    void Initialize::ToString(std::string inLeft, std::string inRight){
+        if(thisVariable->objectType != nullptr){
             if(code != nullptr){
-                std::cout <<  inLeft << std::string(addOffset(addOffset(thisVariable, head)->objectType, head)->name);
-                std::cout << " " << addOffset(thisVariable, head)->thisToken.getName() << " = ";
-                addOffset(code, head)->ToString(inLeft, inRight, head);
+                std::cout <<  inLeft << std::string(thisVariable->objectType->name);
+                std::cout << " " << thisVariable->thisToken.getName() << " = ";
+                code->ToString(inLeft, inRight);
                 std::cout << inRight;
                 return;
             } else {
-                std::cout << inLeft << std::string(addOffset(addOffset(thisVariable, head)->objectType, head)->name) << " " << addOffset(thisVariable, head)->thisToken.getName() << inRight;
+                std::cout << inLeft << std::string(thisVariable->objectType->name) << " " << thisVariable->thisToken.getName() << inRight;
             }
         } else {
             if(code != nullptr){
-                std::cout << inLeft << typeString(addOffset(thisVariable, head)->thisToken.type) << " " << addOffset(thisVariable, head)->thisToken.getName() << " = ";
-                addOffset(code, head)->ToString(inLeft, inRight, head);
+                std::cout << inLeft << typeString(thisVariable->thisToken.type) << " " << thisVariable->thisToken.getName() << " = ";
+                code->ToString(inLeft, inRight);
                 std::cout << inRight;
             } else {
-                std::cout << inLeft << typeString(addOffset(thisVariable, head)->thisToken.type) << " " << addOffset(thisVariable, head)->thisToken.getName() << inRight;
+                std::cout << inLeft << typeString(thisVariable->thisToken.type) << " " << thisVariable->thisToken.getName() << inRight;
             }
         }
     }
 
-    void Initialize::FLVMCodeGen(Instructions* inInstructions, void* head){
+    void Initialize::FLVMCodeGen(Instructions* inInstructions){
         //If there's code, then generate it.
         if(code != nullptr){
             //Generate the code for the right hand side.
-            addOffset(code, head)->FLVMCodeGen(inInstructions, head);
+            code->FLVMCodeGen(inInstructions);
 
             //Get the correct byte size.
             types result;
@@ -836,19 +817,19 @@ inline T* difference(T* left, U* right){
     //Append the `input` to the end of the linked list of Initializations.
     void Initialize::append(Initialize* input, void* head){
         Initialize* current = this;
-        while(addOffset(current, head)->next != nullptr){
-            current = addOffset(current, head)->next;
+        while(current->next != nullptr){
+            current = current->next;
         }
-        addOffset(current, head)->next = input;
+        current->next = input;
     }
 
     //Append `input` to the end of the `memoryOrder` linked list.
     void Initialize::memoryAppend(Initialize* input, void* head){
         Initialize* current = this;
-        while(addOffset(current, head)->memoryOrder != nullptr){
-            current = addOffset(current, head)->memoryOrder;
+        while(current->memoryOrder != nullptr){
+            current = current->memoryOrder;
         }
-        addOffset(current, head)->memoryOrder = input;
+        current->memoryOrder = input;
     }
 
 
@@ -858,22 +839,22 @@ inline T* difference(T* left, U* right){
         //Do nothing
     };
 
-    void Assignment::ToString(std::string inLeft, std::string inRight, void* head){
+    void Assignment::ToString(std::string inLeft, std::string inRight){
         std::cout << inLeft;
-        addOffset(left, head)->ToString(inLeft, inRight, head);
+        left->ToString(inLeft, inRight);
         std::cout << " = ";
-        addOffset(right, head)->ToString(inLeft, inRight, head);
+        right->ToString(inLeft, inRight);
         std::cout << inRight;
     }
 
-    void Assignment::FLVMCodeGen(Instructions* inInstructions, void* head){
+    void Assignment::FLVMCodeGen(Instructions* inInstructions){
         //Evaluate the right hand side before assigning.
         if(right != nullptr){
-            addOffset(right, head)->FLVMCodeGen(inInstructions, head);
+            right->FLVMCodeGen(inInstructions);
         }
         //Generate the fetch instructions for this object.
         //These will be changed to assignment instructions.
-        addOffset(left, head)->FLVMCodeGen(inInstructions, head);
+        left->FLVMCodeGen(inInstructions);
 
         Variable* theVariable = dynamic_cast<Variable*>(left);
         if(theVariable != nullptr){
@@ -901,16 +882,16 @@ inline T* difference(T* left, U* right){
         //Do nothing
     }
 
-    void Add::ToString(std::string inLeft, std::string inRight, void* head){
-        addOffset(left, head)->ToString(inLeft, inRight, head);
+    void Add::ToString(std::string inLeft, std::string inRight){
+        left->ToString(inLeft, inRight);
         std::cout << " + ";
-        addOffset(right, head)->ToString(inLeft, inRight, head);
+        right->ToString(inLeft, inRight);
     }
 
-    void Add::FLVMCodeGen(Instructions* inInstructions, void* head){
+    void Add::FLVMCodeGen(Instructions* inInstructions){
         types result;
-        addOffset(left, head)->FLVMCodeGen(inInstructions, head);
-        addOffset(right, head)->FLVMCodeGen(inInstructions, head);
+        left->FLVMCodeGen(inInstructions);
+        right->FLVMCodeGen(inInstructions);
         //Push the operation
         result.operation[0] = Operation::add;
         inInstructions->push(result);
@@ -926,17 +907,17 @@ inline T* difference(T* left, U* right){
         //Do nothing
     }
 
-    void Subtract::ToString(std::string inLeft, std::string inRight, void* head){
-        addOffset(left, head)->ToString(inLeft, inRight, head);
+    void Subtract::ToString(std::string inLeft, std::string inRight){
+        left->ToString(inLeft, inRight);
         std::cout << " - ";
-        addOffset(right, head)->ToString(inLeft, inRight, head);
+        right->ToString(inLeft, inRight);
     }
 
-    void Subtract::FLVMCodeGen(Instructions* inInstructions, void* head){
+    void Subtract::FLVMCodeGen(Instructions* inInstructions){
         types result;
 
-        addOffset(left, head)->FLVMCodeGen(inInstructions, head);
-        addOffset(right, head)->FLVMCodeGen(inInstructions, head);
+        left->FLVMCodeGen(inInstructions);
+        right->FLVMCodeGen(inInstructions);
         //Push the operation
         result.operation[0] = Operation::subtract;
         inInstructions->push(result);
@@ -952,19 +933,19 @@ inline T* difference(T* left, U* right){
         //Do nothing
     }
 
-    void QuietMultiply::ToString(std::string inLeft, std::string inRight, void* head){
-        addOffset(left, head)->ToString(inLeft, inRight, head);
+    void QuietMultiply::ToString(std::string inLeft, std::string inRight){
+        left->ToString(inLeft, inRight);
         std::cout << " ";
-        addOffset(right, head)->ToString(inLeft, inRight, head);
+        right->ToString(inLeft, inRight);
     }
 
-    void QuietMultiply::FLVMCodeGen(Instructions* inInstructions, void* head){
+    void QuietMultiply::FLVMCodeGen(Instructions* inInstructions){
         types result;
 
         //Generate the code for the left hand object.
-        addOffset(left, head)->FLVMCodeGen(inInstructions, head);
+        left->FLVMCodeGen(inInstructions);
         //Generate the code for the right hand object.
-        addOffset(right, head)->FLVMCodeGen(inInstructions, head);
+        right->FLVMCodeGen(inInstructions);
         //Push the operation
         result.operation[0] = Operation::multiply;
         inInstructions->push(result);
@@ -979,19 +960,19 @@ inline T* difference(T* left, U* right){
         //Do nothing
     }
 
-    void Multiply::ToString(std::string inLeft, std::string inRight, void* head){
-        addOffset(left, head)->ToString(inLeft, inRight, head);
+    void Multiply::ToString(std::string inLeft, std::string inRight){
+        left->ToString(inLeft, inRight);
         std::cout << " * ";
-        addOffset(right, head)->ToString(inLeft, inRight, head);
+        right->ToString(inLeft, inRight);
     }
 
-    void Multiply::FLVMCodeGen(Instructions* inInstructions, void* head){
+    void Multiply::FLVMCodeGen(Instructions* inInstructions){
         types result;
         
         //Generate the code for the left hand object.
-        addOffset(left, head)->FLVMCodeGen(inInstructions, head);
+        left->FLVMCodeGen(inInstructions);
         //Generate the code for the right hand object.
-        addOffset(right, head)->FLVMCodeGen(inInstructions, head);
+        right->FLVMCodeGen(inInstructions);
         //Push the operation
         result.operation[0] = Operation::multiply;
         inInstructions->push(result);
@@ -1007,17 +988,18 @@ inline T* difference(T* left, U* right){
         //Do nothing
     };
 
-    void Divide::ToString(std::string inLeft, std::string inRight, void* head){
-        addOffset(left, head)->ToString(inLeft, inRight, head);
+    void Divide::ToString(std::string inLeft, std::string inRight){
+        left->ToString(inLeft, inRight);
         std::cout << " / ";
-        addOffset(right, head)->ToString(inLeft, inRight, head);
+        right->ToString(inLeft, inRight);
     }
 
-    void Divide::FLVMCodeGen(Instructions* inInstructions, void* head){
+    void Divide::FLVMCodeGen(Instructions* inInstructions){
         types result;
 
-        addOffset(left, head)->FLVMCodeGen(inInstructions, head);
-        addOffset(right, head)->FLVMCodeGen(inInstructions, head);
+        //Generate the code for the left and right operands.
+        left->FLVMCodeGen(inInstructions);
+        right->FLVMCodeGen(inInstructions);
         //Push the operation
         result.operation[0] = Operation::subtract;
         inInstructions->push(result);
@@ -1033,14 +1015,15 @@ inline T* difference(T* left, U* right){
         //Do nothing
     }
 
-    void Parentheses::ToString(std::string inLeft, std::string inRight, void* head){
+    void Parentheses::ToString(std::string inLeft, std::string inRight){
         std::cout << "(";
-        addOffset(subexpression, head)->ToString(inLeft, inRight, head);
+        subexpression->ToString(inLeft, inRight);
         std::cout << ")";
     }
 
-    void Parentheses::FLVMCodeGen(Instructions* inInstructions, void* head){
-        addOffset(subexpression, head)->FLVMCodeGen(inInstructions, head);
+    void Parentheses::FLVMCodeGen(Instructions* inInstructions){
+        //Generate the code for the subexpression.
+        subexpression->FLVMCodeGen(inInstructions);
     }
 
 
@@ -1050,15 +1033,15 @@ inline T* difference(T* left, U* right){
         //Do nothing;
     }
 
-    void Negative::ToString(std::string inLeft, std::string inRight, void* head){
+    void Negative::ToString(std::string inLeft, std::string inRight){
         std::cout << "-";
-        addOffset(right, head)->ToString(inLeft, inRight, head);
+        right->ToString(inLeft, inRight);
     }
 
-    void Negative::FLVMCodeGen(Instructions* inInstructions, void* head){
+    void Negative::FLVMCodeGen(Instructions* inInstructions){
         types result;
 
-        addOffset(right, head)->FLVMCodeGen(inInstructions, head);
+        right->FLVMCodeGen(inInstructions);
         //Push back the instruction for -
         result.operation[0] = Operation::negate;
         inInstructions->push(result);
@@ -1071,16 +1054,16 @@ inline T* difference(T* left, U* right){
         //Do nothing
     }
 
-    void Equal::ToString(std::string inLeft, std::string inRight, void* head){
-        addOffset(left, head)->ToString(inLeft, inRight, head);
+    void Equal::ToString(std::string inLeft, std::string inRight){
+        left->ToString(inLeft, inRight);
         std::cout << " == ";
-        addOffset(right, head)->ToString(inLeft, inRight, head);
+        right->ToString(inLeft, inRight);
     }
 
-    void Equal::FLVMCodeGen(Instructions* inInstructions, void* head){
+    void Equal::FLVMCodeGen(Instructions* inInstructions){
         types result;
-        addOffset(left, head)->FLVMCodeGen(inInstructions, head);
-        addOffset(right, head)->FLVMCodeGen(inInstructions, head);
+        left->FLVMCodeGen(inInstructions);
+        right->FLVMCodeGen(inInstructions);
         //Push back the instruction for ==
         result.operation[0] = Operation::equals;
         inInstructions->push(result);
@@ -1093,16 +1076,16 @@ inline T* difference(T* left, U* right){
         //Do nothing
     }
 
-    void NotEqual::ToString(std::string inLeft, std::string inRight, void* head){
-        addOffset(left, head)->ToString(inLeft, inRight, head);
+    void NotEqual::ToString(std::string inLeft, std::string inRight){
+        left->ToString(inLeft, inRight);
         std::cout << " != ";
-        addOffset(right, head)->ToString(inLeft, inRight, head);
+        right->ToString(inLeft, inRight);
     }
 
-    void NotEqual::FLVMCodeGen(Instructions* inInstructions, void* head){
+    void NotEqual::FLVMCodeGen(Instructions* inInstructions){
         types result;
-        left->FLVMCodeGen(inInstructions, head);
-        right->FLVMCodeGen(inInstructions, head);
+        left->FLVMCodeGen(inInstructions);
+        right->FLVMCodeGen(inInstructions);
         //Push back the instruction for !=
         result.operation[0] = Operation::nequals;
         inInstructions->push(result);
@@ -1115,16 +1098,16 @@ inline T* difference(T* left, U* right){
         //Do nothing
     }
 
-    void GreaterThan::ToString(std::string inLeft, std::string inRight, void* head){
-        addOffset(left, head)->ToString(inLeft, inRight, head);
+    void GreaterThan::ToString(std::string inLeft, std::string inRight){
+        left->ToString(inLeft, inRight);
         std::cout << " > ";
-        addOffset(right, head)->ToString(inLeft, inRight, head);
+        right->ToString(inLeft, inRight);
     }
 
-    void GreaterThan::FLVMCodeGen(Instructions* inInstructions, void* head){
+    void GreaterThan::FLVMCodeGen(Instructions* inInstructions){
         types result;
-        addOffset(left, head)->FLVMCodeGen(inInstructions, head);
-        addOffset(right, head)->FLVMCodeGen(inInstructions, head);
+        left->FLVMCodeGen(inInstructions);
+        right->FLVMCodeGen(inInstructions);
         //Push back the instruction for >
         result.operation[0] = Operation::greater;
         inInstructions->push(result);
@@ -1137,16 +1120,16 @@ inline T* difference(T* left, U* right){
         //Do nothing
     }
 
-    void GreaterThanOr::ToString(std::string inLeft, std::string inRight, void* head){
-        addOffset(left, head)->ToString(inLeft, inRight, head);
+    void GreaterThanOr::ToString(std::string inLeft, std::string inRight){
+        left->ToString(inLeft, inRight);
         std::cout << " >= ";
-        addOffset(right, head)->ToString(inLeft, inRight, head);
+        right->ToString(inLeft, inRight);
     }
 
-    void GreaterThanOr::FLVMCodeGen(Instructions* inInstructions, void* head){
+    void GreaterThanOr::FLVMCodeGen(Instructions* inInstructions){
         types result;   
-        addOffset(left, head)->FLVMCodeGen(inInstructions, head);
-        addOffset(right, head)->FLVMCodeGen(inInstructions, head);
+        left->FLVMCodeGen(inInstructions);
+        right->FLVMCodeGen(inInstructions);
         //Push back the instruction for >=
         result.operation[0] = Operation::greateror;
         inInstructions->push(result);
@@ -1159,16 +1142,16 @@ inline T* difference(T* left, U* right){
         //Do nothing
     }
 
-    void LessThan::ToString(std::string inLeft, std::string inRight, void* head){
-        addOffset(left, head)->ToString(inLeft, inRight, head);
+    void LessThan::ToString(std::string inLeft, std::string inRight){
+        left->ToString(inLeft, inRight);
         std::cout << " < ";
-        addOffset(right, head)->ToString(inLeft, inRight, head);
+        right->ToString(inLeft, inRight);
     }
 
-    void LessThan::FLVMCodeGen(Instructions* inInstructions, void* head){
+    void LessThan::FLVMCodeGen(Instructions* inInstructions){
         types result;
-        addOffset(left, head)->FLVMCodeGen(inInstructions, head);
-        addOffset(right, head)->FLVMCodeGen(inInstructions, head);
+        left->FLVMCodeGen(inInstructions);
+        right->FLVMCodeGen(inInstructions);
         //Push back the instruction for <
         result.operation[0] = Operation::lesser;
         inInstructions->push(result);
@@ -1181,16 +1164,16 @@ inline T* difference(T* left, U* right){
         //Do nothing
     }
 
-    void LessThanOr::ToString(std::string inLeft, std::string inRight, void* head){
-        addOffset(left, head)->ToString(inLeft, inRight, head);
+    void LessThanOr::ToString(std::string inLeft, std::string inRight){
+        left->ToString(inLeft, inRight);
         std::cout << " <= ";
-        addOffset(right, head)->ToString(inLeft, inRight, head);
+        right->ToString(inLeft, inRight);
     }
 
-    void LessThanOr::FLVMCodeGen(Instructions* inInstructions, void* head){
+    void LessThanOr::FLVMCodeGen(Instructions* inInstructions){
         types result;
-        left->FLVMCodeGen(inInstructions, head);
-        right->FLVMCodeGen(inInstructions, head);
+        left->FLVMCodeGen(inInstructions);
+        right->FLVMCodeGen(inInstructions);
         //Push back the instruction for <=
         result.operation[0] = Operation::lesseror;
         inInstructions->push(result);
@@ -1203,16 +1186,16 @@ inline T* difference(T* left, U* right){
         //Do nothing
     };
 
-    void Or::ToString(std::string inLeft, std::string inRight, void* head){
-        addOffset(left, head)->ToString(inLeft, inRight, head);
+    void Or::ToString(std::string inLeft, std::string inRight){
+        left->ToString(inLeft, inRight);
         std::cout << " OR ";
-        addOffset(right, head)->ToString(inLeft, inRight, head);
+        right->ToString(inLeft, inRight);
     }
 
-    void Or::FLVMCodeGen(Instructions* inInstructions, void* head){
+    void Or::FLVMCodeGen(Instructions* inInstructions){
         types result;
-        addOffset(left, head)->FLVMCodeGen(inInstructions, head);
-        addOffset(right, head)->FLVMCodeGen(inInstructions, head);
+        left->FLVMCodeGen(inInstructions);
+        right->FLVMCodeGen(inInstructions);
         //Push back the instruction for OR
         result.operation[0] = Operation::ior;
         inInstructions->push(result);
@@ -1225,16 +1208,16 @@ inline T* difference(T* left, U* right){
         //Do nothing
     }
 
-    void And::ToString(std::string inLeft, std::string inRight, void* head){
-        addOffset(left, head)->ToString(inLeft, inRight, head);
+    void And::ToString(std::string inLeft, std::string inRight){
+        left->ToString(inLeft, inRight);
         std::cout << " AND ";
-        addOffset(right, head)->ToString(inLeft, inRight, head);
+        right->ToString(inLeft, inRight);
     }
 
-    void And::FLVMCodeGen(Instructions* inInstructions, void* head){
+    void And::FLVMCodeGen(Instructions* inInstructions){
         types result;
-        addOffset(left, head)->FLVMCodeGen(inInstructions, head);
-        addOffset(right, head)->FLVMCodeGen(inInstructions, head);
+        left->FLVMCodeGen(inInstructions);
+        right->FLVMCodeGen(inInstructions);
         //Push back the instruction for AND
         result.operation[0] = Operation::iand;
         inInstructions->push(result);
@@ -1247,14 +1230,14 @@ inline T* difference(T* left, U* right){
         //Do nothing
     }
 
-    void Not::ToString(std::string inLeft, std::string inRight, void* head){
+    void Not::ToString(std::string inLeft, std::string inRight){
         std::cout << "!";
-        addOffset(right, head)->ToString(inLeft, inRight, head);
+        right->ToString(inLeft, inRight);
     }
 
-    void Not::FLVMCodeGen(Instructions* inInstructions, void* head){
+    void Not::FLVMCodeGen(Instructions* inInstructions){
         types result;
-        addOffset(right, head)->FLVMCodeGen(inInstructions, head);
+        right->FLVMCodeGen(inInstructions);
         //Push back the operation for !
         result.operation[0] = Operation::inot;
         inInstructions->push(result);
@@ -1267,31 +1250,31 @@ inline T* difference(T* left, U* right){
         //Do nothing
     };
 
-    void IfClass::ToString(std::string inLeft, std::string inRight, void* head){
+    void IfClass::ToString(std::string inLeft, std::string inRight){
         if(elseBody == nullptr){
             std::cout << inLeft << "\x1b[36mif\x1b[0m(";
-            addOffset(condition, head)->ToString(inLeft, inRight, head);
+            condition->ToString(inLeft, inRight);
             std::cout << "){\n";
-                addOffset(ifBody, head)->ToString("  " + inLeft, ";", head);
+                ifBody->ToString("  " + inLeft, ";");
             std::cout << "\n" << inLeft << "}\n";
         } else {
             std::cout << inLeft + "\x1b[36mif\x1b[0m(";
-            addOffset(condition, head)->ToString(inLeft, ";", head);
+            condition->ToString(inLeft, ";");
             std::cout << "){\n";
-                addOffset(ifBody, head)->ToString("  " + inLeft, inRight, head);
+                ifBody->ToString("  " + inLeft, inRight);
             std::cout << "\n" << inLeft << "} else {\n";
-                addOffset(elseBody, head)->ToString("  " + inLeft, ";", head);
+                elseBody->ToString("  " + inLeft, ";");
             std::cout << "\n" << inLeft << "}\n";
         }
     }
 
-    void IfClass::FLVMCodeGen(Instructions* inInstructions, void* head){
+    void IfClass::FLVMCodeGen(Instructions* inInstructions){
         types result;
         //If there is not an else statement, generate code for just an if statement.
         //otherwise, generate both bodies and cjumps as needed.
         if(elseBody == nullptr){
             //Generate the instructions for the if condition.
-            condition->FLVMCodeGen(inInstructions, head);
+            condition->FLVMCodeGen(inInstructions);
 
             //Mark where the conditional jump instruction will be.
             int64_t cjumpPosition = inInstructions->instructionCount;
@@ -1299,13 +1282,13 @@ inline T* difference(T* left, U* right){
             //Push a cjump instruction. This will be edited later.
             result.fixed8 = cjumpPosition;
             inInstructions->push(result);
-            addOffset(ifBody, head)->FLVMCodeGen(inInstructions, head);
+            ifBody->FLVMCodeGen(inInstructions);
 
             //Adjust the conditional jump destination.
             inInstructions->instructionSet[cjumpPosition].fixed8 = inInstructions->instructionCount - cjumpPosition;
         } else {
             //Generate the instructions for the if condition.
-            condition->FLVMCodeGen(inInstructions, head);
+            condition->FLVMCodeGen(inInstructions);
 
             //Mark where the conditional jump instruction will be.
             int64_t cjumpPosition = inInstructions->instructionCount;
@@ -1313,7 +1296,7 @@ inline T* difference(T* left, U* right){
             //Push a cjump instruction. This will be edited later.
             result.fixed8 = cjumpPosition;
             inInstructions->push(result);
-            addOffset(ifBody, head)->FLVMCodeGen(inInstructions, head);
+            ifBody->FLVMCodeGen(inInstructions);
 
             //Push an unconditional jump to skip over the else statement.
             //This will only be reached if the first branch is taken.
@@ -1327,7 +1310,7 @@ inline T* difference(T* left, U* right){
             inInstructions->instructionSet[cjumpPosition].fixed8 = endIfSize - cjumpPosition;
             
             //Generate the bytecode for the else statement.
-            elseBody->FLVMCodeGen(inInstructions, head);
+            elseBody->FLVMCodeGen(inInstructions);
 
             //Adjust the unconditional jump destination.
             inInstructions->instructionSet[endIfSize].fixed8 = inInstructions->instructionCount;
@@ -1342,45 +1325,45 @@ inline T* difference(T* left, U* right){
         //Do nothing
     };
 
-    void ForLoop::ToString(std::string inLeft, std::string inRight, void* head){
+    void ForLoop::ToString(std::string inLeft, std::string inRight){
         std::cout << inLeft << "\x1b[34mfor\x1b[0m(";
         if(assign != nullptr){
-            addOffset(assign, head)->ToString("", "", head);
+            assign->ToString("", "");
             std::cout << "; ";
         } else {
             std::cout << ";";
         }
 
         if(condition != nullptr){
-            addOffset(condition, head)->ToString("", "", head);
+            condition->ToString("", "");
             std::cout << "; ";
         } else {
             std::cout << ";";
         }
 
         if(incrementer != nullptr){
-            addOffset(incrementer, head)->ToString("", "", head);
+            incrementer->ToString("", "");
         }
         std::cout << "){\n";
-        addOffset(body, head)->ToString("  " + inLeft, inRight, head);
+        body->ToString("  " + inLeft, inRight);
         std::cout << "\n" << inLeft << "}\n";
     }
 
-    void ForLoop::FLVMCodeGen(Instructions* inInstructions, void* head){
+    void ForLoop::FLVMCodeGen(Instructions* inInstructions){
         types result;
         //The initial value of a for loop.
         if(assign != nullptr){
-            addOffset(assign, head)->FLVMCodeGen(inInstructions, head);
+            assign->FLVMCodeGen(inInstructions);
         }
 
         //Start the scope, because we don't want to continually assign/initialize.
         result.operation[0] = Operation::newScope;
         inInstructions->push(result);
         //Determine which scope this is for.
-        result.fixed8 = ((Scope*) addOffset(body, head))->whichScope;
+        result.fixed8 = body->whichScope;
         inInstructions->push(result);
         //Get the variable slot size.
-        result.fixed8 = ((Scope*) addOffset(body, head))->variableSlotSize;
+        result.fixed8 = body->variableSlotSize;
         inInstructions->push(result);
 
         //This will be where the end of the loop will unconditionally jump to.
@@ -1391,7 +1374,7 @@ inline T* difference(T* left, U* right){
         //The condition for a for loop to terminate.
         //If none is provided, then it will perpetually loop.
         if(condition != nullptr){
-            addOffset(condition, head)->FLVMCodeGen(inInstructions, head);
+            condition->FLVMCodeGen(inInstructions);
         } else {
             result.boolean[0] = false;
             inInstructions->push(result);
@@ -1404,12 +1387,12 @@ inline T* difference(T* left, U* right){
 
         //Add the body of instructions.
         if(body != nullptr){
-            addOffset(((Scope*) addOffset(body, head))->body, head)->FLVMCodeGen(inInstructions, head);
+            body->body->FLVMCodeGen(inInstructions);
         }
 
         //Add another line of code for changes at the end of the loop.
         if(incrementer != nullptr){
-            addOffset(incrementer, head)->FLVMCodeGen(inInstructions, head);
+            incrementer->FLVMCodeGen(inInstructions);
         }
 
         //Place the unconditional jump instruction at the end.
@@ -1423,7 +1406,7 @@ inline T* difference(T* left, U* right){
         result.operation[0] = Operation::deleteScope;
         inInstructions->push(result);
         //Determine which scope this is for.
-        result.fixed8 = ((Scope*) addOffset(body, head))->whichScope;
+        result.fixed8 = body->whichScope;
         inInstructions->push(result);
     }
 
@@ -1434,19 +1417,19 @@ inline T* difference(T* left, U* right){
         //Do nothing
     };
 
-    void WhileLoop::ToString(std::string inLeft, std::string inRight, void* head){
+    void WhileLoop::ToString(std::string inLeft, std::string inRight){
         std::cout << inLeft << "while(";
         if(condition != nullptr){
-            addOffset(condition, head)->ToString(inLeft, inRight, head);
+            condition->ToString(inLeft, inRight);
         }
         std::cout << "){\n";
         if(body != nullptr){
-            addOffset(body, head)->ToString("  " + inLeft, inRight, head);
+            body->ToString("  " + inLeft, inRight);
         }
         std::cout << "\n" << inLeft << "}\n";
     }
 
-    void WhileLoop::FLVMCodeGen(Instructions* inInstructions, void* head){
+    void WhileLoop::FLVMCodeGen(Instructions* inInstructions){
         types result;
         //Generate the push instruction.
         result.operation[0] = Operation::push;
@@ -1461,7 +1444,7 @@ inline T* difference(T* left, U* right){
         result.operation[0] = Operation::newScope;
         inInstructions->push(result);
         //Don't forget which scope.
-        result.fixed8 = ((Scope*) addOffset(body, head))->whichScope;
+        result.fixed8 = body->whichScope;
         inInstructions->push(result);
         //Add the variable slot size.
         result.fixed8 = body->variableSlotSize;
@@ -1471,7 +1454,7 @@ inline T* difference(T* left, U* right){
         size_t start = inInstructions->instructionCount;
         //Generate the code for the condition, if any.
         if(condition != nullptr){
-            addOffset(condition, head)->FLVMCodeGen(inInstructions, head);
+            condition->FLVMCodeGen(inInstructions);
         }
         //The location of the conditional jump statement.
         size_t here = inInstructions->instructionCount;    
@@ -1479,7 +1462,7 @@ inline T* difference(T* left, U* right){
         result.operation[0] = Operation::cjump;
         inInstructions->push(result);
         //Generate the code for the body.
-        addOffset(((Scope*) addOffset(body, head))->body, head)->FLVMCodeGen(inInstructions, head);
+        body->body->FLVMCodeGen(inInstructions);
         //Place an unconditional jump to restart the loop.
         result.operation[0] = Operation::jump;
         inInstructions->push(result);
@@ -1493,7 +1476,7 @@ inline T* difference(T* left, U* right){
         result.operation[0] = Operation::deleteScope;
         inInstructions->push(result);
         //Which scope is being deleted.
-        result.fixed8 = ((Scope*) addOffset(body, head))->whichScope;
+        result.fixed8 = body->whichScope;
         inInstructions->push(result);
     }
 
@@ -1504,48 +1487,50 @@ inline T* difference(T* left, U* right){
         //Do nothing
     };
 
-    void Function::ToString(std::string inLeft, std::string inRight, void* head){
-        Initialize* currInit = addOffset(code, head)->allInitializations;
+    void Function::ToString(std::string inLeft, std::string inRight){
+        Initialize* currInit = code->allInitializations;
 
         std::cout << inLeft + "\x1b[36m" + typeString(type) + "\x1b[35m " + std::string(name) + "\x1b[0m(";
         
         //Combine all the variables, if any.
-        if(addOffset(code, head)->allInitializations != nullptr){
+        if(code->allInitializations != nullptr){
             //Stop right before the last variable to not append an extra comma.
             for(int i = 1; i < argumentCount; i++){
-                std::cout << "\x1b[36m" + typeString(addOffset(addOffset(currInit, head)->thisVariable, head)->thisToken.type) << "\x1b[0m " << addOffset(addOffset(currInit, head)->thisVariable, head)->thisToken.getName() << ", ";
+                std::cout << "\x1b[36m" + typeString(currInit->thisVariable->thisToken.type) << "\x1b[0m " << currInit->thisVariable->thisToken.getName() << ", ";
                 currInit = currInit->next;
             }
             //Append the last variable without an extra comma.
-            std::cout << "\x1b[36m" << typeString(addOffset(addOffset(currInit, head)->thisVariable, head)->thisToken.type) << "\x1b[0m " << addOffset(addOffset(currInit, head)->thisVariable, head)->thisToken.getName();
+            std::cout << "\x1b[36m" << typeString(currInit->thisVariable->thisToken.type) << "\x1b[0m " << currInit->thisVariable->thisToken.getName();
         }
         //Return the function printed in the only correct format.
         std::cout << inLeft << "){\n";
-        addOffset(code, head)->ToString("  " + inLeft, ";", head);
+        code->ToString("  " + inLeft, ";");
         std::cout << "\n" << inLeft + "}\n";
     }
 
-    void Function::append(Initialize* input, void* head){
-        Initialize* currInit = addOffset(code, head)->allInitializations;
+    void Function::append(Initialize* input){
+        Initialize* currInit = code->allInitializations;
         if(currInit != nullptr){
-            while(addOffset(currInit, head)->next != nullptr){
-                currInit = addOffset(currInit, head)->next;
+            while(currInit->next != nullptr){
+                currInit = currInit->next;
             }
-            addOffset(currInit, head)->next = input;
+            currInit->next = input;
         } else {
-            addOffset(code, head)->allInitializations = input;
+            code->allInitializations = input;
         }
     }
 
-    void Function::FLVMCodeGen(Instructions* inInstructions, void* head){
+    void Function::FLVMCodeGen(Instructions* inInstructions){
         //Change where this function starts in the program.
         if(!alreadyGenerated){
             position = inInstructions->currentInstruction;
+            //If there's any code, then genereate the instructions for it.
             if(code != nullptr){
-                addOffset(((Scope*) addOffset(code, head))->body, head)->FLVMCodeGen(inInstructions, head);
+                code->body->FLVMCodeGen(inInstructions);
             }
+            //If there are more functions, then define them too.
             if(allFunctions != nullptr){
-                addOffset(allFunctions, head)->FLVMCodeGen(inInstructions, head);
+                allFunctions->FLVMCodeGen(inInstructions);
             }
         }
     }
@@ -1557,33 +1542,34 @@ inline T* difference(T* left, U* right){
         //Do nothing
     }
 
-    void Call::ToString(std::string inLeft, std::string inRight, void* head){
+    void Call::ToString(std::string inLeft, std::string inRight){
         std::cout << "\x1b[35m" + std::string(function->name) + "\x1b[0m(";
-        addOffset(arguments, head)->ToString(inLeft, "", head);
+        arguments->ToString(inLeft, "");
         std::cout << ")";
     }
 
-    void Call::FLVMCodeGen(Instructions* inInstructions, void* head){
+    void Call::FLVMCodeGen(Instructions* inInstructions){
         types result;
         //Create a new scope
         result.operation[0] = Operation::newScope;
         inInstructions->push(result);
         //Push which scope this is.
-        result.fixed8 = ((Scope*) addOffset(((Function*) addOffset(function, head))->code, head))->whichScope;
+        result.fixed8 = function->code->whichScope;
+        inInstructions->push(result);
         //Push how many slots are needed by this scope.
-        result.fixed8 = ((Scope*) addOffset(((Function*) addOffset(function, head))->code, head))->variableSlotSize;
+        result.fixed8 = function->code->variableSlotSize;
         inInstructions->push(result);
 
         //Generate the arguments, if any.
         if(arguments != nullptr){
-            arguments->FLVMCodeGen(inInstructions, head);
+            arguments->FLVMCodeGen(inInstructions);
         }
 
         //Push the call operation.
         result.operation[0] = Operation::call;
         inInstructions->push(result);
         //This is where in the instruction set the function exists.
-        result.fixed8 = ((Function*) addOffset(function, head))->position;
+        result.fixed8 = function->position;
         inInstructions->push(result);
     }
 
@@ -1595,23 +1581,23 @@ inline T* difference(T* left, U* right){
         //The default settings are already in place.
     }
 
-    void Arguments::ToString(std::string inLeft, std::string inRight, void* head){
+    void Arguments::ToString(std::string inLeft, std::string inRight){
         if(next != nullptr){
-            addOffset(current, head)->ToString(inLeft, "", head);
+            current->ToString(inLeft, "");
             std::cout << ", ";
-            addOffset(next, head)->ToString(inLeft, "", head);
+            next->ToString(inLeft, "");
         } else {
-            return addOffset(current, head)->ToString(inLeft, "", head);
+            return current->ToString(inLeft, "");
         }
     }
 
-    void Arguments::FLVMCodeGen(Instructions* inInstructions, void* head){
+    void Arguments::FLVMCodeGen(Instructions* inInstructions){
         Arguments* currArgs = this;
-        while(((Arguments*) addOffset(currArgs, head))->next != nullptr){
-            addOffset(((Arguments*) addOffset(currArgs, head))->current, head)->FLVMCodeGen(inInstructions, head);
-            currArgs = ((Arguments*) addOffset(currArgs, head))->next;
+        while(currArgs->next != nullptr){
+            currArgs->current->FLVMCodeGen(inInstructions);
+            currArgs = currArgs->next;
         }
-        addOffset(((Arguments*) addOffset(currArgs, head))->current, head)->FLVMCodeGen(inInstructions, head);
+        currArgs->current->FLVMCodeGen(inInstructions);
     }
 
 
@@ -1621,16 +1607,16 @@ inline T* difference(T* left, U* right){
         //Do nothing
     }
 
-    void ReturnClass::ToString(std::string inLeft, std::string inRight, void* head){
+    void ReturnClass::ToString(std::string inLeft, std::string inRight){
         std::cout << inLeft << "\x1b[34mreturn\x1b[0m ";
-        addOffset(statement, head)->ToString(inLeft, inRight, head);
+        statement->ToString(inLeft, inRight);
         std::cout << inRight;
     }
 
-    void ReturnClass::FLVMCodeGen(Instructions* inInstructions, void* head){
+    void ReturnClass::FLVMCodeGen(Instructions* inInstructions){
         types result;
         //There will be code with the return statement.
-        addOffset(statement, head)->FLVMCodeGen(inInstructions, head);
+        statement->FLVMCodeGen(inInstructions);
         //Generate the return instruction and how many scopes to exit.
         result.operation[0] = Operation::ireturn;
         //This determines how many scopes to exit.
@@ -1645,15 +1631,15 @@ inline T* difference(T* left, U* right){
         type = FloridaType::Object;
     }
 
-    void ObjectClass::ToString(std::string inLeft, std::string inRight, void* head){
+    void ObjectClass::ToString(std::string inLeft, std::string inRight){
         std::cout << "object " + std::string(name) + "{\n";
         if(code != nullptr){
-            addOffset(addOffset(code, head)->body, head)->ToString("  " + inLeft, inRight, head);
+            code->body->ToString("  " + inLeft, inRight);
         }
         std::cout << inLeft << "\n}\n";
     }
 
-    void ObjectClass::FLVMCodeGen(Instructions* inInstructions, void* head){
+    void ObjectClass::FLVMCodeGen(Instructions* inInstructions){
         //TO DO
     }
 
@@ -1664,41 +1650,43 @@ inline T* difference(T* left, U* right){
         //Do nothing
     }
 
-    void MemberAccess::ToString(std::string inLeft, std::string inRight, void* head){
-        addOffset(left, head)->ToString(inLeft, inRight, head);
+    void MemberAccess::ToString(std::string inLeft, std::string inRight){
+        left->ToString(inLeft, inRight);
         std::cout << ".";
-        addOffset(right, head)->ToString(inLeft, inRight, head);
+        right->ToString(inLeft, inRight);
     }
 
-    void MemberAccess::FLVMCodeGen(Instructions* inInstructions, void* head){
-        // types result;
-        // Node* currentNode = left;
+    void MemberAccess::FLVMCodeGen(Instructions* inInstructions){
+        types result;
+        int64_t offset = 0;
+        MemberAccess* current = this;
+        Variable* last = nullptr;
 
-        // //This will create a push instruction or adjust the literal of the instruction.
-        // MemberAccess* theAccess = dynamic_cast<MemberAccess*>(currentNode);
-        // if(theAccess != nullptr){
-        //     theAccess->left->FLVMCodeGen(inInstructions, head);
-        //     if(inInstructions.back().oper == Operation::push){
-        //         inInstructions.back().literal.fixed8 += theAccess->right->stackBytePosition;
-        //     } else {
-        //         Instruction thePush;
-        //         thePush.oper = Operation::push;
-        //         inInstructions.push_back(thePush);
-        //     }
-        // }
+        //Determine how far into the stack the access chain goes.
+        while(true){
+            offset += current->left->stackBytePosition;
 
-        // //This will create a dereference instruction for the object.
-        // Dereference* theDereference = dynamic_cast<Dereference*>(currentNode);
-        // if(theDereference != nullptr){
-        //     theDereference->left->FLVMCodeGen(inInstructions, head);  
-        //     //The instructions for this don't exist yet.
-        // }
+            //Move to the next one, if possible.
+            current = dynamic_cast<MemberAccess*>(current->right);
+            if(current != nullptr){
+                continue;
+            }
 
-        // //Reaching a variable means that the chain has ended.
-        // Variable* theVariable = dynamic_cast<Variable*>(currentNode);
-        // if(theVariable != nullptr){
-        //     theVariable->FLVMCodeGen(inInstructions, head);
-        // }
+            //If a variable is found, then a break is gauaranteed.
+            last = dynamic_cast<Variable*>(right);
+            if(last != nullptr){
+                offset += last->stackBytePosition;
+            }
+
+            break;
+        }
+
+        //Push the push operation to the stack.
+        result.operation[0] = Operation::push;
+        inInstructions->push(result);
+        //Push the offset size to the stack.
+        result.fixed8 = offset;
+        inInstructions->push(result);
     }
 
 
@@ -1708,43 +1696,12 @@ inline T* difference(T* left, U* right){
         //Do nothing
     }
 
-    void Dereference::ToString(std::string inLeft, std::string inRight, void* head){
-    //     addOffset(left, head)->ToString(inLeft, inRight, head);
-    //     std::cout << "->";
-    //     addOffset(right, head)->ToString(inLeft, inRight, head);
-    // }
-
-    // void Dereference::FLVMCodeGen(Instructions* inInstructions, void* head){
-    //     types result;
-    //     Node* currentNode = left;
-
-    //     //This will create a push instruction or adjust the literal of the instruction.
-    //     MemberAccess* theAccess = dynamic_cast<MemberAccess*>(currentNode);
-    //     if(theAccess != nullptr){
-    //         theAccess->left->FLVMCodeGen(inInstructions, head);
-    //         if(inInstructions.back().oper == Operation::push){
-    //             inInstructions.back().literal.fixed8 += theAccess->right->stackBytePosition;
-    //         } else {
-    //             Instruction thePush;
-    //             thePush.oper = Operation::push;
-    //             inInstructions.push_back(thePush);
-    //         }
-    //     }
-
-    //     //This will create a dereference instruction for the object.
-    //     Dereference* theDereference = dynamic_cast<Dereference*>(currentNode);
-    //     if(theDereference != nullptr){
-    //         theDereference->left->FLVMCodeGen(inInstructions, head);  
-    //         //The instructions for this don't exist yet.
-    //     }
-
-    //     //Reaching a variable means that the chain has ended.
-    //     Variable* theVariable = dynamic_cast<Variable*>(currentNode);
-    //     if(theVariable != nullptr){
-    //         theVariable->FLVMCodeGen(inInstructions, head);
-    //     }
+    void Dereference::ToString(std::string inLeft, std::string inRight){
+        left->ToString(inLeft, inRight);
+        std::cout << "->";
+        right->ToString(inLeft, inRight);
     }
 
-    void Dereference::FLVMCodeGen(Instructions* inInstructions, void* head){
+    void Dereference::FLVMCodeGen(Instructions* inInstructions){
         //Do nothing for now
     }

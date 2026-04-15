@@ -10,14 +10,6 @@
 #include <iostream>
 #include <math.h>
 
-//This allows me to find where in memory the pointer is supposed to exist given some `head`.
-//`addOffset(body, head)`
-//The return type is always the left argument.
-template<typename T, typename U>
-inline T* addOffset(T* left, U* right){
-    return (T*) ((int64_t) left + (char*) right);
-}
-
 class FloridaVM{
 public:
     //This will handle relative scopes.
@@ -101,7 +93,7 @@ public:
     FloridaVM(Parser input, int64_t stackSize){
         //Generate the function bytecode.
         if(input.stack->allFunctions != nullptr){
-            addOffset(input.stack->allFunctions, input.stack->head)->FLVMCodeGen(programInstructions, (Node*) input.stack->head);
+            input.stack->allFunctions->FLVMCodeGen(programInstructions);
         }
         //The base pointer stack. The stack for the base pointers and their respective scope.
         BPStack = (uint64_t*) malloc(2 * 100 * sizeof(uint64_t));
@@ -122,9 +114,9 @@ public:
         //Generate the rest of the instructions.
         //This is always a `Scope`.
         
-        dynamic_cast<Scope*>(input.stack->AST)->body->FLVMCodeGen(programInstructions, (Node*) input.stack->head);
+        dynamic_cast<Scope*>(input.stack->AST)->body->FLVMCodeGen(programInstructions);
         //Obtain the abstract syntax tree.
-        AST = (Node*) addOffset(input.stack->AST, input.stack->head);
+        AST = (Node*) input.stack->AST;
         //Obtain all function definitions
         allFunctions = input.stack->allFunctions;
     }

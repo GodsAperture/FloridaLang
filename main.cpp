@@ -83,7 +83,7 @@ int main(){
 
 	//If the error flag has been raised, then
 	//terminate the program and print out the errors.
-		if(FloridaParser.error){
+	if(FloridaParser.error){
 		FloridaParser.errorPrint();
 		return -1;
 	}
