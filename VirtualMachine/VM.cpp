@@ -334,6 +334,9 @@ inline types VMTypecast(types input, FloridaType left, FloridaType right){
                 default:
                     return input;
             }
+        default:
+            //Do nothing
+            return input;
         }
     return input;
 }
@@ -997,7 +1000,7 @@ char FloridaVM::next(){
 
 
 ////Basic math operations
-        case Operation::Add:
+        case Operation::IAdd:
             //Get the right operand;
             right = top();
             pop();
@@ -1008,7 +1011,7 @@ char FloridaVM::next(){
             result = VMadd(left, right, programInstructions->next());
             push(result);
             break;
-        case Operation::Subtract:
+        case Operation::ISubtract:
             //Get the right operand;
             right = top();
             pop();
@@ -1019,7 +1022,7 @@ char FloridaVM::next(){
             result = VMsubtract(left, right, programInstructions->next());
             push(result);
             break;
-        case Operation::Multiply:
+        case Operation::IMultiply:
             //Get the right operand;
             right = top();
             pop();
@@ -1030,7 +1033,7 @@ char FloridaVM::next(){
             result = VMmultiply(left, right, programInstructions->next());
             push(result);
             break;
-        case Operation::Divide:
+        case Operation::IDivide:
             //Get the right operand;
             right = top();
             pop();

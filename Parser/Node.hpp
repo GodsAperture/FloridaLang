@@ -183,52 +183,52 @@ public:
 
 
 //Mathematical operations
-class Add : public Node{
+class Addition : public Node{
 public:
     Node* left = nullptr;
     Node* right = nullptr;
 
-    Add();
+    Addition();
     void ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
 };
 
-class Subtract : public Node{
+class Subtraction : public Node{
 public:
     Node* left = nullptr;
     Node* right = nullptr;
 
-    Subtract();
+    Subtraction();
     void ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
 };
 
-class QuietMultiply : public Node{
+class QuietMultiplication : public Node{
 public:
     Node* left = nullptr;
     Node* right = nullptr;
 
-    QuietMultiply();
+    QuietMultiplication();
     void ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
 };
 
-class Multiply : public Node{
+class Multiplication : public Node{
 public: 
     Node* left = nullptr;
     Node* right = nullptr;
 
-    Multiply();
+    Multiplication();
     void ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
 };
 
-class Divide : public Node{
+class Division : public Node{
 public: 
     Node* left = nullptr;
     Node* right = nullptr;
 
-    Divide();
+    Division();
     void ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
 };

@@ -882,22 +882,22 @@ std::string assignPad(FloridaType input, char where){
 
     
 //Add +
-    Add::Add(){
+    Addition::Addition(){
         //Do nothing
     }
 
-    void Add::ToString(std::string inLeft, std::string inRight){
+    void Addition::ToString(std::string inLeft, std::string inRight){
         left->ToString(inLeft, inRight);
         std::cout << " + ";
         right->ToString(inLeft, inRight);
     }
 
-    void Add::FLVMCodeGen(Instructions* inInstructions){
+    void Addition::FLVMCodeGen(Instructions* inInstructions){
         types result;
         left->FLVMCodeGen(inInstructions);
         right->FLVMCodeGen(inInstructions);
         //Push the operation
-        result.operation[0] = Operation::add;
+        result.operation[0] = Operation::IAdd;
         inInstructions->push(result);
         //Push the data type
         result.type[0] = left->type;
@@ -906,24 +906,24 @@ std::string assignPad(FloridaType input, char where){
 
 
 
-//Subtract -
-    Subtract::Subtract(){
+//Subtraction -
+    Subtraction::Subtraction(){
         //Do nothing
     }
 
-    void Subtract::ToString(std::string inLeft, std::string inRight){
+    void Subtraction::ToString(std::string inLeft, std::string inRight){
         left->ToString(inLeft, inRight);
         std::cout << " - ";
         right->ToString(inLeft, inRight);
     }
 
-    void Subtract::FLVMCodeGen(Instructions* inInstructions){
+    void Subtraction::FLVMCodeGen(Instructions* inInstructions){
         types result;
 
         left->FLVMCodeGen(inInstructions);
         right->FLVMCodeGen(inInstructions);
         //Push the operation
-        result.operation[0] = Operation::subtract;
+        result.operation[0] = Operation::ISubtract;
         inInstructions->push(result);
         //Push the data type
         result.type[0] = left->type;
@@ -932,18 +932,18 @@ std::string assignPad(FloridaType input, char where){
 
 
 
-//Quiet multiply does not have a character
-    QuietMultiply::QuietMultiply(){
+//Quiet multiplication does not have a character
+    QuietMultiplication::QuietMultiplication(){
         //Do nothing
     }
 
-    void QuietMultiply::ToString(std::string inLeft, std::string inRight){
+    void QuietMultiplication::ToString(std::string inLeft, std::string inRight){
         left->ToString(inLeft, inRight);
         std::cout << " ";
         right->ToString(inLeft, inRight);
     }
 
-    void QuietMultiply::FLVMCodeGen(Instructions* inInstructions){
+    void QuietMultiplication::FLVMCodeGen(Instructions* inInstructions){
         types result;
 
         //Generate the code for the left hand object.
@@ -951,7 +951,7 @@ std::string assignPad(FloridaType input, char where){
         //Generate the code for the right hand object.
         right->FLVMCodeGen(inInstructions);
         //Push the operation
-        result.operation[0] = Operation::multiply;
+        result.operation[0] = Operation::IMultiply;
         inInstructions->push(result);
         //Push the data type
         result.type[0] = left->type;
@@ -960,17 +960,17 @@ std::string assignPad(FloridaType input, char where){
 
 
 //Multiply *
-    Multiply::Multiply(){
+    Multiplication::Multiplication(){
         //Do nothing
     }
 
-    void Multiply::ToString(std::string inLeft, std::string inRight){
+    void Multiplication::ToString(std::string inLeft, std::string inRight){
         left->ToString(inLeft, inRight);
         std::cout << " * ";
         right->ToString(inLeft, inRight);
     }
 
-    void Multiply::FLVMCodeGen(Instructions* inInstructions){
+    void Multiplication::FLVMCodeGen(Instructions* inInstructions){
         types result;
         
         //Generate the code for the left hand object.
@@ -978,7 +978,7 @@ std::string assignPad(FloridaType input, char where){
         //Generate the code for the right hand object.
         right->FLVMCodeGen(inInstructions);
         //Push the operation
-        result.operation[0] = Operation::multiply;
+        result.operation[0] = Operation::IMultiply;
         inInstructions->push(result);
         //Push the data type
         result.type[0] = left->type;
@@ -987,25 +987,25 @@ std::string assignPad(FloridaType input, char where){
 
 
 
-//Divide /
-    Divide::Divide(){
+//Division /
+    Division::Division(){
         //Do nothing
     };
 
-    void Divide::ToString(std::string inLeft, std::string inRight){
+    void Division::ToString(std::string inLeft, std::string inRight){
         left->ToString(inLeft, inRight);
         std::cout << " / ";
         right->ToString(inLeft, inRight);
     }
 
-    void Divide::FLVMCodeGen(Instructions* inInstructions){
+    void Division::FLVMCodeGen(Instructions* inInstructions){
         types result;
 
         //Generate the code for the left and right operands.
         left->FLVMCodeGen(inInstructions);
         right->FLVMCodeGen(inInstructions);
         //Push the operation
-        result.operation[0] = Operation::subtract;
+        result.operation[0] = Operation::IDivide;
         inInstructions->push(result);
         //Push the data type
         result.type[0] = left->type;
@@ -1047,7 +1047,7 @@ std::string assignPad(FloridaType input, char where){
 
         right->FLVMCodeGen(inInstructions);
         //Push back the instruction for -
-        result.operation[0] = Operation::negate;
+        result.operation[0] = Operation::INegate;
         inInstructions->push(result);
     }
 

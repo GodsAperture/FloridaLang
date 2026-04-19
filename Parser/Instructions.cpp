@@ -54,8 +54,8 @@ enum Operation : int16_t {
     //Unfortunately, this also means I have to define ALL of them in VM.
     //C'est la vie.
 
-    //`typecast`, starting type, ending type
-    typecast,
+    //`ITypecast`, starting type, ending type
+    ITypecast,
 
     //All ufixed1TO casts.
     ufixed1TOufixed1,
@@ -180,18 +180,18 @@ enum Operation : int16_t {
     //All math instructions are also organized as such so I
     //can use a math trick to get the correct instruction.
     
-    //`Multiply`, type
-    Multiply,
-    //`Divide`, type
-    Divide,
-    //`Add`, type
-    Add,
-    //`Subtract`, type
-    Subtract,
-    //`Negate`
-    Negate,
-    //`Exponent`
-    Exponent,
+    //`IMultiply`, type
+    IMultiply,
+    //`IDivide`, type
+    IDivide,
+    //`IAdd`, type
+    IAdd,
+    //`ISubtract`, type
+    ISubtract,
+    //`INegate`
+    INegate,
+    //`IExponent`
+    IExponent,
 
     //Object comparisons
     equals,

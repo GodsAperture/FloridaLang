@@ -97,12 +97,12 @@ inline FloridaType returnType(FloridaType left, FloridaType right){
 
 
 //Mathy stuff
-Node* Parser::Addition(){
+Node* Parser::add(){
     Node* left = nullptr;
     Node* right = nullptr;
-    Add* result = nullptr;
+    Addition* result = nullptr;
 
-    left = Subtraction();
+    left = subtract();
     if(left == nullptr){
         return nullptr;
     }
@@ -112,12 +112,12 @@ Node* Parser::Addition(){
         return left;
     }
 
-    right = Addition();
+    right = add();
     if(right == nullptr){
         //Error, TO DO
     }
 
-    result = stack->alloc<Add>();
+    result = stack->alloc<Addition>();
     result->left = left;
     result->right = right;
     result->type = returnType(left->type, right->type);
@@ -125,12 +125,12 @@ Node* Parser::Addition(){
     return result;
 }
 
-Node* Parser::Subtraction(){
+Node* Parser::subtract(){
     Node* left = nullptr;
     Node* right = nullptr;
-    Subtract* result = nullptr;
+    Subtraction* result = nullptr;
 
-    left = Multiplication();
+    left = multiply();
     if(left == nullptr){
         return nullptr;
     }
@@ -140,12 +140,12 @@ Node* Parser::Subtraction(){
         return left;
     }
 
-    right = Subtraction();
+    right = subtract();
     if(right == nullptr){
         //Error, TO DO
     }
 
-    result = stack->alloc<Subtract>();
+    result = stack->alloc<Subtraction>();
     result->left = left;
     result->right = right;
     result->type = returnType(left->type, right->type);
@@ -153,21 +153,21 @@ Node* Parser::Subtraction(){
     return result;
 }
 
-Node* Parser::Multiplication(){
+Node* Parser::multiply(){
     Node* left = nullptr;
     Node* right = nullptr;
-    Multiply* result = nullptr;
+    Multiplication* result = nullptr;
 
-    left = Division();
+    left = divide();
     if(left == nullptr){
         return nullptr;
     }
 
     //Failing here is not an error.
     if(!check("*")){
-        right = Multiplication();
+        right = multiply();
         if(right != nullptr){
-            QuietMultiply* newResult = stack->alloc<QuietMultiply>();
+            QuietMultiplication* newResult = stack->alloc<QuietMultiplication>();
             newResult->left = left;
             newResult->right = right;
             newResult->type = returnType(left->type, right->type);
@@ -178,12 +178,12 @@ Node* Parser::Multiplication(){
         }
     }
 
-    right = Multiplication();
+    right = multiply();
     if(right == nullptr){
         //Error, TO DO
     }
 
-    result = stack->alloc<Multiply>();
+    result = stack->alloc<Multiplication>();
     result->left = left;
     result->right = right;
     result->type = returnType(left->type, right->type);
@@ -191,10 +191,10 @@ Node* Parser::Multiplication(){
     return result;
 }
 
-Node* Parser::Division(){
+Node* Parser::divide(){
     Node* left = nullptr;
     Node* right = nullptr;
-    Divide* result = nullptr;
+    Division* result = nullptr;
 
     left = primitive();
     if(left == nullptr){
@@ -206,12 +206,12 @@ Node* Parser::Division(){
         return left;
     }
 
-    right = Division();
+    right = divide();
     if(right == nullptr){
         //Error, TO DO
     }
 
-    result = stack->alloc<Divide>();
+    result = stack->alloc<Division>();
     result->left = left;
     result->right = right;
     result->type = returnType(left->type, right->type);
@@ -229,14 +229,14 @@ Node* Parser::primitive(){
     std::string current = given[iter].getName();
     if(check("-")){
         Negative* expression = stack->alloc<Negative>();
-        expression->right = Multiplication();
+        expression->right = multiply();
 
         return expression;
     }
     //Check for expression within parentheses.
     if(check("(")){
         Parentheses* expression = stack->alloc<Parentheses>();
-        Node* subexpression = Addition();
+        Node* subexpression = add();
         expression->subexpression = subexpression;
         //Increment for the right parenthesis;
         if(!check(")")){
@@ -373,7 +373,7 @@ Node* Parser::equal(){
     Node* right = nullptr;
     Equal* result = nullptr;
 
-    left = Addition();
+    left = add();
     if(left == nullptr){
         reset(start);
         return nullptr;
@@ -384,7 +384,7 @@ Node* Parser::equal(){
         return nullptr;
     }
 
-    right = Addition();
+    right = add();
     if(right == nullptr){
         //This means that the expression is malformed.
         error = true;
@@ -427,7 +427,7 @@ Node* Parser::notEqual(){
     Node* right = nullptr;
     NotEqual* result = nullptr;
 
-    left = Addition();
+    left = add();
     if(left == nullptr){
         reset(start);
         return nullptr;
@@ -440,7 +440,7 @@ Node* Parser::notEqual(){
         return nullptr;
     }
 
-    right = Addition();
+    right = add();
     if(right == nullptr){
         //This means that the expression is malformed.
         error = true;
@@ -483,7 +483,7 @@ Node* Parser::greaterThan(){
     Node* right = nullptr;
     GreaterThan* result = nullptr;
 
-    left = Addition();
+    left = add();
     if(left == nullptr){
         reset(start);
         return nullptr;
@@ -494,7 +494,7 @@ Node* Parser::greaterThan(){
         return nullptr;
     }
 
-    right = Addition();
+    right = add();
     if(right == nullptr){
         //This means that the expression is malformed.
         error = true;
@@ -537,7 +537,7 @@ Node* Parser::greaterThanOr(){
     Node* left = nullptr;
     Node* right = nullptr;
 
-    left = Addition();
+    left = add();
     if(left == nullptr){
         reset(start);
         return nullptr;
@@ -548,7 +548,7 @@ Node* Parser::greaterThanOr(){
         return nullptr;
     }
 
-    right = Addition();
+    right = add();
     if(right == nullptr){
         //This means that the expression is malformed.
         error = true;
@@ -591,7 +591,7 @@ Node* Parser::lessThan(){
     Node* right = nullptr;
     LessThan* result = nullptr;
 
-    left = Addition();
+    left = add();
     if(left == nullptr){
         reset(start);
         return nullptr;
@@ -602,7 +602,7 @@ Node* Parser::lessThan(){
         return nullptr;
     }
 
-    right = Addition();
+    right = add();
     if(right == nullptr){
         //This means that the expression is malformed.
         error = true;
@@ -645,7 +645,7 @@ Node* Parser::lessThanOr(){
     Node* right = nullptr;
     LessThanOr* result = nullptr;
 
-    left = Addition();
+    left = add();
     if(left == nullptr){
         reset(start);
         return nullptr;
@@ -656,7 +656,7 @@ Node* Parser::lessThanOr(){
         return nullptr;
     }
 
-    right = Addition();
+    right = add();
     if(right == nullptr){
         //This means that the expression is malformed.
         error = true;
@@ -723,7 +723,7 @@ Node* Parser::compare(){
         return thing;
     }
 
-    thing = Addition();
+    thing = add();
     if(thing != nullptr){
         return thing;
     }
