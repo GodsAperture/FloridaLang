@@ -85,6 +85,8 @@ class Scope : public Node{
     public:
         //This points to the outerscope.
         Scope* parent = nullptr;
+        //This is for convenience during debugging.
+        Scope* allScopes = nullptr;
         //The corresponding "name" of the scope.
         std::string_view name;
         //This is the body of code within the scope.
@@ -444,13 +446,13 @@ public:
     void append(Arguments* input, Node* head);
 };
 
-class Call : public Node{
+class FunctionCall : public Node{
 public:
     Function* function = nullptr;
     Arguments* arguments = nullptr;
     int64_t argumentByteSize = 0;
 
-    Call();
+    FunctionCall();
     void ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
 };

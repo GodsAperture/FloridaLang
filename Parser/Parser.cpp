@@ -349,7 +349,7 @@ Node* Parser::primitive(){
             return result;
         }
     }
-    Call* thisCall = call();
+    FunctionCall* thisCall = call();
     if(thisCall != nullptr){
         return thisCall;
     }
@@ -1468,7 +1468,7 @@ Function* Parser::function(){
 
 }
 
-Call* Parser::call(){
+FunctionCall* Parser::call(){
     if(!hasTokens(3)){
         return nullptr;
     }
@@ -1492,7 +1492,7 @@ Call* Parser::call(){
         iter++;
         //Create the call object, and adjust the scope to a new scope.
         //If I don't, variables/functions might not be grabbed from the proper scope.
-        Call* result = stack->alloc<Call>();
+        FunctionCall* result = stack->alloc<FunctionCall>();
         result->function = tempScope->funGet(name);
         //Adjust the scope here.
         stack->currentScope = result->function->code;

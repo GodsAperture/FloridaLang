@@ -39,6 +39,18 @@ public:
     //The abstract syntax tree of the program.
     Node* AST = nullptr;
     Function* allFunctions = nullptr;
+    ObjectClass* allObjects = nullptr;
+    Scope* allScopes = nullptr;
+
+    //Using the 
+    inline Function* getFunction(uint64_t input);
+    //Given 
+    inline ObjectClass getObject(uint64_t input);
+    //Using the scope number, find a particular scope.
+    inline Scope* getScope(int64_t input);
+    //Get the name of the scope associated with the scope.
+    inline std::string getName(int64_t input);
+
     
     //Exceutes the current instruction in the virtual machine.
     //Returns characters based on success, failure, etc.
@@ -89,6 +101,11 @@ public:
     void INPush(uint64_t input);
     //Pop the top-most element from the INStack.
     uint64_t INPop();
+    //Convenient method for printing the type out.
+    inline void printType(FloridaType theType, types input);
+
+    //Convenience method for grabbing `types` from the instruction set.
+    inline types grab(int64_t input);
 
     FloridaVM(Parser input, int64_t stackSize){
         //Generate the function bytecode.

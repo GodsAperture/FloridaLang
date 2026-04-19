@@ -104,6 +104,32 @@ uint64_t FloridaVM::INPop(){
 
 
 
+inline types FloridaVM::grab(int64_t input){
+    return programInstructions->instructionSet[input];
+}
+
+inline Scope* FloridaVM::getScope(int64_t input){
+    Scope* currentScope = allScopes;
+    while(currentScope != nullptr){
+        if(currentScope->whichScope == input){
+            return currentScope;
+        }
+    }
+
+    //Unreachable, but required by the compiler.
+    return nullptr;
+}
+
+inline std::string FloridaVM::getName(int64_t input){
+    if(getScope(input)->whichScope == 0){
+        return "Global Scope";
+    } else {
+        return std::string(getScope(input)->name);
+    }
+}
+
+
+
 //Add the two numbers in question.
 inline types VMadd(types left, types right, types theType){
     types result;
@@ -220,10 +246,165 @@ inline types VMdivide(types left, types right, types theType){
     return result;
 }
 
+//Typecast the type from the left type to the right type.
+inline types VMTypecast(types input, FloridaType left, FloridaType right){
+    switch(right){
+        case FloridaType::ufixed1:
+            switch(left){
+                //unsigned fixed point types
+                case FloridaType::ufixed1:
+                    return input;
+                case FloridaType::ufixed2:
+                    input.ufixed1[0] = (uint8_t) input.ufixed2[0];
+                    return input;
+                case FloridaType::ufixed4:
+                    input.ufixed1[0] = (uint8_t) input.ufixed4[0];
+                    return input;
+                case FloridaType::ufixed8:
+                    input.ufixed1[0] = (uint8_t) input.ufixed8;
+                    return input;
 
+                //fixed point types
+
+                //floating point types
+                default:
+                    return input;
+            }
+        case FloridaType::ufixed2:
+            switch(left){
+                case FloridaType::ufixed1:
+                    input.ufixed2[0] = (uint16_t) input.ufixed1[0];
+                    return input;
+                case FloridaType::ufixed2:
+                    return input;
+                case FloridaType::ufixed4:
+                    input.ufixed2[0] = (uint16_t) input.ufixed4[0];
+                    return input;
+                case FloridaType::ufixed8:
+                    input.ufixed2[0] = (uint16_t) input.ufixed8;
+                    return input;
+                default:
+                    return input;
+            }
+        case FloridaType::ufixed4:
+            switch(left){
+                case FloridaType::ufixed1:
+                    input.ufixed4[0] = (uint32_t) input.ufixed1[0];
+                    return input;
+                case FloridaType::ufixed2:
+                    input.ufixed4[0] = (uint32_t) input.ufixed2[0];
+                    return input;
+                case FloridaType::ufixed4:
+                    return input;
+                case FloridaType::ufixed8:
+                    input.ufixed4[0] = (uint32_t) input.ufixed8;
+                    return input;
+                default:
+                    return input;
+            }
+        case FloridaType::ufixed8:
+            switch(left){
+                case FloridaType::ufixed1:
+                    input.ufixed8 = (uint64_t) input.ufixed1[0];
+                    return input;
+                case FloridaType::ufixed2:
+                    input.ufixed8 = (uint64_t) input.ufixed2[0];
+                    return input;
+                case FloridaType::ufixed4:
+                    input.ufixed8 = (uint64_t) input.ufixed4[0];
+                    return input;
+                case FloridaType::ufixed8:
+                    return input;
+                default:
+                    return input;
+            }
+        case FloridaType::fixed1:
+            switch(left){
+                case FloridaType::ufixed1:
+                    return input;
+                case FloridaType::ufixed2:
+                    input.fixed1[0] = (int8_t) input.ufixed2[0];
+                    return input;
+                case FloridaType::ufixed4:
+                    input.fixed1[0] = (int8_t) input.ufixed4[0];
+                    return input;
+                case FloridaType::ufixed8:
+                    input.fixed1[0] = (int8_t) input.ufixed8;
+                    return input;
+                default:
+                    return input;
+            }
+        }
+    return input;
+}
+
+
+inline void FloridaVM::printType(FloridaType theType, types input){
+    switch(theType){
+        case FloridaType::fixed1:
+            std::cout << input.fixed1[0];
+            return;
+        case FloridaType::fixed2:
+            std::cout << input.fixed2[0];
+            return;
+        case FloridaType::fixed4:
+            std::cout << input.fixed4[0];
+            return;
+        case FloridaType::fixed8:
+            std::cout << input.fixed8;
+            return;
+        case FloridaType::ufixed1:
+            std::cout << input.ufixed1[0];
+            return;
+        case FloridaType::ufixed2:
+            std::cout << input.ufixed2[0];
+            return;
+        case FloridaType::ufixed4:
+            std::cout << input.ufixed4[0];
+            return;
+        case FloridaType::ufixed8:
+            std::cout << input.ufixed8;
+            return;
+        case FloridaType::float4:
+            std::cout << input.float4[0];
+            return;
+        case FloridaType::float8:
+            std::cout << input.float8;
+            return;
+        default:
+            //Do nothing
+            return;
+    }
+}
 
 void FloridaVM::printAll(){
-    //TO DO
+    //The current instruction to be displayed to the terminal.
+    uint64_t current = 0;
+    uint64_t instructionNumber = 1;
+
+    while(current < programInstructions->instructionCount){
+        //This is to make the main body look separate and tidy.
+        if(current == programInstructions->currentInstruction){
+            std::cout << "\t\t====MAIN BODY====\n\n";
+        }
+
+        switch(grab(current).operation[0]){
+            case NewScope:
+                std::cout << instructionNumber << " " << "NewScope (*" << getName(grab(current + 1).fixed8) << " - which scope: " << grab(current + 1).fixed8 << "\n\t - variable slot size: " << grab(current + 2).fixed8 << "\n";   
+                current += 3; 
+                break;
+            case Operation::Push:
+                std::cout << instructionNumber << " " << "Push: ";
+                printType(grab(current + 1).type[0], grab(current + 2));
+                std::cout << "\n";
+                current += 3;
+                break;
+            default:
+                std::cout << "The printAll() method is missing a definition for Operation number " << grab(current).operation[0] << "\n";
+                return;
+        }
+        instructionNumber++;
+    }
 }
 
 char FloridaVM::next(){
@@ -251,19 +432,19 @@ char FloridaVM::next(){
     Operation current = programInstructions->next().operation[0];
     switch (current){
         ////VM related instructions.
-        case Operation::push:
+        case Operation::Push:
             push(programInstructions->next());
             break;
-        case Operation::pop:
+        case Operation::Pop:
             stackSize--;
             break;
-        case Operation::call:
+        case Operation::ICall:
             //Push the current Instruction number to the INStack.
             INPush(instructionNumber);            
             //Move the instruction to the start of its instruction set.
             instructionNumber = programInstructions->next().fixed8;
             return true;
-        case Operation::newScope:
+        case Operation::NewScope:
             //Use left to get the correct UniqueScope.
             whichScope = programInstructions->next().fixed8;
             //Move the CurrentInfo value to the BPStack.
@@ -275,7 +456,7 @@ char FloridaVM::next(){
             //Initialize all the empty spots for variables.
             stackSize += programInstructions->next().fixed8;
             break;
-        case Operation::deleteScope:
+        case Operation::DeleteScope:
             //Readjust the reference to be the prior reference.
             reference = CurrentBP[BPTopScope()];
             //Readjust the most recent scope reference.
@@ -285,7 +466,7 @@ char FloridaVM::next(){
             //Pop the trash from the top of the stack.
             pop();
             break;
-        case Operation::ireturn:
+        case Operation::IReturn:
             //Grab the resulting value that is to be returned from the scope.
             result = top();
             //The return instruction has to exit scope a particular number of times.
@@ -305,12 +486,12 @@ char FloridaVM::next(){
             //pop to the previous top of the stack.
             pop(stackSize - reference + 2);
             break;
-        case Operation::cjump:
+        case Operation::CJump:
             //If it's true, then don't skip.
             instructionNumber += !(top().boolean[0]) * (programInstructions->next().fixed8);
             pop();
             return true;
-        case Operation::jump:
+        case Operation::Jump:
             instructionNumber = programInstructions->next().fixed8;
             break;
 
@@ -816,7 +997,7 @@ char FloridaVM::next(){
 
 
 ////Basic math operations
-        case Operation::add:
+        case Operation::Add:
             //Get the right operand;
             right = top();
             pop();
@@ -827,7 +1008,7 @@ char FloridaVM::next(){
             result = VMadd(left, right, programInstructions->next());
             push(result);
             break;
-        case Operation::subtract:
+        case Operation::Subtract:
             //Get the right operand;
             right = top();
             pop();
@@ -838,7 +1019,7 @@ char FloridaVM::next(){
             result = VMsubtract(left, right, programInstructions->next());
             push(result);
             break;
-        case Operation::multiply:
+        case Operation::Multiply:
             //Get the right operand;
             right = top();
             pop();
@@ -849,7 +1030,7 @@ char FloridaVM::next(){
             result = VMmultiply(left, right, programInstructions->next());
             push(result);
             break;
-        case Operation::divide:
+        case Operation::Divide:
             //Get the right operand;
             right = top();
             pop();

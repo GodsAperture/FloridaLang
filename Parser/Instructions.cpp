@@ -9,18 +9,18 @@ class Scope;
 
 //2 byte representation for all operations.
 enum Operation : int16_t {
-    //`newScope`, `whichScope`, `variableSlotSize`
-    newScope,
-    //`deleteScope`, `fixed8`
-    deleteScope,
-    //`call`, `fixed8`
-    call,
-    //`ireturn`, `fixed8`
-    ireturn,
-    //`cjump`, `fixed8`
-    cjump,
-    //`jump`, `fixed8`
-    jump,
+    //`NewScope`, `whichScope`, `variableSlotSize`
+    NewScope,
+    //`DeleteScope`, `fixed8`
+    DeleteScope,
+    //`ICall`, `fixed8`
+    ICall,
+    //`IReturn`, `fixed8`
+    IReturn,
+    //`CJump`, `fixed8`
+    CJump,
+    //`Jump`, `fixed8`
+    Jump,
 
     //`fetch1`, `whichScope`, `stackOffset`
     fetch1,
@@ -40,11 +40,11 @@ enum Operation : int16_t {
     //`assign8`, `whichScope`, `stackOffset`
     assign8,
 
-    //`Push`, `primitive`
-    push,
-    //`pop`, `fixed8`.
+    //`Push`, `type`, `primitive`
+    Push,
+    //`Pop`, `fixed8`.
     //The fixed8 determines how many elements are popped.
-    pop,
+    Pop,
 
     //All type casts
     //I'm writing them in this order take advantage of a math property.
@@ -180,18 +180,18 @@ enum Operation : int16_t {
     //All math instructions are also organized as such so I
     //can use a math trick to get the correct instruction.
     
-    //`multiply`, type
-    multiply,
-    //`divide`, type
-    divide,
-    //`add`, type
-    add,
-    //`subtract`, type
-    subtract,
-    //`negate`
-    negate,
-    //`exponent`
-    exponent,
+    //`Multiply`, type
+    Multiply,
+    //`Divide`, type
+    Divide,
+    //`Add`, type
+    Add,
+    //`Subtract`, type
+    Subtract,
+    //`Negate`
+    Negate,
+    //`Exponent`
+    Exponent,
 
     //Object comparisons
     equals,
@@ -299,8 +299,8 @@ public:
             instructionSet = (types*) realloc(instructionSet, 2 * maxInstructionCount);
             maxInstructionCount *= 2;
             instructionSet[instructionCount] = input;
-            instructionCount++;
         }
+        instructionCount++;
     }
 
     //Returns the current instruction in the instruction set and increments.

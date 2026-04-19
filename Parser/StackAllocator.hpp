@@ -35,15 +35,17 @@ public:
     Function* currentFunction = nullptr;
     //A linked list of all the functions in the program.
     Function* allFunctions = nullptr;
-    //All objects in the heap will be found here.
-    ObjectClass* heapBound = nullptr;
-    //The class being currently defined.
-    //Object* currentObject = nullptr;
+    //A linked list of all the existing scopes in the program.
+    Scope* allScopes = nullptr;
     //A linked list of all the classes in the program.
-    //Ojbect* allObjects = nullptr;
+    ObjectClass* allObjects = nullptr;
 
-    ObjectClass* hasHeapObject(std::string_view input);
-    ObjectClass* getHeapObject(std::string_view input);
+    //Append a new scope the list of all scopes.
+    void push(Scope* input);
+    //Append a new object the list of all scopes.
+    void push(ObjectClass* input);
+    //Append a new function to the list of all scopes.
+    void push(Function* input);
 
     StackAllocator();
 
