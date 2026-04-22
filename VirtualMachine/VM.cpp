@@ -249,6 +249,7 @@ inline types VMdivide(types left, types right, types theType){
 //Typecast the type from the left type to the right type.
 inline types VMTypecast(types input, FloridaType left, FloridaType right){
     switch(right){
+        //Unsigned fixed point types
         case FloridaType::ufixed1:
             switch(left){
                 //unsigned fixed point types
@@ -265,13 +266,38 @@ inline types VMTypecast(types input, FloridaType left, FloridaType right){
                     return input;
 
                 //fixed point types
+                case FloridaType::fixed1:
+                    input.ufixed1[0] = (uint8_t) input.fixed1[0];
+                    return input;
+                case FloridaType::fixed2:
+                    input.ufixed1[0] = (uint8_t) input.fixed2[0];
+                    return input;
+                case FloridaType::fixed4:
+                    input.ufixed1[0] = (uint8_t) input.fixed4[0];
+                    return input;
+                case FloridaType::fixed8:
+                    input.ufixed1[0] = (uint8_t) input.fixed8;
+                    return input;
 
                 //floating point types
+                case FloridaType::float1:
+                    return input;
+                case FloridaType::float2:
+                    return input;
+                case FloridaType::float4:
+                    input.ufixed1[0] = (uint8_t) input.float4[0];
+                    return input;
+                case FloridaType::float8:
+                    input.ufixed1[0] = (uint8_t) input.float8;
+                    return input;
+                
                 default:
                     return input;
             }
+
         case FloridaType::ufixed2:
             switch(left){
+                //unsigned fixed point types
                 case FloridaType::ufixed1:
                     input.ufixed2[0] = (uint16_t) input.ufixed1[0];
                     return input;
@@ -283,27 +309,85 @@ inline types VMTypecast(types input, FloridaType left, FloridaType right){
                 case FloridaType::ufixed8:
                     input.ufixed2[0] = (uint16_t) input.ufixed8;
                     return input;
+
+                //fixed point types
+                case FloridaType::fixed1:
+                    input.ufixed2[0] = (uint16_t) input.fixed1[0];
+                    return input;
+                case FloridaType::fixed2:
+                    input.ufixed2[0] = (uint16_t) input.fixed2[0];
+                    return input;
+                case FloridaType::fixed4:
+                    input.ufixed2[0] = (uint16_t) input.fixed4[0];
+                    return input;
+                case FloridaType::fixed8:
+                    input.ufixed2[0] = (uint16_t) input.fixed8;
+                    return input;
+
+                //floating point types
+                case FloridaType::float1:
+                    return input;
+                case FloridaType::float2:
+                    return input;
+                case FloridaType::float4:
+                    input.ufixed2[0] = (uint16_t) input.float4[0];
+                    return input;
+                case FloridaType::float8:
+                    input.ufixed2[0] = (uint16_t) input.float8;
+                    return input;
+                
                 default:
                     return input;
             }
+        
         case FloridaType::ufixed4:
             switch(left){
+                //unsigned fixed point types
                 case FloridaType::ufixed1:
                     input.ufixed4[0] = (uint32_t) input.ufixed1[0];
                     return input;
                 case FloridaType::ufixed2:
-                    input.ufixed4[0] = (uint32_t) input.ufixed2[0];
                     return input;
                 case FloridaType::ufixed4:
+                    input.ufixed4[0] = (uint32_t) input.ufixed4[0];
                     return input;
                 case FloridaType::ufixed8:
                     input.ufixed4[0] = (uint32_t) input.ufixed8;
                     return input;
+
+                //fixed point types
+                case FloridaType::fixed1:
+                    input.ufixed4[0] = (uint32_t) input.fixed1[0];
+                    return input;
+                case FloridaType::fixed2:
+                    input.ufixed4[0] = (uint32_t) input.fixed2[0];
+                    return input;
+                case FloridaType::fixed4:
+                    input.ufixed4[0] = (uint32_t) input.fixed4[0];
+                    return input;
+                case FloridaType::fixed8:
+                    input.ufixed4[0] = (uint32_t) input.fixed8;
+                    return input;
+
+                //floating point types
+                case FloridaType::float1:
+                    return input;
+                case FloridaType::float2:
+                    return input;
+                case FloridaType::float4:
+                    input.ufixed4[0] = (uint32_t) input.float4[0];
+                    return input;
+                case FloridaType::float8:
+                    input.ufixed4[0] = (uint32_t) input.float8;
+                    return input;
+                
                 default:
                     return input;
             }
+
         case FloridaType::ufixed8:
             switch(left){
+                //unsigned fixed point types
                 case FloridaType::ufixed1:
                     input.ufixed8 = (uint64_t) input.ufixed1[0];
                     return input;
@@ -315,12 +399,45 @@ inline types VMTypecast(types input, FloridaType left, FloridaType right){
                     return input;
                 case FloridaType::ufixed8:
                     return input;
+
+                //fixed point types
+                case FloridaType::fixed1:
+                    input.ufixed8 = (uint64_t) input.fixed1[0];
+                    return input;
+                case FloridaType::fixed2:
+                    input.ufixed8 = (uint64_t) input.fixed2[0];
+                    return input;
+                case FloridaType::fixed4:
+                    input.ufixed8 = (uint64_t) input.fixed4[0];
+                    return input;
+                case FloridaType::fixed8:
+                    input.ufixed8 = (uint64_t) input.fixed8;
+                    return input;
+
+                //floating point types
+                case FloridaType::float1:
+                    return input;
+                case FloridaType::float2:
+                    return input;
+                case FloridaType::float4:
+                    input.ufixed8 = (uint64_t) input.float4[0];
+                    return input;
+                case FloridaType::float8:
+                    input.ufixed8 = (uint64_t) input.float8;
+                    return input;
+                
                 default:
                     return input;
             }
+
+
+        
+        //Fixed point types
         case FloridaType::fixed1:
             switch(left){
+                //unsigned fixed point types
                 case FloridaType::ufixed1:
+                    input.fixed1[0] = (int8_t) input.ufixed1[0];
                     return input;
                 case FloridaType::ufixed2:
                     input.fixed1[0] = (int8_t) input.ufixed2[0];
@@ -331,9 +448,273 @@ inline types VMTypecast(types input, FloridaType left, FloridaType right){
                 case FloridaType::ufixed8:
                     input.fixed1[0] = (int8_t) input.ufixed8;
                     return input;
+
+                //fixed point types
+                case FloridaType::fixed1:
+                    return input;
+                case FloridaType::fixed2:
+                    input.fixed1[0] = (int8_t) input.fixed2[0];
+                    return input;
+                case FloridaType::fixed4:
+                    input.fixed1[0] = (int8_t) input.fixed4[0];
+                    return input;
+                case FloridaType::fixed8:
+                    input.fixed1[0] = (int8_t) input.fixed8;
+                    return input;
+
+                //floating point types
+                case FloridaType::float1:
+                    return input;
+                case FloridaType::float2:
+                    return input;
+                case FloridaType::float4:
+                    input.fixed1[0] = (int8_t) input.float4[0];
+                    return input;
+                case FloridaType::float8:
+                    input.fixed1[0] = (int8_t) input.float8;
+                    return input;
+                
                 default:
                     return input;
             }
+
+        case FloridaType::fixed2:
+            switch(left){
+                //unsigned fixed point types
+                case FloridaType::ufixed1:
+                    input.fixed2[0] = (int16_t) input.ufixed1[0];
+                    return input;
+                case FloridaType::ufixed2:
+                    input.fixed2[0] = (int16_t) input.ufixed2[0];
+                    return input;
+                case FloridaType::ufixed4:
+                    input.fixed2[0] = (int16_t) input.ufixed4[0];  
+                    return input;
+                case FloridaType::ufixed8:
+                    input.fixed2[0] = (int16_t) input.ufixed8;
+                    return input;
+
+                //fixed point types
+                case FloridaType::fixed1:
+                    input.fixed2[0] = (int16_t) input.fixed1[0];
+                    return input;
+                case FloridaType::fixed2:
+                    return input;
+                case FloridaType::fixed4:
+                    input.fixed2[0] = (int16_t) input.fixed4[0];
+                    return input;
+                case FloridaType::fixed8:
+                    input.fixed2[0] = (int16_t) input.fixed8;
+                    return input;
+
+                //floating point types
+                case FloridaType::float1:
+                    return input;
+                case FloridaType::float2:
+                    return input;
+                case FloridaType::float4:
+                    input.fixed2[0] = (int16_t) input.float4[0];   
+                    return input;
+                case FloridaType::float8:
+                    input.fixed2[0] = (int16_t) input.float8;
+                    return input;
+                
+                default:
+                    return input;
+            }
+        
+        case FloridaType::fixed4:
+            switch(left){
+                //unsigned fixed point types
+                case FloridaType::ufixed1:
+                    input.fixed4[0] = (int32_t) input.ufixed1[0];
+                    return input;
+                case FloridaType::ufixed2:
+                    input.fixed4[0] = (int32_t) input.ufixed2[0];
+                    return input;
+                case FloridaType::ufixed4:
+                    input.fixed4[0] = (int32_t) input.ufixed4[0];  
+                    return input;
+                case FloridaType::ufixed8:
+                    input.fixed4[0] = (int32_t) input.ufixed8;
+                    return input;
+
+                //fixed point types
+                case FloridaType::fixed1:
+                    input.fixed4[0] = (int32_t) input.fixed1[0];
+                    return input;
+                case FloridaType::fixed2:
+                    input.fixed4[0] = (int32_t) input.fixed2[0];
+                    return input;
+                case FloridaType::fixed4:
+                    input.fixed4[0] = (int32_t) input.fixed4[0];
+                    return input;
+                case FloridaType::fixed8:
+                    input.fixed4[0] = (int32_t) input.fixed8;
+                    return input;
+
+                //floating point types
+                case FloridaType::float1:
+                    return input;
+                case FloridaType::float2:
+                    return input;
+                case FloridaType::float4:
+                    input.fixed4[0] = (int32_t) input.float4[0];   
+                    return input;
+                case FloridaType::float8:
+                    input.fixed4[0] = (int32_t) input.float8;
+                    return input;
+                
+                default:
+                    return input;
+            }
+            
+        case FloridaType::fixed8:
+            switch(left){
+                //unsigned fixed point types
+                case FloridaType::ufixed1:
+                    input.fixed8 = (int64_t) input.ufixed1[0];
+                    return input;
+                case FloridaType::ufixed2:
+                    input.fixed8 = (int64_t) input.ufixed2[0];
+                    return input;
+                case FloridaType::ufixed4:
+                    input.fixed8 = (int64_t) input.ufixed4[0];  
+                    return input;
+                case FloridaType::ufixed8:
+                    input.fixed8 = (int64_t) input.ufixed8;
+                    return input;
+
+                //fixed point types
+                case FloridaType::fixed1:
+                    input.fixed8 = (int64_t) input.fixed1[0];
+                    return input;
+                case FloridaType::fixed2:
+                    input.fixed8 = (int64_t) input.fixed2[0];
+                    return input;
+                case FloridaType::fixed4:
+                    input.fixed8 = (int64_t) input.fixed4[0];
+                    return input;
+                case FloridaType::fixed8:
+                    return input;
+
+                //floating point types
+                case FloridaType::float1:
+                    return input;
+                case FloridaType::float2:
+                    return input;
+                case FloridaType::float4:
+                    input.fixed8 = (int64_t) input.float4[0];   
+                    return input;
+                case FloridaType::float8:
+                    input.fixed8 = (int64_t) input.float8;
+                    return input;
+                
+                default:
+                    return input;
+            }
+
+
+
+        //Floating point types
+        case FloridaType::float1:
+            return input;
+
+        case FloridaType::float2:
+            return input;
+
+        case FloridaType::float4:
+            switch(left){
+                //unsigned fixed point types
+                case FloridaType::ufixed1:
+                    input.float4[0] = (float) input.ufixed1[0];
+                    return input;
+                case FloridaType::ufixed2:
+                    input.float4[0] = (float) input.ufixed2[0];
+                    return input;
+                case FloridaType::ufixed4:
+                    input.float4[0] = (float) input.ufixed4[0];  
+                    return input;
+                case FloridaType::ufixed8:
+                    input.float4[0] = (float) input.ufixed8;
+                    return input;
+
+                //fixed point types
+                case FloridaType::fixed1:
+                    input.float4[0] = (float) input.fixed1[0];
+                    return input;
+                case FloridaType::fixed2:
+                    input.float4[0] = (float) input.fixed2[0];
+                    return input;
+                case FloridaType::fixed4:
+                    input.float4[0] = (float) input.fixed4[0];
+                    return input;
+                case FloridaType::fixed8:
+                    input.float4[0] = (float) input.fixed8;
+                    return input;
+
+                //floating point types
+                case FloridaType::float1:
+                    return input;
+                case FloridaType::float2:
+                    return input;
+                case FloridaType::float4:
+                    input.float4[0] = (float) input.float4[0];   
+                    return input;
+                case FloridaType::float8:
+                    input.float4[0] = (float) input.float8;
+                    return input;
+                
+                default:
+                    return input;
+            }
+
+        case FloridaType::float8:
+            switch(left){
+                //unsigned fixed point types
+                case FloridaType::ufixed1:
+                    input.float8 = (double) input.ufixed1[0];
+                    return input;
+                case FloridaType::ufixed2:
+                    input.float8 = (double) input.ufixed2[0];
+                    return input;
+                case FloridaType::ufixed4:
+                    input.float8 = (double) input.ufixed4[0];  
+                    return input;
+                case FloridaType::ufixed8:
+                    input.float8 = (double) input.ufixed8;
+                    return input;
+
+                //fixed point types
+                case FloridaType::fixed1:
+                    input.float8 = (double) input.fixed1[0];
+                    return input;
+                case FloridaType::fixed2:
+                    input.float8 = (double) input.fixed2[0];
+                    return input;
+                case FloridaType::fixed4:
+                    input.float8 = (double) input.fixed4[0];
+                    return input;
+                case FloridaType::fixed8:
+                    input.float8 = (double) input.fixed8;
+                    return input;
+
+                //floating point types
+                case FloridaType::float1:
+                    return input;
+                case FloridaType::float2:
+                    return input;
+                case FloridaType::float4:
+                    input.float8 = (double) input.float4[0];   
+                    return input;
+                case FloridaType::float8:
+                    input.float8 = (double) input.float8;
+                    return input;
+                
+                default:
+                    return input;
+            }
+
         default:
             //Do nothing
             return input;
