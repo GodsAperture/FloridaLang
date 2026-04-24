@@ -238,12 +238,16 @@ std::string assignPad(FloridaType input, char where){
 
     void TypecastClass::FLVMCodeGen(Instructions* inInstructions){
         types result;
-        body->FLVMCodeGen(inInstructions);   
-        //Once again, I abuse the integer nature to get the correct operation.
-        //This will pick the correct one among 100 total options.
-        //10 of those are redundant and only necessary to let the math work.
-        result.fixed8 = ((body->type - FloridaType::ufixed1) * 10 + (type - FloridaType::ufixed1) + ufixed1TOufixed1);
-
+        //Generate the code
+        body->FLVMCodeGen(inInstructions);
+        //Push the instruction.
+        result.operation[0] = Operation::ITypecast;
+        inInstructions->push(result);
+        //Push the first type.
+        result.type[0] = type;
+        inInstructions->push(result);
+        //Push the second type.
+        result.type[0] = secondType;
         inInstructions->push(result);
     }
 

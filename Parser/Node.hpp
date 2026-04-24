@@ -270,6 +270,7 @@ public:
 //Type casts
 class TypecastClass : public Node{
 public:
+    FloridaType secondType = BadToken;
     Node* body = nullptr;
 
     TypecastClass();
