@@ -238,7 +238,7 @@ std::string assignPad(FloridaType input, char where){
 
     void TypecastClass::FLVMCodeGen(Instructions* inInstructions){
         types result;
-        //Generate the code
+        //Generate the code.
         body->FLVMCodeGen(inInstructions);
         //Push the instruction.
         result.operation[0] = Operation::ITypecast;
@@ -898,13 +898,19 @@ std::string assignPad(FloridaType input, char where){
 
     void Addition::FLVMCodeGen(Instructions* inInstructions){
         types result;
+
+        //Generate the code for the left hand object.
         left->FLVMCodeGen(inInstructions);
+        //Generate the code for the right hand object.
         right->FLVMCodeGen(inInstructions);
-        //Push the operation
+        //Push the operation.
         result.operation[0] = Operation::IAdd;
         inInstructions->push(result);
-        //Push the data type
+        //Push the left type.
         result.type[0] = left->type;
+        inInstructions->push(result);
+        //Push the right type.
+        result.type[0] = right->type;
         inInstructions->push(result);
     }
 
@@ -924,13 +930,18 @@ std::string assignPad(FloridaType input, char where){
     void Subtraction::FLVMCodeGen(Instructions* inInstructions){
         types result;
 
+        //Generate the code for the left hand object.
         left->FLVMCodeGen(inInstructions);
+        //Generate the code for the right hand object.
         right->FLVMCodeGen(inInstructions);
-        //Push the operation
+        //Push the operation.
         result.operation[0] = Operation::ISubtract;
         inInstructions->push(result);
-        //Push the data type
+        //Push the left type.
         result.type[0] = left->type;
+        inInstructions->push(result);
+        //Push the right type.
+        result.type[0] = right->type;
         inInstructions->push(result);
     }
 
@@ -954,11 +965,14 @@ std::string assignPad(FloridaType input, char where){
         left->FLVMCodeGen(inInstructions);
         //Generate the code for the right hand object.
         right->FLVMCodeGen(inInstructions);
-        //Push the operation
+        //Push the operation.
         result.operation[0] = Operation::IMultiply;
         inInstructions->push(result);
-        //Push the data type
+        //Push the left type.
         result.type[0] = left->type;
+        inInstructions->push(result);
+        //Push the right type.
+        result.type[0] = right->type;
         inInstructions->push(result);
     }
 
@@ -981,11 +995,14 @@ std::string assignPad(FloridaType input, char where){
         left->FLVMCodeGen(inInstructions);
         //Generate the code for the right hand object.
         right->FLVMCodeGen(inInstructions);
-        //Push the operation
+        //Push the operation.
         result.operation[0] = Operation::IMultiply;
         inInstructions->push(result);
-        //Push the data type
+        //Push the left type.
         result.type[0] = left->type;
+        inInstructions->push(result);
+        //Push the right type.
+        result.type[0] = right->type;
         inInstructions->push(result);
     }
 
@@ -1005,14 +1022,18 @@ std::string assignPad(FloridaType input, char where){
     void Division::FLVMCodeGen(Instructions* inInstructions){
         types result;
 
-        //Generate the code for the left and right operands.
+        //Generate the code for the left hand object.
         left->FLVMCodeGen(inInstructions);
+        //Generate the code for the right hand object.
         right->FLVMCodeGen(inInstructions);
-        //Push the operation
+        //Push the operation.
         result.operation[0] = Operation::IDivide;
         inInstructions->push(result);
-        //Push the data type
+        //Push the left type.
         result.type[0] = left->type;
+        inInstructions->push(result);
+        //Push the right type.
+        result.type[0] = right->type;
         inInstructions->push(result);
     }
 

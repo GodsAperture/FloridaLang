@@ -219,7 +219,6 @@ Node* Parser::divide(){
     return result;
 }
 
-
 Node* Parser::primitive(){
     if(!hasTokens(1)){
         return nullptr;

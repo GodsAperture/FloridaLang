@@ -8,58 +8,62 @@
 class Scope;
 
 //2 byte representation for all operations.
+//All operations will start with the letter I, shortened from Instruction.
 enum Operation : int16_t {
     //`NewScope`, `whichScope`, `variableSlotSize`
-    NewScope,
-    //`DeleteScope`, `fixed8`
-    DeleteScope,
+    //Generates a new scope associated with `whichScope` and preallocates memory the size of `variableSlotSize`.
+    INewScope,
+    //`DeleteScope`
+    IDeleteScope,
     //`ICall`, `fixed8`
+    //Calls the function associated with the number `fixed8`.
     ICall,
     //`IReturn`, `fixed8`
+    //Exits `fixed8` scopes.
     IReturn,
     //`CJump`, `fixed8`
-    CJump,
+    //Conditionally jumps `fixed8` positions forward in the instruction set.
+    ICJump,
     //`Jump`, `fixed8`
-    Jump,
+    //Jumps to the `fixed8` position in the instruction set.
+    IJump,
 
-    //`pointer`, `fetch1`, `whichScope`, `stackOffset`
-    //`pointer` will be in the stack.
-    fetch1,
+    //`fetch1`, `whichScope`, `stackOffset`
+    IFetch1,
     //`fetch2`, `whichScope`, `stackOffset`
-    fetch2,
+    IFetch2,
     //`fetch4`, `whichScope`, `stackOffset`
-    fetch4,
+    IFetch4,
     //`fetch8`, `whichScope`, `stackOffset`
-    fetch8,
+    IFetch8,
 
     //`assign1`, `whichScope`, `stackOffset`
-    assign1,
+    IAssign1,
     //`assign2`, `whichScope`, `stackOffset`
-    assign2,
+    IAssign2,
     //`assign4`, `whichSCope`, `stackOffset`
-    assign4,
+    IAssign4,
     //`assign8`, `whichScope`, `stackOffset`
-    assign8,
+    IAssign8,
 
     //`Push`, `type`, `primitive`
-    Push,
+    //Pushes the `primitive` to the stack. `type` is only for debugging.
+    IPush,
     //`Pop`, `fixed8`.
     //The fixed8 determines how many elements are popped.
-    Pop,
+    IPop,
 
-    //`ITypecast`, starting type, ending type
+    //`ITypecast`, `FloridaType`, `FloridaType`
+    //The `types` object is cast from the first type to the second type.
     ITypecast,
-
-    //All math instructions are also organized as such so I
-    //can use a math trick to get the correct instruction.
     
-    //`IMultiply`, type
+    //`IMultiply`, `FloridaType`, `FloridaType`
     IMultiply,
-    //`IDivide`, type
+    //`IDivide`, `FloridaType`, `FloridaType`
     IDivide,
-    //`IAdd`, type
+    //`IAdd`, `FloridaType`, `FloridaType`
     IAdd,
-    //`ISubtract`, type
+    //`ISubtract`, `FloridaType`, `FloridaType`
     ISubtract,
     //`INegate`
     INegate,
@@ -67,19 +71,19 @@ enum Operation : int16_t {
     IExponent,
 
     //Object comparisons
-    equals,
-    nequals,
-    greater,
-    greateror,
-    lesser,
-    lesseror,
+    IEquals,
+    INEquals,
+    IGreater,
+    IGreaterOr,
+    ILesser,
+    ILesserOr,
 
     //Boolean algebra
     //i is short for instruction
     //i is also used because these are actual C++ operators.
-    ior,
-    iand,
-    inot
+    IOr,
+    IAnd,
+    INot
 };
 
 //A convenient 8 byte section of memory that can represent everything I need.

@@ -50,11 +50,13 @@ public:
     inline Scope* getScope(int64_t input);
     //Get the name of the scope associated with the scope.
     inline std::string getName(int64_t input);
+    //Print out the full scope stack.
+    inline void printScope(Scope* input);
 
     
     //Exceutes the current instruction in the virtual machine.
     //Returns characters based on success, failure, etc.
-    char next();
+    char executeNext();
     //Prints the current instruction, the next instruction, and the instruction number.
     //Returns `true` if an instruction was successfully executed.
     bool debuggerNext();
@@ -81,6 +83,8 @@ public:
     inline void edit(types input);
     //Edit the prior to top most value of the computation stack.
     inline void editPrior(types input);
+    //Get the next `types` in the instruction set.
+    inline types next();
 
     //Call stack related methods.
     //Add a new element in the BPStack.

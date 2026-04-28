@@ -108,12 +108,12 @@ int main(){
 			Florida.infoPrint();
 			counter++;
 		}
-		returnCode = Florida.next();
+		returnCode = Florida.executeNext();
 	}
 
 	//Standard method for VM execution.
 	while(returnCode){
-		returnCode = Florida.next();
+		returnCode = Florida.executeNext();
 		counter++;
 	}
 
