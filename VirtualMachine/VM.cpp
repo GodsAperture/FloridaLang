@@ -777,6 +777,68 @@ inline void FloridaVM::printType(FloridaType theType, types input){
     }
 }
 
+inline void printFloridaType(types input){
+    switch(input.type[0]){
+        case ufixed1:
+            std::cout << "ufixed1";
+            return;
+        case ufixed2:
+            std::cout << "ufixed2";
+            return;
+        case ufixed4:
+            std::cout << "ufixed4";
+            return;
+        case ufixed8:
+            std::cout << "ufixed8";
+            return;
+        case fixed1:
+            std::cout << "fixed1";
+            return;
+        case fixed2:
+            std::cout << "fixed2";
+            return;
+        case fixed4:
+            std::cout << "fixed4";
+            return;
+        case fixed8:
+            std::cout << "fixed8";
+            return;
+        case float4:
+            std::cout << "float4";
+            return;
+        case float8:
+            std::cout << "float8";
+            return;
+        default:
+            return;
+    }
+}
+
+inline types ResultingType(types left, types right){
+    uint64_t row = 0;
+    uint64_t column = 0;
+    types result;
+
+    //Determine the column of the matrix.
+    if((left.type[0] % 4) > (right.type[0] % 4)){
+        column = left.type[0] % 4;
+    } else {
+        column = right.type[0] % 4;
+    }
+
+    //Determine the row of the matrix.
+    if((left.type[0] >> 3) > (right.type[0] >> 3)){
+        row = (left.type[0] - ufixed1) >> 2;
+    } else {
+        row = (right.type[0] - ufixed1) >> 2;
+    }
+
+    //Grab the corresponding matrix entry for the correct resulting type.
+    result.type[0] = (FloridaType) ((fixed1 - ufixed1) * row + column + ufixed1);
+
+    return result;
+}
+
 void FloridaVM::printAll(){
     //The current instruction to be displayed to the terminal.
     uint64_t current = 0;
@@ -784,6 +846,11 @@ void FloridaVM::printAll(){
     //Convenience variables.
     Function* theFunction = nullptr;
     ObjectClass* theClass = nullptr;
+    //Convenient bitmasks
+    uint64_t bitmask1 = 7;
+    uint64_t bitmask2 = 3;
+    uint64_t bitmask4 = 1;
+    
 
     while(current < programInstructions->instructionCount){
         //This is to make the main body look separate and tidy.
@@ -793,17 +860,18 @@ void FloridaVM::printAll(){
 
         switch(grab(current).operation[0]){
             case Operation::INewScope:
-                std::cout << instructionNumber << " " << "NewScope (*" << getName(grab(current + 1).fixed8) << "\tWhich scope: " << grab(current + 1).fixed8 << "\n\tVariable slot size: " << grab(current + 2).fixed8;
-                std::cout << "\n";   
+                std::cout << instructionNumber << " " << "NewScope:\n";
+                std::cout << getName(grab(current + 1).fixed8);
+                std::cout << "\tWhich scope: " << grab(current + 1).fixed8;
+                std::cout << "\n\tVariable slot size: " << grab(current + 2).fixed8 << "\n";   
                 current += 3;
                 break;
             case Operation::IDeleteScope:
-                std::cout << instructionNumber << " " << "IDeleteScope";
-                std::cout << "\n";
+                std::cout << instructionNumber << " " << "IDeleteScope\n";
                 current++;
                 break;
             case Operation::ICall:
-                std::cout << instructionNumber << " " << "ICall: \n";
+                std::cout << instructionNumber << " " << "ICall:\n";
                 theFunction = getFunction(grab(current + 1).fixed8);
                 std::cout << theFunction->name << " " << "(*Function number: " << grab(current + 1).fixed8 << "*)";
                 printScope(theFunction->code);
@@ -811,24 +879,102 @@ void FloridaVM::printAll(){
                 current += 2;
                 break;
             case Operation::IReturn:
-                std::cout << instructionNumber << " " << "IReturn: \n";
-                std::cout << "\tScope count: " << grab(current + 1).fixed8;
-                std::cout << "\n";
+                std::cout << instructionNumber << " " << "IReturn:\n";
+                std::cout << "\tScope count: " << grab(current + 1).fixed8 << "\n";
                 current += 2;
                 break;
             case Operation::ICJump:
-                std::cout << instructionNumber << " " << "ICJump: \n";
-                std::cout << "\tICJump distance: " << grab(current + 1).fixed8;
-                std::cout << "\n";
+                std::cout << instructionNumber << " " << "ICJump:\n";
+                std::cout << "\tICJump distance: " << grab(current + 1).fixed8 << "\n";
                 current += 2;
                 break;
+            case Operation::IJump:
+                std::cout << instructionNumber << " " << "IJump:\n";
+                std::cout << "\tJump position: " << grab(current + 1).fixed8 << "\n";
+                current += 2;
+                break;
+            case Operation::IFetch1:
+                std::cout << instructionNumber << " " << "IFetch1:\n";
+                std::cout << "\tWhich scope: " << grab(current + 1).fixed8 << "\n";
+                std::cout << "\tStack offset: " << (grab(current + 2).fixed8 >> 3) << "\n";
+                std::cout << "\tByte offset: " << (bitmask1 & grab(current + 2).fixed8) << "\n";
+                current += 3;
+                break;
+            case Operation::IFetch2:
+                std::cout << instructionNumber << " " << "IFetch2:\n";
+                std::cout << "\tWhich scope: " << grab(current + 1).fixed8 << "\n";
+                std::cout << "\tStack offset: " << (grab(current + 2).fixed8 >> 2) << "\n";
+                std::cout << "\tByte offset: " << (bitmask2 & grab(current + 2).fixed8) << "\n";
+                current += 3;
+                break;
+            case Operation::IFetch4:
+                std::cout << instructionNumber << " " << "IFetch4:\n";
+                std::cout << "\tWhich scope: " << grab(current + 1).fixed8 << "\n";
+                std::cout << "\tStack offset: " << (grab(current + 2).fixed8 >> 1) << "\n";
+                std::cout << "\tByte offset: " << (bitmask4 & grab(current + 2).fixed8) << "\n";
+                current += 3;
+                break;
+            case Operation::IFetch8:
+                std::cout << instructionNumber << " " << "IFetch8:\n";
+                std::cout << "\tWhich scope: " << grab(current + 1).fixed8 << "\n";
+                std::cout << "\tStack offset: " << grab(current + 2).fixed8 << "\n";
+                current += 3;
+                break;
+            case Operation::IAssign1:
+                std::cout << instructionNumber << " " << "IAssign1:\n";
+                std::cout << "\tWhich scope: " << grab(current + 1).fixed8 << "\n";
+                std::cout << "\tStack offset: " << (grab(current + 2).fixed8 >> 3) << "\n";
+                std::cout << "\tByte offset: " << (bitmask1 & grab(current + 2).fixed8) << "\n";
+                current += 3;
+                break;
+            case Operation::IAssign2:
+                std::cout << instructionNumber << " " << "IAssign2:\n";
+                std::cout << "\tWhich scope: " << grab(current + 1).fixed8 << "\n";
+                std::cout << "\tStack offset: " << (grab(current + 2).fixed8 >> 2) << "\n";
+                std::cout << "\tByte offset: " << (bitmask2 & grab(current + 2).fixed8) << "\n";
+                current += 3;
+                break;
+            case Operation::IAssign4:
+                std::cout << instructionNumber << " " << "IAssign4:\n";
+                std::cout << "\tWhich scope: " << grab(current + 1).fixed8 << "\n";
+                std::cout << "\tStack offset: " << (grab(current + 2).fixed8 >> 1) << "\n";
+                std::cout << "\tByte offset: " << (bitmask4 & grab(current + 2).fixed8) << "\n";
+                current += 3;
+                break;
+            case Operation::IAssign8:
+                std::cout << instructionNumber << " " << "IAssign8:\n";
+                std::cout << "\tWhich scope: " << grab(current + 1).fixed8 << "\n";
+                std::cout << "\tStack offset: " << grab(current + 2).fixed8 << "\n";
+                current += 3;
+                break;
             case Operation::IPush:
-                std::cout << instructionNumber << " " << "Push: \n";
+                std::cout << instructionNumber << " " << "IPush:\n";
                 std::cout << "\tPrimitive: ";
                 printType(grab(current + 1).type[0], grab(current + 2));
                 std::cout << "\n";
                 current += 3;
                 break;
+            case Operation::IPop:
+                std::cout << instructionNumber << " " << "IPop:\n";
+                std::cout << "\tPop count: " << grab(current + 1).fixed8;
+                current += 2;
+                break;
+            case Operation::ITypecast:
+                std::cout << instructionNumber << " " << "ITypecast:\n";
+                std::cout << "\tStarting type: ";
+                printFloridaType(grab(current + 1));
+                std::cout << "\n\tEnding type: ";
+                printFloridaType(grab(current + 2));
+                std::cout << "\n";
+            case Operation::IMultiply:
+                std::cout << instructionNumber << " " << "IMultiply:\n";
+                std::cout << "\tLeft type: ";
+                printFloridaType(grab(current + 1));
+                std::cout << "\n\tRight type: ";
+                printFloridaType(grab(current + 2));
+                std::cout << "\n\tResulting type: ";
+                printFloridaType(ResultingType(grab(current + 1), grab(current + 2)));
+                std::cout << "\n";
             default:
                 std::cout << "The printAll() method is missing a definition for Operation number " << grab(current).operation[0] << "\n";
                 return;
@@ -928,17 +1074,17 @@ char FloridaVM::executeNext(){
 
 
 ////Variable related instructions.
-            //You might be asking "Why didn't I just move the whole union instead of part of the union?"
+            //You might be asking "Why didn't I just move the whole 8 byte union instead of part of the union?"
             //The reason why is this creates a security vulnerability called "Byte peeking."
-            //If I give the user the full 8 bytes, there may be other bytes that the user
+            //If I give the user the full 8 bytes, there may be other information that the user
             //will be given that aren't part of what they requested.
             //So, I grab parts of the full union.
-            //Is it slower? Yes. Is it safer? Yes.
+            //Is it slower? No. Is it safer? Yes.
 
 //Fetch instructions
         //Bitshifting an int64_t by N is equivalent to dividing an int64_t by 2^N.
         //Bitmasking an int64_t using 2^N-1 is the equivalent to doing int64_t % 2^N.
-        //These hold true for when N is natural number.
+        //These hold true for when N is a natural number.
         case Operation::IFetch1:
             whichScope = next().ufixed8;
             result = next();
@@ -954,7 +1100,7 @@ char FloridaVM::executeNext(){
             stackOffset = result.fixed8 >> 3;
             byteOffset = (bitmask2 & result.fixed8) >> 1;
 
-            result.fixed2[0] = computationStack[CurrentBP[whichScope] + stackOffset].fixed1[byteOffset];
+            result.fixed2[0] = computationStack[CurrentBP[whichScope] + stackOffset].fixed2[byteOffset];
             push(result);
             break;
         case Operation::IFetch4:
