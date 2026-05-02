@@ -966,6 +966,8 @@ void FloridaVM::printAll(){
                 std::cout << "\n\tEnding type: ";
                 printFloridaType(grab(current + 2));
                 std::cout << "\n";
+                current += 3;
+                break;
             case Operation::IMultiply:
                 std::cout << instructionNumber << " " << "IMultiply:\n";
                 std::cout << "\tLeft type: ";
@@ -975,6 +977,85 @@ void FloridaVM::printAll(){
                 std::cout << "\n\tResulting type: ";
                 printFloridaType(ResultingType(grab(current + 1), grab(current + 2)));
                 std::cout << "\n";
+                current += 3;
+                break;
+            case Operation::IDivide:
+                std::cout << instructionNumber << " " << "IDivide:\n";
+                std::cout << "\tLeft type: ";
+                printFloridaType(grab(current + 1));
+                std::cout << "\n\tRight type: ";
+                printFloridaType(grab(current + 2));
+                std::cout << "\n\tResulting type: ";
+                printFloridaType(ResultingType(grab(current + 1), grab(current + 2)));
+                std::cout << "\n";
+                current += 3;
+                break;
+            case Operation::IAdd:
+                std::cout << instructionNumber << " " << "IAdd:\n";
+                std::cout << "\tLeft type: ";
+                printFloridaType(grab(current + 1));
+                std::cout << "\n\tRight type: ";
+                printFloridaType(grab(current + 2));
+                std::cout << "\n\tResulting type: ";
+                printFloridaType(ResultingType(grab(current + 1), grab(current + 2)));
+                std::cout << "\n";
+                current += 3;
+                break;
+            case Operation::ISubtract:
+                std::cout << instructionNumber << " " << "ISubtract:\n";
+                std::cout << "\tLeft type: ";
+                printFloridaType(grab(current + 1));
+                std::cout << "\n\tRight type: ";
+                printFloridaType(grab(current + 2));
+                std::cout << "\n\tResulting type: ";
+                printFloridaType(ResultingType(grab(current + 1), grab(current + 2)));
+                std::cout << "\n";
+                current += 3;
+                break;
+            case Operation::INegate:
+                std::cout << instructionNumber << " " << "INegate\n";
+                current++;
+                break;
+            case Operation::IExponent:
+                std::cout << instructionNumber << " " << "IExponent\n";
+                current++;
+                break;
+            case Operation::IEquals:
+                std::cout << instructionNumber << " " << "IEquals\n";
+                current++;
+                break;
+            case Operation::INEquals:
+                std::cout << instructionNumber << " " << "INEquals\n";
+                current++;
+                break;
+            case Operation::IGreater:
+                std::cout << instructionNumber << " " << "IGreater\n";
+                current++;
+                break;
+            case Operation::IGreaterOr:
+                std::cout << instructionNumber << " " << "IGreaterOr\n";
+                current++;
+                break;
+            case Operation::ILesser:
+                std::cout << instructionNumber << " " << "ILesser\n";
+                current++;
+                break;
+            case Operation::ILesserOr:
+                std::cout << instructionNumber << " " << "ILesserOr\n";
+                current++;
+                break;
+            case Operation::IOr:
+                std::cout << instructionNumber << " " << "IOr\n";
+                current++;
+                break;
+            case Operation::IAnd:
+                std::cout << instructionNumber << " " << "IAnd\n";
+                current++;
+                break;
+            case Operation::INot:
+                std::cout << instructionNumber << " " << "INot\n";
+                current++;
+                break;
             default:
                 std::cout << "The printAll() method is missing a definition for Operation number " << grab(current).operation[0] << "\n";
                 return;
