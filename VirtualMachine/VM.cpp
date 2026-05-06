@@ -120,6 +120,11 @@ inline Scope* FloridaVM::getScope(int64_t input){
     return nullptr;
 }
 
+//TO FIX
+inline Function* FloridaVM::getFunction(uint64_t input){
+    return nullptr;
+}
+
 inline std::string FloridaVM::getName(int64_t input){
     if(getScope(input)->whichScope == 0){
         return "Global Scope";
@@ -128,7 +133,7 @@ inline std::string FloridaVM::getName(int64_t input){
     }
 }
 
-inline void printScope(Scope* input){
+inline void FloridaVM::printScope(Scope* input){
     if(input->parent != nullptr){
         printScope(input->parent);
         std::cout << " -> ";
@@ -174,6 +179,8 @@ inline types VMadd(types left, types right, types leftType, types rightType){
                     //This is an error.
                     return result;
             }
+        default:
+            return result;
     }
     return result;
 }
@@ -821,13 +828,13 @@ inline types ResultingType(types left, types right){
 
     //Determine the column of the matrix.
     if((left.type[0] % 4) > (right.type[0] % 4)){
-        column = left.type[0] % 4;
+        column = (left.type[0] - ufixed1) % 4;
     } else {
-        column = right.type[0] % 4;
+        column = (right.type[0] - ufixed1) % 4;
     }
 
     //Determine the row of the matrix.
-    if((left.type[0] >> 3) > (right.type[0] >> 3)){
+    if((left.type[0] >> 2) > (right.type[0] >> 2)){
         row = (left.type[0] - ufixed1) >> 2;
     } else {
         row = (right.type[0] - ufixed1) >> 2;
@@ -842,10 +849,9 @@ inline types ResultingType(types left, types right){
 void FloridaVM::printAll(){
     //The current instruction to be displayed to the terminal.
     uint64_t current = 0;
-    uint64_t instructionNumber = 1;
+    uint64_t instructionNumber = 0;
     //Convenience variables.
     Function* theFunction = nullptr;
-    ObjectClass* theClass = nullptr;
     //Convenient bitmasks
     uint64_t bitmask1 = 7;
     uint64_t bitmask2 = 3;
@@ -949,7 +955,9 @@ void FloridaVM::printAll(){
                 break;
             case Operation::IPush:
                 std::cout << instructionNumber << " " << "IPush:\n";
-                std::cout << "\tPrimitive: ";
+                std::cout << "\t";
+                printFloridaType(grab(current + 1));
+                std::cout << ": ";
                 printType(grab(current + 1).type[0], grab(current + 2));
                 std::cout << "\n";
                 current += 3;

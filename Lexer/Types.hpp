@@ -26,11 +26,10 @@ enum FloridaType : int16_t {
     ufixed1, ufixed2, ufixed4, ufixed8,
     fixed1, fixed2, fixed4, fixed8,
     //If float1 and/or float2 ever come into existence:
-    //1.) Why did hardware manufactureres do this??
+    //1.) Why did hardware manufacturers do this??
     //2.) These are objectively awful for floating point numbers.
     //Solution? Don't implement these as hardware instructions.
-    /*Non-existent*/ float1, /*Non-existent*/ float2,
-    float4, float8,
+    /*Non-existent*/ float1, /*Non-existent*/ float2, float4, float8,
     ufixedn, fixedn, floatn,
 
     //Keywords

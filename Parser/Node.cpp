@@ -456,7 +456,7 @@ std::string assignPad(FloridaType input, char where){
         types result;
 
         //The new scope will use the last value to pick the proper scope and adjust its value.
-        result.operation[0] = Operation::NewScope;
+        result.operation[0] = Operation::INewScope;
         inInstructions->push(result);
         //Be sure to addOffset this otherwise I can never adjust the unique scopes.
         result.fixed8 = whichScope;
@@ -468,7 +468,7 @@ std::string assignPad(FloridaType input, char where){
             body->FLVMCodeGen(inInstructions);
         }
         //Push the delete scope operation onto the stack.
-        result.operation[0] = Operation::DeleteScope;
+        result.operation[0] = Operation::IDeleteScope;
         inInstructions->push(result);
         //Add which here to be able to adjust the unique Scope here too.
         result.fixed8 = whichScope;
@@ -653,7 +653,7 @@ std::string assignPad(FloridaType input, char where){
     void Primitive::FLVMCodeGen(Instructions* inInstructions){
         types result;
         //Generate a push instruction.
-        result.operation[0] = Operation::Push;
+        result.operation[0] = Operation::IPush;
         inInstructions->push(result);
         //Add the type for debugging purposes.
         result.type[0] = type;
@@ -697,7 +697,6 @@ std::string assignPad(FloridaType input, char where){
 
     void Body::FLVMCodeGen(Instructions* inInstructions){
         //Add the current chunk of code if it is not a function.
-        std::cout << "Here\n";
         if(dynamic_cast<Function*>(current) == nullptr){
             current->FLVMCodeGen(inInstructions);
             //After the line has finished execution, pop it from the stack.
@@ -739,7 +738,7 @@ std::string assignPad(FloridaType input, char where){
         if(objectType != nullptr){
             //This will fetch the full object.
             for(uint64_t i = 0; i < objectType->memorySize / 8; i++){
-                result.operation[0] = Operation::fetch8;
+                result.operation[0] = Operation::IFetch8;
                 inInstructions->push(result);
                 result.fixed8 = stackBytePosition + i * 8;
                 inInstructions->push(result);
@@ -751,7 +750,7 @@ std::string assignPad(FloridaType input, char where){
         //More math-magic. I can map the `type` to the correct `operation`.
         int64_t bitmask = 7L;
         //Determine which fetch operation is needed.
-        result.operation[0] = (Operation) ((bitmask & (type - FloridaType::ufixed1)) + Operation::assign1);
+        result.operation[0] = (Operation) ((bitmask & (type - FloridaType::ufixed1)) + Operation::IAssign1);
         inInstructions->push(result);
         //Get which scope the variable is in.
         result.fixed8 = owner->whichScope;
@@ -800,16 +799,16 @@ std::string assignPad(FloridaType input, char where){
             types result;
             switch(allocationSize(type)){
                 case 1:
-                    result.operation[0] = Operation::assign1;
+                    result.operation[0] = Operation::IAssign1;
                     break;
                 case 2:
-                    result.operation[0] = Operation::assign2;
+                    result.operation[0] = Operation::IAssign2;
                     break;
                 case 4:
-                    result.operation[0] = Operation::assign4;
+                    result.operation[0] = Operation::IAssign4;
                     break;
                 case 8:
-                    result.operation[0] = Operation::assign8;
+                    result.operation[0] = Operation::IAssign8;
                     break;
             }
             inInstructions->push(result);
@@ -1094,7 +1093,7 @@ std::string assignPad(FloridaType input, char where){
         left->FLVMCodeGen(inInstructions);
         right->FLVMCodeGen(inInstructions);
         //Push back the instruction for ==
-        result.operation[0] = Operation::equals;
+        result.operation[0] = Operation::IEquals;
         inInstructions->push(result);
     }
 
@@ -1116,7 +1115,7 @@ std::string assignPad(FloridaType input, char where){
         left->FLVMCodeGen(inInstructions);
         right->FLVMCodeGen(inInstructions);
         //Push back the instruction for !=
-        result.operation[0] = Operation::nequals;
+        result.operation[0] = Operation::INEquals;
         inInstructions->push(result);
     }
 
@@ -1138,7 +1137,7 @@ std::string assignPad(FloridaType input, char where){
         left->FLVMCodeGen(inInstructions);
         right->FLVMCodeGen(inInstructions);
         //Push back the instruction for >
-        result.operation[0] = Operation::greater;
+        result.operation[0] = Operation::IGreater;
         inInstructions->push(result);
     }
 
@@ -1160,7 +1159,7 @@ std::string assignPad(FloridaType input, char where){
         left->FLVMCodeGen(inInstructions);
         right->FLVMCodeGen(inInstructions);
         //Push back the instruction for >=
-        result.operation[0] = Operation::greateror;
+        result.operation[0] = Operation::IGreaterOr;
         inInstructions->push(result);
     }
 
@@ -1182,7 +1181,7 @@ std::string assignPad(FloridaType input, char where){
         left->FLVMCodeGen(inInstructions);
         right->FLVMCodeGen(inInstructions);
         //Push back the instruction for <
-        result.operation[0] = Operation::lesser;
+        result.operation[0] = Operation::ILesser;
         inInstructions->push(result);
     }
 
@@ -1204,7 +1203,7 @@ std::string assignPad(FloridaType input, char where){
         left->FLVMCodeGen(inInstructions);
         right->FLVMCodeGen(inInstructions);
         //Push back the instruction for <=
-        result.operation[0] = Operation::lesseror;
+        result.operation[0] = Operation::ILesserOr;
         inInstructions->push(result);
     }
 
@@ -1226,7 +1225,7 @@ std::string assignPad(FloridaType input, char where){
         left->FLVMCodeGen(inInstructions);
         right->FLVMCodeGen(inInstructions);
         //Push back the instruction for OR
-        result.operation[0] = Operation::ior;
+        result.operation[0] = Operation::IOr;
         inInstructions->push(result);
     }
 
@@ -1248,7 +1247,7 @@ std::string assignPad(FloridaType input, char where){
         left->FLVMCodeGen(inInstructions);
         right->FLVMCodeGen(inInstructions);
         //Push back the instruction for AND
-        result.operation[0] = Operation::iand;
+        result.operation[0] = Operation::IAnd;
         inInstructions->push(result);
     }
 
@@ -1268,7 +1267,7 @@ std::string assignPad(FloridaType input, char where){
         types result;
         right->FLVMCodeGen(inInstructions);
         //Push back the operation for !
-        result.operation[0] = Operation::inot;
+        result.operation[0] = Operation::INot;
         inInstructions->push(result);
     }
 
@@ -1297,6 +1296,7 @@ std::string assignPad(FloridaType input, char where){
         }
     }
 
+    //TO FIX
     void IfClass::FLVMCodeGen(Instructions* inInstructions){
         types result;
         //If there is not an else statement, generate code for just an if statement.
@@ -1305,19 +1305,31 @@ std::string assignPad(FloridaType input, char where){
             //Generate the instructions for the if condition.
             condition->FLVMCodeGen(inInstructions);
 
+            //Add the conditional jump instruction.
+            result.operation[0] = Operation::ICJump;
+            inInstructions->push(result);
+
             //Mark where the conditional jump instruction will be.
             int64_t cjumpPosition = inInstructions->instructionCount;
 
-            //Push a cjump instruction. This will be edited later.
+            //Push a conditional jump size. This will be edited later.
             result.fixed8 = cjumpPosition;
             inInstructions->push(result);
-            ifBody->FLVMCodeGen(inInstructions);
+
+            //Add the body of code, if any.
+            if(ifBody != nullptr){
+                ifBody->FLVMCodeGen(inInstructions);
+            }
 
             //Adjust the conditional jump destination.
             inInstructions->instructionSet[cjumpPosition].fixed8 = inInstructions->instructionCount - cjumpPosition;
         } else {
             //Generate the instructions for the if condition.
             condition->FLVMCodeGen(inInstructions);
+
+            //Add the conditional jump instruction.
+            result.operation[0] = Operation::ICJump;
+            inInstructions->push(result);
 
             //Mark where the conditional jump instruction will be.
             int64_t cjumpPosition = inInstructions->instructionCount;
@@ -1329,7 +1341,7 @@ std::string assignPad(FloridaType input, char where){
 
             //Push an unconditional jump to skip over the else statement.
             //This will only be reached if the first branch is taken.
-            result.operation[0] = Operation::Jump;
+            result.operation[0] = Operation::IJump;
             inInstructions->push(result);
 
             //Get the size of the instructions set after the if body is made.
@@ -1386,7 +1398,7 @@ std::string assignPad(FloridaType input, char where){
         }
 
         //Start the scope, because we don't want to continually assign/initialize.
-        result.operation[0] = Operation::NewScope;
+        result.operation[0] = Operation::INewScope;
         inInstructions->push(result);
         //Determine which scope this is for.
         result.fixed8 = body->whichScope;
@@ -1432,7 +1444,7 @@ std::string assignPad(FloridaType input, char where){
         inInstructions->instructionSet[cjumpPosition].fixed8 = inInstructions->instructionCount - cjumpPosition;
 
         //End the existing scope.
-        result.operation[0] = Operation::DeleteScope;
+        result.operation[0] = Operation::IDeleteScope;
         inInstructions->push(result);
         //Determine which scope this is for.
         result.fixed8 = body->whichScope;
@@ -1461,7 +1473,7 @@ std::string assignPad(FloridaType input, char where){
     void WhileLoop::FLVMCodeGen(Instructions* inInstructions){
         types result;
         //Generate the push instruction.
-        result.operation[0] = Operation::Push;
+        result.operation[0] = Operation::IPush;
         inInstructions->push(result);
         //Put the primitive next to it.
         result.fixed8 = body->whichScope;
@@ -1470,7 +1482,7 @@ std::string assignPad(FloridaType input, char where){
         //Start of the scope, granted while loops don't really need scopes.
         //This is just for consistency and ease of use.
         //It just makes work easier for me.
-        result.operation[0] = Operation::NewScope;
+        result.operation[0] = Operation::INewScope;
         inInstructions->push(result);
         //Don't forget which scope.
         result.fixed8 = body->whichScope;
@@ -1488,12 +1500,12 @@ std::string assignPad(FloridaType input, char where){
         //The location of the conditional jump statement.
         size_t here = inInstructions->instructionCount;    
         //Lay down the conditional jump.
-        result.operation[0] = Operation::CJump;
+        result.operation[0] = Operation::ICJump;
         inInstructions->push(result);
         //Generate the code for the body.
         body->body->FLVMCodeGen(inInstructions);
         //Place an unconditional jump to restart the loop.
-        result.operation[0] = Operation::Jump;
+        result.operation[0] = Operation::IJump;
         inInstructions->push(result);
         //The location to jump to.
         result.fixed8 = start;
@@ -1502,7 +1514,7 @@ std::string assignPad(FloridaType input, char where){
         inInstructions->instructionSet[here].fixed8 = inInstructions->instructionCount - here;
 
         //End the scope.
-        result.operation[0] = Operation::DeleteScope;
+        result.operation[0] = Operation::IDeleteScope;
         inInstructions->push(result);
         //Which scope is being deleted.
         result.fixed8 = body->whichScope;
@@ -1580,7 +1592,7 @@ std::string assignPad(FloridaType input, char where){
     void FunctionCall::FLVMCodeGen(Instructions* inInstructions){
         types result;
         //Create a new scope
-        result.operation[0] = Operation::NewScope;
+        result.operation[0] = Operation::INewScope;
         inInstructions->push(result);
         //Push which scope this is.
         result.fixed8 = function->code->whichScope;
@@ -1711,7 +1723,10 @@ std::string assignPad(FloridaType input, char where){
         }
 
         //Push the push operation to the stack.
-        result.operation[0] = Operation::Push;
+        result.operation[0] = Operation::IPush;
+        inInstructions->push(result);
+        //Push the type for debugging purposes.
+        result.type[0] = FloridaType::fixed8;
         inInstructions->push(result);
         //Push the offset size to the stack.
         result.fixed8 = offset;

@@ -2,15 +2,5 @@ object thing1{
     float8 first;
 }
 
-object thing2{
-    thing1 first;
-    float4 second;
-}
-
-object thing3{
-    thing1 first;
-    thing2 second;
-}
-
-thing3 y;
-y.second.second = 2 3.14;
+thing1 y;
+y.first = 2 3.14;

@@ -28,23 +28,64 @@ enum Operation : int16_t {
     //Jumps to the `fixed8` position in the instruction set.
     IJump,
 
-    //`fetch1`, `whichScope`, `stackOffset`
+    //`IFetch1`, `whichScope`, `stackOffset`
     IFetch1,
-    //`fetch2`, `whichScope`, `stackOffset`
+    //`IFetch2`, `whichScope`, `stackOffset`
     IFetch2,
-    //`fetch4`, `whichScope`, `stackOffset`
+    //`IFetch4`, `whichScope`, `stackOffset`
     IFetch4,
-    //`fetch8`, `whichScope`, `stackOffset`
+    //`IFetch8`, `whichScope`, `stackOffset`
     IFetch8,
+    //IFetchN will essentially "memcpy" `size` elements from within the stack to the top of the stack.
+    //`IFetchN`, `whichScope`, `stackOffset`, `size`
+    IFetchN,
 
-    //`assign1`, `whichScope`, `stackOffset`
+    //`IAssign1`, `whichScope`, `stackOffset`
     IAssign1,
-    //`assign2`, `whichScope`, `stackOffset`
+    //`IAssign2`, `whichScope`, `stackOffset`
     IAssign2,
-    //`assign4`, `whichSCope`, `stackOffset`
+    //`IAssign4`, `whichSCope`, `stackOffset`
+    //stack: `pointer`  
     IAssign4,
-    //`assign8`, `whichScope`, `stackOffset`
+    //`IAssign8`, `whichScope`, `stackOffset`
     IAssign8,
+    //IAssignN will essentially "memcpy" `size` elements from the top of the stack to within the stack.
+    //`IAssingN`, `whichScope`, `stackOffset`, `size`
+    IAssignN,
+
+    //`IHeapFetch1`, `index`
+    //stack: `pointer`
+    IHeapFetch1,
+    //`IHeapFetch2`, `index`
+    //stack: `pointer`
+    IHeapFetch2,
+    //`IHeapFetch4`, `index`
+    //stack: `pointer`
+    IHeapFetch4,
+    //`IHeapFetch8`
+    //stack: `pointer`
+    IHeapFetch8,
+    //IHeapFetchN will essentially "memcpy" `size` elements from the `pointer` to the top of the stack.
+    //`IHeapFetchN`, `size`
+    //stack: `pointer`
+    IHeapFetchN,
+
+    //`IHeapAssign1`, `index`
+    //stack: `pointer`
+    IHeapAssign1,
+    //`IHeapAssign2`, `index`
+    //stack: `pointer`
+    IHeapAssign2,
+    //`IHeapAssign4`, `index`
+    //stack: `pointer`
+    IHeapAssign4,
+    //`IHeapAssign8`
+    //stack: `pointer`
+    IHeapAssign8,
+    //IHeapAssignN will essentially "memcpy" `size` elements from the top of the stack to the `pointer`.
+    //`IHeapFetchN`, `size`
+    //stack: `pointer`
+    IHeapAssignN,
 
     //`Push`, `type`, `primitive`
     //Pushes the `primitive` to the stack. `type` is only for debugging.

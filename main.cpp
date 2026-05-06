@@ -91,7 +91,6 @@ int main(){
 	//Make the virtual machine.
 	FloridaVM Florida = FloridaVM(FloridaParser, 1000);
 	Florida.printAll();
-	std::cout << "\n";
 	//Debug the bytecode.
 
 	//Execute the instructions.
