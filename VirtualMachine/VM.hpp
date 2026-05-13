@@ -140,6 +140,7 @@ public:
         AST = (Node*) input.stack->AST;
         //Obtain all function definitions
         allFunctions = input.stack->allFunctions;
+        allScopes = input.stack->allScopes;
     }
 
     ~FloridaVM(){

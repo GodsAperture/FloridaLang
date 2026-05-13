@@ -557,6 +557,19 @@ std::string assignPad(FloridaType input, char where){
         return nullptr;
     }
 
+    Variable* Scope::getVariable(int64_t input){
+        Initialize* currentInitialize = allInitializations;
+        while(currentInitialize != nullptr){
+            if(currentInitialize->thisVariable->stackBytePosition == input){
+                return currentInitialize->thisVariable;
+            } else {
+                currentInitialize = currentInitialize->next;
+            }
+        }
+
+        return nullptr;
+    }
+
     ObjectClass* Scope::getObject(std::string_view input){
         //Go through all scopes as needed.
         Scope* currentScope = this;
@@ -1699,29 +1712,6 @@ std::string assignPad(FloridaType input, char where){
 
     void MemberAccess::FLVMCodeGen(Instructions* inInstructions){
         types result;
-        int64_t offset = 0;
-        MemberAccess* current = this;
-        Variable* last = nullptr;
-
-        //Determine how far into the stack the access chain goes.
-        while(true){
-            offset += current->left->stackBytePosition;
-
-            //Move to the next one, if possible.
-            current = dynamic_cast<MemberAccess*>(current->right);
-            if(current != nullptr){
-                continue;
-            }
-
-            //If a variable is found, then a break is gauaranteed.
-            last = dynamic_cast<Variable*>(right);
-            if(last != nullptr){
-                offset += last->stackBytePosition;
-            }
-
-            break;
-        }
-
         //Push the push operation to the stack.
         result.operation[0] = Operation::IPush;
         inInstructions->push(result);
@@ -1729,7 +1719,17 @@ std::string assignPad(FloridaType input, char where){
         result.type[0] = FloridaType::fixed8;
         inInstructions->push(result);
         //Push the offset size to the stack.
-        result.fixed8 = offset;
+        result.fixed8 = left->stackBytePosition;
+        inInstructions->push(result);
+        //Generating the code for the right.
+        right->FLVMCodeGen(inInstructions);
+        //Pushing an add instruction so I can add up the offsets.
+        result.operation[0] = Operation::IAdd;
+        inInstructions->push(result);
+        //Push the approppriate types for the VM.
+        //Push it twice because both number will be fixed8.
+        result.type[0] = FloridaType::fixed8;
+        inInstructions->push(result);
         inInstructions->push(result);
     }
 
@@ -1748,4 +1748,23 @@ std::string assignPad(FloridaType input, char where){
 
     void Dereference::FLVMCodeGen(Instructions* inInstructions){
         //Do nothing for now
+    }
+
+
+
+//Fetch
+    Fetch::Fetch(){
+        //Do nothing
+    }
+
+    void Fetch::ToString(std::string inLeft, std::string inRight){
+        body->ToString(inLeft, inRight);
+    }
+
+    void Fetch::FLVMCodeGen(Instructions* inInstructions){
+        types result;
+        //Generate the body of code
+        body->FLVMCodeGen(inInstructions);
+        //Generate a fetch instruction.
+        
     }

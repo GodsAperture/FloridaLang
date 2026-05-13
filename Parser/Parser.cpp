@@ -34,8 +34,9 @@ uint64_t Parser::allocationSize(FloridaType input){
 }
 
 void Parser::parse(){
+    Scope* result = scope();
     //The entire program is essentially a scope.
-    stack->AST = scope();
+    stack->AST = result;
     //Just a "useful" debugger to make sure I'm creating the AST properly.
     if(error){
         std::cout << "The parser failed to parse the full file.\n";
@@ -805,6 +806,20 @@ Node* Parser::AND(){
     return left;
 }
 
+void Parser::addScope(Scope* input){
+    Scope* currentScope = stack->allScopes;
+    if(stack->allScopes == nullptr){
+        stack->allScopes = input;
+        return;
+    }
+
+    while(currentScope->allScopes != nullptr){
+        currentScope = currentScope->allScopes;
+    }
+
+    currentScope->allScopes = input;
+}
+
 
 
 //Scopes
@@ -832,6 +847,8 @@ Scope* Parser::scope(){
     stack->currentScope = stack->currentScope->parent;
     //Make sure to assign each variable an appropriate size.
     newScope->byteAssign();
+    //Add it to all scopes.
+    addScope(newScope);
 
     return newScope;
 }
@@ -978,6 +995,7 @@ IfClass* Parser::IF(){
             ifScope->name = given[ifPosition].name;
             //Assign each variable a placement in the pack.
             ifScope->byteAssign();
+            addScope(ifScope);
         } else {
             error = true;
             //Error here
@@ -997,6 +1015,7 @@ IfClass* Parser::IF(){
             elseScope->name = given[elsePosition].name;
             //Assign each variable a placement on the stack.
             elseScope->byteAssign();
+            addScope(elseScope);
         } else {
             result = stack->alloc<IfClass>();
             result->condition = condition;
@@ -1032,6 +1051,7 @@ ForLoop* Parser::FOR(){
     if(check("for") & check("(")){
         //If the body is a nullptr, then the user provided no code.
         Scope* thisScope = stack->alloc<Scope>();
+        addScope(thisScope);
         thisScope->name = given[iter - 2].name;
 
         //Assign the scopes its unique scope value.
@@ -1400,6 +1420,7 @@ Function* Parser::function(){
         result->type = returnType;
         int64_t variableCount = 0;
         Scope* newScope = stack->alloc<Scope>();
+        addScope(newScope);
         newScope->associatedFunction = result;
         newScope->name = name;
         

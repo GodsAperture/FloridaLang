@@ -131,6 +131,7 @@ public:
     //Functions and methods
     Function* function();
     void functionAppend(Function* input);
+    void addScope(Scope* input);
     FunctionCall* call();
     ReturnClass* Return();
 

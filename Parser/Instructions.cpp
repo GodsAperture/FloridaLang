@@ -28,29 +28,38 @@ enum Operation : int16_t {
     //Jumps to the `fixed8` position in the instruction set.
     IJump,
 
-    //`IFetch1`, `whichScope`, `stackOffset`
+    //`IFetch1`, `whichScope`
+    //stack: `stackOffset`
     IFetch1,
-    //`IFetch2`, `whichScope`, `stackOffset`
+    //`IFetch2`, `whichScope`
+    //stack: `stackOffset`
     IFetch2,
     //`IFetch4`, `whichScope`, `stackOffset`
+    //stack: `stackOffset`
     IFetch4,
-    //`IFetch8`, `whichScope`, `stackOffset`
+    //`IFetch8`, `whichScope`
+    //stack: `stackOffset`
     IFetch8,
     //IFetchN will essentially "memcpy" `size` elements from within the stack to the top of the stack.
-    //`IFetchN`, `whichScope`, `stackOffset`, `size`
+    //`IFetchN`, `whichScope`, `size`
+    //stack: `stackOffset`
     IFetchN,
 
-    //`IAssign1`, `whichScope`, `stackOffset`
+    //`IAssign1`, `whichScope`
+    //stack: `stackOffset`
     IAssign1,
-    //`IAssign2`, `whichScope`, `stackOffset`
+    //`IAssign2`, `whichScope`
+    //stack: `stackOffset`
     IAssign2,
-    //`IAssign4`, `whichSCope`, `stackOffset`
-    //stack: `pointer`  
+    //`IAssign4`, `whichSCope`
+    //stack: `stackOffset`
     IAssign4,
-    //`IAssign8`, `whichScope`, `stackOffset`
+    //`IAssign8`, `whichScope`
+    //stack: `stackOffset`
     IAssign8,
     //IAssignN will essentially "memcpy" `size` elements from the top of the stack to within the stack.
-    //`IAssingN`, `whichScope`, `stackOffset`, `size`
+    //`IAssingN`, `whichScope`, `size`
+    //stack: `stackOffset`
     IAssignN,
 
     //`IHeapFetch1`, `index`

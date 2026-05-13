@@ -138,6 +138,9 @@ class Scope : public Node{
         
         //Gets the pointer to the variable in question.
         Variable* getVariable(std::string_view input);
+        //Grabs the pointer to the variable in question.
+        //The int64_t is the offset that the variable exists at.
+        Variable* getVariable(int64_t input);
         //Gets the pointer to the object in question.
         ObjectClass* getObject(std::string_view input);
         //Gets the pointer to the function in question.
@@ -534,7 +537,6 @@ public:
     MemberAccess();
     void ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
-    void AssignCodeGen(Instructions* inInstructions, Node* head);
 };
 
 class Dereference : public Node{
@@ -548,7 +550,6 @@ public:
     Dereference();
     void ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
-    void AssignCodeGen(Instructions* inInstructions, Node* head);
 };
 
 
@@ -559,6 +560,24 @@ class Pair{
 public:
     T* first = nullptr;
     U* second = nullptr;
+};
+
+class Fetch : public Node{
+public:
+    Node* body = nullptr;
+
+    Fetch();
+    void ToString(std::string inLeft, std::string inRight) override;
+    void FLVMCodeGen(Instructions* inInstructions) override;
+};
+
+class Assign : public Node{
+public:
+    Node* body = nullptr;
+
+    Assign();
+    void ToString(std::string inLeft, std::string inRight) override;
+    void FLVMCodeGen(Instructions* inInstructions) override;
 };
 
 #endif

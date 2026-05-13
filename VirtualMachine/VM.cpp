@@ -904,6 +904,7 @@ void FloridaVM::printAll(){
                 std::cout << "\tWhich scope: " << grab(current + 1).fixed8 << "\n";
                 std::cout << "\tStack offset: " << (grab(current + 2).fixed8 >> 3) << "\n";
                 std::cout << "\tByte offset: " << (bitmask1 & grab(current + 2).fixed8) << "\n";
+                std::cout << "\tVariable name: " << getScope(grab(current + 1).fixed8)->getVariable(grab(current + 2).fixed8 >> 3)->thisToken.getName() << "\n";
                 current += 3;
                 break;
             case Operation::IFetch2:
@@ -911,6 +912,7 @@ void FloridaVM::printAll(){
                 std::cout << "\tWhich scope: " << grab(current + 1).fixed8 << "\n";
                 std::cout << "\tStack offset: " << (grab(current + 2).fixed8 >> 2) << "\n";
                 std::cout << "\tByte offset: " << (bitmask2 & grab(current + 2).fixed8) << "\n";
+                std::cout << "\tVariable name: " << getScope(grab(current + 1).fixed8)->getVariable(grab(current + 2).fixed8 >> 3) << "\n";
                 current += 3;
                 break;
             case Operation::IFetch4:
@@ -918,12 +920,14 @@ void FloridaVM::printAll(){
                 std::cout << "\tWhich scope: " << grab(current + 1).fixed8 << "\n";
                 std::cout << "\tStack offset: " << (grab(current + 2).fixed8 >> 1) << "\n";
                 std::cout << "\tByte offset: " << (bitmask4 & grab(current + 2).fixed8) << "\n";
+                std::cout << "\tVariable name: " << getScope(grab(current + 1).fixed8)->getVariable(grab(current + 2).fixed8 >> 3) << "\n";
                 current += 3;
                 break;
             case Operation::IFetch8:
                 std::cout << instructionNumber << " " << "IFetch8:\n";
                 std::cout << "\tWhich scope: " << grab(current + 1).fixed8 << "\n";
                 std::cout << "\tStack offset: " << grab(current + 2).fixed8 << "\n";
+                std::cout << "\tVariable name: " << getScope(grab(current + 1).fixed8)->getVariable(grab(current + 2).fixed8 >> 3) << "\n";
                 current += 3;
                 break;
             case Operation::IAssign1:
@@ -931,6 +935,7 @@ void FloridaVM::printAll(){
                 std::cout << "\tWhich scope: " << grab(current + 1).fixed8 << "\n";
                 std::cout << "\tStack offset: " << (grab(current + 2).fixed8 >> 3) << "\n";
                 std::cout << "\tByte offset: " << (bitmask1 & grab(current + 2).fixed8) << "\n";
+                std::cout << "\tVariable name: " << getScope(grab(current + 1).fixed8)->getVariable(grab(current + 2).fixed8 >> 3) << "\n";
                 current += 3;
                 break;
             case Operation::IAssign2:
@@ -938,6 +943,7 @@ void FloridaVM::printAll(){
                 std::cout << "\tWhich scope: " << grab(current + 1).fixed8 << "\n";
                 std::cout << "\tStack offset: " << (grab(current + 2).fixed8 >> 2) << "\n";
                 std::cout << "\tByte offset: " << (bitmask2 & grab(current + 2).fixed8) << "\n";
+                std::cout << "\tVariable name: " << getScope(grab(current + 1).fixed8)->getVariable(grab(current + 2).fixed8 >> 3) << "\n";
                 current += 3;
                 break;
             case Operation::IAssign4:
@@ -945,12 +951,14 @@ void FloridaVM::printAll(){
                 std::cout << "\tWhich scope: " << grab(current + 1).fixed8 << "\n";
                 std::cout << "\tStack offset: " << (grab(current + 2).fixed8 >> 1) << "\n";
                 std::cout << "\tByte offset: " << (bitmask4 & grab(current + 2).fixed8) << "\n";
+                std::cout << "\tVariable name: " << getScope(grab(current + 1).fixed8)->getVariable(grab(current + 2).fixed8 >> 3) << "\n";
                 current += 3;
                 break;
             case Operation::IAssign8:
                 std::cout << instructionNumber << " " << "IAssign8:\n";
                 std::cout << "\tWhich scope: " << grab(current + 1).fixed8 << "\n";
                 std::cout << "\tStack offset: " << grab(current + 2).fixed8 << "\n";
+                std::cout << "\tVariable name: " << getScope(grab(current + 1).fixed8)->getVariable(grab(current + 2).fixed8 >> 3)->thisToken.getName() << "\n";
                 current += 3;
                 break;
             case Operation::IPush:
@@ -977,45 +985,41 @@ void FloridaVM::printAll(){
                 current += 3;
                 break;
             case Operation::IMultiply:
-                std::cout << instructionNumber << " " << "IMultiply:\n";
-                std::cout << "\tLeft type: ";
+                std::cout << instructionNumber << " " << "IMultiply:\n\t";
                 printFloridaType(grab(current + 1));
-                std::cout << "\n\tRight type: ";
+                std::cout << " * ";
                 printFloridaType(grab(current + 2));
-                std::cout << "\n\tResulting type: ";
+                std::cout << " -> ";
                 printFloridaType(ResultingType(grab(current + 1), grab(current + 2)));
                 std::cout << "\n";
                 current += 3;
                 break;
             case Operation::IDivide:
-                std::cout << instructionNumber << " " << "IDivide:\n";
-                std::cout << "\tLeft type: ";
+                std::cout << instructionNumber << " " << "IDivide:\n\t";
                 printFloridaType(grab(current + 1));
-                std::cout << "\n\tRight type: ";
+                std::cout << " / ";
                 printFloridaType(grab(current + 2));
-                std::cout << "\n\tResulting type: ";
+                std::cout << " -> ";
                 printFloridaType(ResultingType(grab(current + 1), grab(current + 2)));
                 std::cout << "\n";
                 current += 3;
                 break;
             case Operation::IAdd:
-                std::cout << instructionNumber << " " << "IAdd:\n";
-                std::cout << "\tLeft type: ";
+                std::cout << instructionNumber << " " << "IAdd:\n\t";
                 printFloridaType(grab(current + 1));
-                std::cout << "\n\tRight type: ";
+                std::cout << " + ";
                 printFloridaType(grab(current + 2));
-                std::cout << "\n\tResulting type: ";
+                std::cout << " -> ";
                 printFloridaType(ResultingType(grab(current + 1), grab(current + 2)));
                 std::cout << "\n";
                 current += 3;
                 break;
             case Operation::ISubtract:
-                std::cout << instructionNumber << " " << "ISubtract:\n";
-                std::cout << "\tLeft type: ";
+                std::cout << instructionNumber << " " << "ISubtract:\n\t";
                 printFloridaType(grab(current + 1));
-                std::cout << "\n\tRight type: ";
+                std::cout << " - ";
                 printFloridaType(grab(current + 2));
-                std::cout << "\n\tResulting type: ";
+                std::cout << " -> ";
                 printFloridaType(ResultingType(grab(current + 1), grab(current + 2)));
                 std::cout << "\n";
                 current += 3;
