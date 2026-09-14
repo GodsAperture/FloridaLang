@@ -150,30 +150,170 @@ inline types FloridaVM::next(){
 
 //Add the two numbers in question.
 inline types VMadd(types left, types right, types leftType, types rightType){
+    //If there is a pointer to a primitive, then it will be converted to its primitive.
+    switch(leftType.type[0]){
+        case FloridaType::ufixed1P:
+            left.ufixed1[0] = *left.ufixed1P;
+            leftType.type[0] = FloridaType::ufixed1;
+            break;
+        case FloridaType::ufixed2P:
+            left.ufixed2[0] = *left.ufixed2P;
+            leftType.type[0] = FloridaType::ufixed2;
+            break;
+        case FloridaType::ufixed4P:
+            left.ufixed4[0] = *left.ufixed4P;
+            leftType.type[0] = FloridaType::ufixed4;
+            break;
+        case FloridaType::ufixed8P:
+            left.ufixed8 = *left.ufixed8P;
+            leftType.type[0] = FloridaType::ufixed8;
+            break;
+        case FloridaType::fixed1P:
+            left.fixed1[0] = *left.fixed1P;
+            leftType.type[0] = FloridaType::fixed1;
+            break;
+        case FloridaType::fixed2P:
+            left.fixed2[0] = *left.fixed2P;
+            leftType.type[0] = FloridaType::fixed2;
+            break;
+        case FloridaType::fixed4P:
+            left.fixed4[0] = *left.fixed4P;
+            leftType.type[0] = FloridaType::fixed4;
+            break;
+        case FloridaType::fixed8P:
+            left.fixed8 = *left.fixed8P;
+            leftType.type[0] = FloridaType::fixed8;
+            break;
+        case FloridaType::float4P:
+            left.float4[0] = *left.float4P;
+            leftType.type[0] = FloridaType::float4;
+            break;
+        case FloridaType::float8P:
+            left.float8 = *left.float8P;
+            leftType.type[0] = FloridaType::float8;
+            break;
+        case FloridaType::BoolP:
+            left.boolean[0] = *left.float8P;
+            leftType.type[0] = FloridaType::float8;
+            break;
+    }
+
+    switch(rightType.type[0]){
+        case FloridaType::ufixed1P:
+            right.ufixed1[0] = *right.ufixed1P;
+            rightType.type[0] = FloridaType::ufixed1;
+            break;
+        case FloridaType::ufixed2P:
+            right.ufixed2[0] = *right.ufixed2P;
+            rightType.type[0] = FloridaType::ufixed2;
+            break;
+        case FloridaType::ufixed4P:
+            right.ufixed4[0] = *right.ufixed4P;
+            rightType.type[0] = FloridaType::ufixed4;
+            break;
+        case FloridaType::ufixed8P:
+            right.ufixed8 = *right.ufixed8P;
+            rightType.type[0] = FloridaType::ufixed8;
+            break;
+        case FloridaType::fixed1P:
+            right.fixed1[0] = *right.fixed1P;
+            rightType.type[0] = FloridaType::fixed1;
+            break;
+        case FloridaType::fixed2P:
+            right.fixed2[0] = *right.fixed2P;
+            rightType.type[0] = FloridaType::fixed2;
+            break;
+        case FloridaType::fixed4P:
+            right.fixed4[0] = *right.fixed4P;
+            rightType.type[0] = FloridaType::fixed4;
+            break;
+        case FloridaType::fixed8P:
+            right.fixed8 = *right.fixed8P;
+            rightType.type[0] = FloridaType::fixed8;
+            break;
+        case FloridaType::float4P:
+            right.float4[0] = *right.float4P;
+            rightType.type[0] = FloridaType::float4;
+            break;
+        case FloridaType::float8P:
+            right.float8 = *right.float8P;
+            rightType.type[0] = FloridaType::float8;
+            break;
+        case FloridaType::BoolP:
+            right.boolean[0] = *right.float8P;
+            rightType.type[0] = FloridaType::float8;
+            break;
+    }
+
     types result;
     switch(leftType.type[0]){
         case FloridaType::ufixed1:
             switch(rightType.type[0]){
                 case FloridaType::ufixed8:
-                    result.ufixed8 = ((uint64_t) left.ufixed1[0]) + right.ufixed8;
+                    result.ufixed8 = left.ufixed1[0] + right.ufixed8;
                     return result;
                 case FloridaType::ufixed4:
-                    result.ufixed4[0] = ((int32_t) left.ufixed1[0]) + right.ufixed4[0];
+                    result.ufixed4[0] = left.ufixed1[0] + right.ufixed4[0];
                     return result;
                 case FloridaType::ufixed2:
-                    result.fixed4[0] = ((int32_t) left.ufixed1[0]) + ((int32_t) right.ufixed2[0]);
+                    result.ufixed2[0] = left.ufixed1[0] + right.ufixed2[0];
+                    return result;
+                case FloridaType::ufixed1:
+                    result.ufixed1[0] = left.ufixed1[0] + right.ufixed1[0];
                     return result;
                 case FloridaType::fixed8:
-                    result.fixed8 = ((int64_t) left.ufixed1[0]) + right.fixed8;
+                    result.fixed8 = left.ufixed1[0] + right.fixed8;
                     return result;
                 case FloridaType::fixed4:
-                    result.fixed4[0] = left.fixed4[0] + right.fixed4[0];
+                    result.fixed4[0] = left.ufixed1[0] + right.fixed4[0];
+                    return result;
+                case FloridaType::fixed2:
+                    result.fixed2[0] = left.ufixed1[0] + right.fixed2[0];
+                    return result;
+                case FloridaType::fixed1:
+                    result.fixed1[0] = left.ufixed1[0] + right.fixed1[0];
                     return result;
                 case FloridaType::float8:
-                    result.float8 = left.float8 + right.float8;
+                    result.float8 = left.ufixed1[0] + right.float8;
                     return result;
                 case FloridaType::float4:
-                    result.float4[0] = left.float4[0] + right.float4[0];
+                    result.float4[0] = left.ufixed1[0] + right.float4[0];
+                    return result;
+                default:
+                    //This is an error.
+                    return result;
+            }
+        case FloridaType::ufixed2:
+            switch(rightType.type[0]){
+                case FloridaType::ufixed8:
+                    result.ufixed8 = left.ufixed2[0] + right.ufixed8;
+                    return result;
+                case FloridaType::ufixed4:
+                    result.ufixed4[0] = left.ufixed2[0] + right.ufixed4[0];
+                    return result;
+                case FloridaType::ufixed2:
+                    result.ufixed2[0] = left.ufixed2[0] + right.ufixed2[0];
+                    return result;
+                case FloridaType::ufixed1:
+                    result.ufixed2[0] = left.ufixed2[0] + right.ufixed1[0];
+                    return result;
+                case FloridaType::fixed8:
+                    result.fixed8 = left.ufixed2[0] + right.fixed8;
+                    return result;
+                case FloridaType::fixed4:
+                    result.fixed4[0] = left.ufixed2[0] + right.fixed4[0];
+                    return result;
+                case FloridaType::fixed2:
+                    result.fixed2[0] = left.ufixed2[0] + right.fixed2[0];
+                    return result;
+                case FloridaType::fixed1:
+                    result.fixed1[0] = left.ufixed2[0] + right.fixed1[0];
+                    return result;
+                case FloridaType::float8:
+                    result.float8 = left.ufixed2[0] + right.float8;
+                    return result;
+                case FloridaType::float4:
+                    result.float4[0] = left.ufixed2[0] + right.float4[0];
                     return result;
                 default:
                     //This is an error.

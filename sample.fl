@@ -4,5 +4,16 @@ object thing1{
     float8 third;
 }
 
+float8 fun(float8 x){
+    object thisThing{
+        ...
+    }
+    float8 fun1(float8 y){
+        return y * x;
+    }
+
+    return x * fun1(2.0);
+}
+
 thing1 y;
-y.third = 2 3.14;
+y.third = 2 * 3.14;

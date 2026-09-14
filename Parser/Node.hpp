@@ -27,7 +27,7 @@ class Node{
 public:
     FloridaType type = FloridaType::BadToken;
     Node(){
-        //Exists for the sake of the default constructor.    
+        //Exists for the sake of the default constructor.
     }
 
     Node(const Node&) = delete;
@@ -202,16 +202,6 @@ public:
     Node* right = nullptr;
 
     Subtraction();
-    void ToString(std::string inLeft, std::string inRight) override;
-    void FLVMCodeGen(Instructions* inInstructions) override;
-};
-
-class QuietMultiplication : public Node{
-public:
-    Node* left = nullptr;
-    Node* right = nullptr;
-
-    QuietMultiplication();
     void ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
 };
@@ -537,19 +527,21 @@ public:
     MemberAccess();
     void ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
+    int64_t offset();
 };
 
 class Dereference : public Node{
 public:
     //`left` will either be a `Variable` or a `MemberAccess`.
     Node* left = nullptr;
-    //`right` will be a `Dereference`, a `MemberAccess`, or a `Variable`.   
+    //`right` will be a `Dereference`, a `MemberAccess`, or a `Variable`.
     Node* right = nullptr;
     ObjectClass* objectType = nullptr;
     
     Dereference();
     void ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
+    int64_t offset();
 };
 
 
@@ -565,17 +557,9 @@ public:
 class Fetch : public Node{
 public:
     Node* body = nullptr;
+    int64_t whichScope = -1;
 
     Fetch();
-    void ToString(std::string inLeft, std::string inRight) override;
-    void FLVMCodeGen(Instructions* inInstructions) override;
-};
-
-class Assign : public Node{
-public:
-    Node* body = nullptr;
-
-    Assign();
     void ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
 };

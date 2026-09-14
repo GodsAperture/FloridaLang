@@ -21,6 +21,8 @@ enum FloridaType : int16_t {
 
     //Booleans
     Bool,
+    //Characters
+    Character,
 
     //Numbers
     ufixed1, ufixed2, ufixed4, ufixed8,
@@ -30,7 +32,17 @@ enum FloridaType : int16_t {
     //2.) These are objectively awful for floating point numbers.
     //Solution? Don't implement these as hardware instructions.
     /*Non-existent*/ float1, /*Non-existent*/ float2, float4, float8,
-    ufixedn, fixedn, floatn,
+
+    //Boolean pointer
+    BoolP,
+    //Character pointer
+    CharacterP,
+
+    //Number pointers
+    ufixed1P, ufixed2P, ufixed4P, ufixed8P,
+    fixed1P, fixed2P, fixed4P, fixed8P,
+    //The 1 and 2 byte floating point number don't exist.
+    float1P, float2P, float4P, float8P,
 
     //Keywords
     If, For, Break, While, Return, Object, Try, Catch, Typecast,

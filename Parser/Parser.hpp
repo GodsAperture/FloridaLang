@@ -116,10 +116,10 @@ public:
     Node* compare();
 
     //0 priority
-    Node* OR();             //left: AND(), right: AND()
+    Node* OR();             //left: AND(), right: OR()
 
     //1 priority
-    Node* AND();            //left: compare(), right: compare()
+    Node* AND();            //left: compare(), right: AND()
 
     //if statement
     IfClass* IF();

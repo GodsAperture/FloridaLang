@@ -37,15 +37,11 @@ std::string typeString(FloridaType input){
             return "fixed4";
         case FloridaType::fixed8:
             return "fixed8";
-        case FloridaType::fixedn:
-            return "fixedn";
     //Floating point numbers
         case FloridaType::float4:
             return "float4";
         case FloridaType::float8:
             return "float8";
-        case FloridaType::floatn:
-            return "floatn";
         default:
             return "NULLERROR";
     }
@@ -89,9 +85,6 @@ FloridaType typeReturn(std::string inString){
     if(inString == "fixed8"){
         return FloridaType::fixed8;
     }
-    if(inString == "fixedn"){
-        return FloridaType::fixedn;
-    }
     //Floating point numbers.
     if(inString == "float4"){
         return FloridaType::float4;
@@ -99,14 +92,17 @@ FloridaType typeReturn(std::string inString){
     if(inString == "float8"){
         return FloridaType::float8;
     }
-    if(inString == "floatn"){
-        return FloridaType::floatn;
-    }
     return FloridaType::Null;
+}
+
+inline int64_t sizeReturn(FloridaType input){
+    return (input - ufixed1) % 4;
 }
 
 int64_t allocationSize(FloridaType input){
         switch(input){
+            case FloridaType::Character:
+                return 1;
             case FloridaType::Bool:
                 return 1;
             case FloridaType::ufixed8:
@@ -959,36 +955,6 @@ std::string assignPad(FloridaType input, char where){
 
 
 
-//Quiet multiplication does not have a character
-    QuietMultiplication::QuietMultiplication(){
-        //Do nothing
-    }
-
-    void QuietMultiplication::ToString(std::string inLeft, std::string inRight){
-        left->ToString(inLeft, inRight);
-        std::cout << " ";
-        right->ToString(inLeft, inRight);
-    }
-
-    void QuietMultiplication::FLVMCodeGen(Instructions* inInstructions){
-        types result;
-
-        //Generate the code for the left hand object.
-        left->FLVMCodeGen(inInstructions);
-        //Generate the code for the right hand object.
-        right->FLVMCodeGen(inInstructions);
-        //Push the operation.
-        result.operation[0] = Operation::IMultiply;
-        inInstructions->push(result);
-        //Push the left type.
-        result.type[0] = left->type;
-        inInstructions->push(result);
-        //Push the right type.
-        result.type[0] = right->type;
-        inInstructions->push(result);
-    }
-
-
 //Multiply *
     Multiplication::Multiplication(){
         //Do nothing
@@ -1766,5 +1732,7 @@ std::string assignPad(FloridaType input, char where){
         //Generate the body of code
         body->FLVMCodeGen(inInstructions);
         //Generate a fetch instruction.
-        
+        result.operation[0] = Operation::IFetch;
+        inInstructions->push(result);
+
     }

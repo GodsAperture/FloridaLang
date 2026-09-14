@@ -22,19 +22,26 @@ enum Operation : int16_t {
     //Exits `fixed8` scopes.
     IReturn,
     //`CJump`, `fixed8`
+    //stack: `boolean`
     //Conditionally jumps `fixed8` positions forward in the instruction set.
     ICJump,
     //`Jump`, `fixed8`
     //Jumps to the `fixed8` position in the instruction set.
     IJump,
 
+    //`IFetch`, `whichScope`, `byteSize`
+    //stack: `stackOffset`
+    //`byteSize` is the size of the allocation to be fetched and placed on the stack.
+    //`stackOffset` encodes both the position in the stack (relative to some base pointer)
+    //and the byte offset (if the primitive is an array in the `types` union).
+    IFetch,
     //`IFetch1`, `whichScope`
     //stack: `stackOffset`
     IFetch1,
     //`IFetch2`, `whichScope`
     //stack: `stackOffset`
     IFetch2,
-    //`IFetch4`, `whichScope`, `stackOffset`
+    //`IFetch4`, `whichScope`
     //stack: `stackOffset`
     IFetch4,
     //`IFetch8`, `whichScope`
@@ -139,10 +146,13 @@ enum Operation : int16_t {
 //A convenient 8 byte section of memory that can represent everything I need.
 //Arrays of `types` will be used to represent objects in the stack and heap.
 union types{
+    //Characters.
+    char character[8];
+
     //Booleans.
     bool boolean[8];
 
-    //Floating point values;
+    //Floating point values.
     double float8;
     float float4[2];
 
@@ -152,11 +162,34 @@ union types{
     int16_t fixed2[4];
     int8_t fixed1[8];
 
-    //Unsigned fixed point values;
+    //Unsigned fixed point values.
     uint64_t ufixed8;
     uint32_t ufixed4[2];
     uint16_t ufixed2[4];
     uint8_t ufixed1[8];
+
+    //Character pointer.
+    char* characterP;
+
+    //Boolean pointer.
+    bool* booleanP;
+
+    //Floating point pointers.
+    double* float8P;
+    float* float4P;
+
+    //Fixed point pointers.
+    int64_t* fixed8P;
+    int32_t* fixed4P;
+    int16_t* fixed2P;
+    int8_t* fixed1P;
+
+    //Unsigned fixed point pointers.
+    uint64_t* ufixed8P;
+    uint32_t* ufixed4P;
+    uint16_t* ufixed2P;
+    uint8_t* ufixed1P;
+
 
     //Information
     FloridaType type[4];

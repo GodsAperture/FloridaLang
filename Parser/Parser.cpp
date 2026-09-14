@@ -166,17 +166,7 @@ Node* Parser::multiply(){
 
     //Failing here is not an error.
     if(!check("*")){
-        right = multiply();
-        if(right != nullptr){
-            QuietMultiplication* newResult = stack->alloc<QuietMultiplication>();
-            newResult->left = left;
-            newResult->right = right;
-            newResult->type = returnType(left->type, right->type);
-
-            return newResult;
-        } else {
-            return left;
-        }
+        return left;
     }
 
     right = multiply();
@@ -744,26 +734,13 @@ Node* Parser::OR(){
         return nullptr;
     }
 
-    if(!hasTokens(2)){
+    if(check("OR")){
         return left;
     }
 
-    while(check("OR")){
-        right = AND();
-        if(right == nullptr){
-            error = true;
-            errorStack.push_back("Expression expected after the OR operator.");
-            reset(start);
-            return nullptr;
-        }
-
-        result = stack->alloc<Or>();
-        result->left = left;
-        result->right = right;
-        result->type = FloridaType::Bool;
-
-        left = result;
-
+    right = OR();
+    if(right == nullptr){
+        return nullptr;
     }
 
     return left;
@@ -781,26 +758,13 @@ Node* Parser::AND(){
         return nullptr;
     }
 
-    if(!hasTokens(2)){
+    if(check("AND")){
         return left;
     }
 
-    while(check("AND")){
-        right = compare();
-        if(right == nullptr){
-            error = true;
-            errorStack.push_back("Expression expected after the AND operator.");
-            reset(start);
-            return nullptr;
-        }
-
-        result = stack->alloc<And>();
-        result->left = left;
-        result->right = right;
-        result->type = FloridaType::Bool;
-
-        left = result;
-
+    right = AND();
+    if(right == nullptr){
+        return nullptr;
     }
 
     return left;
