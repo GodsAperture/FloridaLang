@@ -115,7 +115,14 @@ Node* Parser::add(){
 
     right = add();
     if(right == nullptr){
-        //Error, TO DO
+        Error* error = stack->alloc<Error>();
+        error->column = given[iter - 1].column;
+        error->row = given[iter - 1].row;
+        error->errorMessage = "[" + std::to_string(given[iter - 1].row) + ", " + std::to_string(given[iter - 1].column) + "] Expected an expression after the + operator.";
+
+        unprocessedErrors.push_back(error);
+        result->right = error;
+        return result;
     }
 
     result = stack->alloc<Addition>();
@@ -143,7 +150,14 @@ Node* Parser::subtract(){
 
     right = subtract();
     if(right == nullptr){
-        //Error, TO DO
+        Error* error = stack->alloc<Error>();
+        error->column = given[iter - 1].column;
+        error->row = given[iter - 1].row;
+        error->errorMessage = "[" + std::to_string(given[iter - 1].row) + ", " + std::to_string(given[iter - 1].column) + "] Expected an expression after the - operator.";
+
+        unprocessedErrors.push_back(error);
+        result->right = error;
+        return result;
     }
 
     result = stack->alloc<Subtraction>();
@@ -171,7 +185,14 @@ Node* Parser::multiply(){
 
     right = multiply();
     if(right == nullptr){
-        //Error, TO DO
+        Error* error = stack->alloc<Error>();
+        error->column = given[iter - 1].column;
+        error->row = given[iter - 1].row;
+        error->errorMessage = "[" + std::to_string(given[iter - 1].row) + ", " + std::to_string(given[iter - 1].column) + "] Expected an expression after the * operator.";
+
+        unprocessedErrors.push_back(error);
+        result->right = error;
+        return result;
     }
 
     result = stack->alloc<Multiplication>();
@@ -199,7 +220,14 @@ Node* Parser::divide(){
 
     right = divide();
     if(right == nullptr){
-        //Error, TO DO
+        Error* error = stack->alloc<Error>();
+        error->column = given[iter - 1].column;
+        error->row = given[iter - 1].row;
+        error->errorMessage = "[" + std::to_string(given[iter - 1].row) + ", " + std::to_string(given[iter - 1].column) + "] Expected an expression after the / operator.";
+
+        unprocessedErrors.push_back(error);
+        result->right = error;
+        return result;
     }
 
     result = stack->alloc<Division>();
@@ -339,7 +367,7 @@ Node* Parser::primitive(){
             return result;
         }
     }
-    FunctionCall* thisCall = call();
+    Node* thisCall = call();
     if(thisCall != nullptr){
         return thisCall;
     }
@@ -376,9 +404,14 @@ Node* Parser::equal(){
 
     right = add();
     if(right == nullptr){
-        //This means that the expression is malformed.
-        error = true;
-        return nullptr;
+        Error* error = stack->alloc<Error>();
+        error->column = given[iter - 1].column;
+        error->row = given[iter - 1].row;
+        error->errorMessage = "[" + std::to_string(given[iter - 1].row) + ", " + std::to_string(given[iter - 1].column) + "] Expected an expression after the == operator.";
+
+        unprocessedErrors.push_back(error);
+        result->right = error;
+        return result;
     }
 
     FloridaType resultType = returnType(left->type, right->type);
@@ -432,9 +465,14 @@ Node* Parser::notEqual(){
 
     right = add();
     if(right == nullptr){
-        //This means that the expression is malformed.
-        error = true;
-        return nullptr;
+        Error* error = stack->alloc<Error>();
+        error->column = given[iter - 1].column;
+        error->row = given[iter - 1].row;
+        error->errorMessage = "[" + std::to_string(given[iter - 1].row) + ", " + std::to_string(given[iter - 1].column) + "] Expected an expression after the != operator.";
+
+        unprocessedErrors.push_back(error);
+        result->right = error;
+        return result;
     }
 
     FloridaType resultType = returnType(left->type, right->type);
@@ -486,9 +524,14 @@ Node* Parser::greaterThan(){
 
     right = add();
     if(right == nullptr){
-        //This means that the expression is malformed.
-        error = true;
-        return nullptr;
+        Error* error = stack->alloc<Error>();
+        error->column = given[iter - 1].column;
+        error->row = given[iter - 1].row;
+        error->errorMessage = "[" + std::to_string(given[iter - 1].row) + ", " + std::to_string(given[iter - 1].column) + "] Expected an expression after the > operator.";
+
+        unprocessedErrors.push_back(error);
+        result->right = error;
+        return result;
     }
 
     FloridaType resultType = returnType(left->type, right->type);
@@ -540,9 +583,14 @@ Node* Parser::greaterThanOr(){
 
     right = add();
     if(right == nullptr){
-        //This means that the expression is malformed.
-        error = true;
-        return nullptr;
+        Error* error = stack->alloc<Error>();
+        error->column = given[iter - 1].column;
+        error->row = given[iter - 1].row;
+        error->errorMessage = "[" + std::to_string(given[iter - 1].row) + ", " + std::to_string(given[iter - 1].column) + "] Expected an expression after the >= operator.";
+
+        unprocessedErrors.push_back(error);
+        result->right = error;
+        return result;
     }
 
     FloridaType resultType = returnType(left->type, right->type);
@@ -594,9 +642,14 @@ Node* Parser::lessThan(){
 
     right = add();
     if(right == nullptr){
-        //This means that the expression is malformed.
-        error = true;
-        return nullptr;
+        Error* error = stack->alloc<Error>();
+        error->column = given[iter - 1].column;
+        error->row = given[iter - 1].row;
+        error->errorMessage = "[" + std::to_string(given[iter - 1].row) + ", " + std::to_string(given[iter - 1].column) + "] Expected an expression after the < operator.";
+
+        unprocessedErrors.push_back(error);
+        result->right = error;
+        return result;
     }
 
     FloridaType resultType = returnType(left->type, right->type);
@@ -648,9 +701,14 @@ Node* Parser::lessThanOr(){
 
     right = add();
     if(right == nullptr){
-        //This means that the expression is malformed.
-        error = true;
-        return nullptr;
+        Error* error = stack->alloc<Error>();
+        error->column = given[iter - 1].column;
+        error->row = given[iter - 1].row;
+        error->errorMessage = "[" + std::to_string(given[iter - 1].row) + ", " + std::to_string(given[iter - 1].column) + "] Expected an expression after the <= operator.";
+
+        unprocessedErrors.push_back(error);
+        result->right = error;
+        return result;
     }
 
     FloridaType resultType = returnType(left->type, right->type);
@@ -740,7 +798,14 @@ Node* Parser::OR(){
 
     right = OR();
     if(right == nullptr){
-        return nullptr;
+        Error* error = stack->alloc<Error>();
+        error->column = given[iter - 1].column;
+        error->row = given[iter - 1].row;
+        error->errorMessage = "[" + std::to_string(given[iter - 1].row) + ", " + std::to_string(given[iter - 1].column) + "] Expected an expression after the OR operator.";
+
+        unprocessedErrors.push_back(error);
+        result->right = error;
+        return result;
     }
 
     return left;
@@ -764,7 +829,14 @@ Node* Parser::AND(){
 
     right = AND();
     if(right == nullptr){
-        return nullptr;
+        Error* error = stack->alloc<Error>();
+        error->column = given[iter - 1].column;
+        error->row = given[iter - 1].row;
+        error->errorMessage = "[" + std::to_string(given[iter - 1].row) + ", " + std::to_string(given[iter - 1].column) + "] Expected an expression after the AND operator.";
+
+        unprocessedErrors.push_back(error);
+        result->right = error;
+        return result;
     }
 
     return left;
@@ -818,37 +890,19 @@ Scope* Parser::scope(){
 }
 
 Body* Parser::body(){
-    Node* current = nullptr;
-    Body* currentBody = nullptr;
-    Body* bodyStart = stack->alloc<Body>();
+    Node* temp = nullptr;
     
     //Look out for anything familiar such as assignments or if statements.
-    current = commonExpressions();
-    if(current == nullptr){
+    temp = commonExpressions();
+    if(temp == nullptr){
         return nullptr;
     }
-    Body* tempBody = stack->alloc<Body>();
-    tempBody->current = current;
-    bodyStart->append(tempBody);
-    //std::cout << current->ToString(">>", ";") << "\n";
-    //Treat the Body* as a "linked list."
-    currentBody = bodyStart;
+    Body* result = stack->alloc<Body>();
+    result->current = temp;
+    //Recursively call to check for another body of code.
+    result->next = body();
 
-    //So long as the program has tokens as the most recent check for
-    //a expression hasn't turned up nothing, keep checking.
-    while(hasTokens() & (currentBody != nullptr)){
-        current = commonExpressions();
-        if(current == nullptr){
-            return bodyStart;
-        }
-        //Append code to the "linked list" of expressions.
-        currentBody = stack->alloc<Body>();
-        currentBody->current = current;
-        //Move down the "linked list."
-        bodyStart->append(currentBody);
-    }
-
-    return bodyStart;
+    return result;
 }
 
 //Convenient method
@@ -878,10 +932,13 @@ Node* Parser::commonExpressions(){
     result = assignment();
     if(result != nullptr){
         if(!check(";")){
-            error = true;
-            std::cout << "Warning: Missing ';' expected at [Line: " + std::to_string(given[iter - 1].row) + "] for the expression:\n\t ";
-            result->ToString("", "");
-            std::cout << "\n\n";
+            Error* error = stack->alloc<Error>();
+            error->column = given[iter - 1].column;
+            error->row = given[iter - 1].row;
+            error->errorMessage = "[" + std::to_string(given[iter - 1].row) + ", " + std::to_string(given[iter - 1].column) + "] Expected a ; after the expression.";
+
+            unprocessedErrors.push_back(error);
+            return error;
         }
         return result;
     }
@@ -889,10 +946,13 @@ Node* Parser::commonExpressions(){
     result = initialize();
     if(result != nullptr){
         if(!check(";")){
-            error = true;
-            std::cout << "Warning: Missing ';' expected at [Line: " + std::to_string(given[iter - 1].row) + "] for the expression:\n\t ";
-            result->ToString("", "");
-            std::cout << "\n\n";
+            Error* error = stack->alloc<Error>();
+            error->column = given[iter - 1].column;
+            error->row = given[iter - 1].row;
+            error->errorMessage = "[" + std::to_string(given[iter - 1].row) + ", " + std::to_string(given[iter - 1].column) + "] Expected a ; after the expression.";
+
+            unprocessedErrors.push_back(error);
+            return error;
         }
         return result;
     }
@@ -943,7 +1003,7 @@ Node* Parser::commonStatements(){
 }
 
 //if statement
-IfClass* Parser::IF(){ 
+Node* Parser::IF(){ 
     Node* condition = nullptr;
     IfClass* result = nullptr;
 
@@ -961,14 +1021,21 @@ IfClass* Parser::IF(){
             ifScope->byteAssign();
             addScope(ifScope);
         } else {
-            error = true;
-            //Error here
-            return nullptr;
+            Error* error = stack->alloc<Error>();
+            error->column = given[iter - 1].column;
+            error->row = given[iter - 1].row;
+            error->errorMessage = "[" + std::to_string(given[iter - 1].row) + ", " + std::to_string(given[iter - 1].column) + "] Expected a boolean expression for the if statement.";
+
+            unprocessedErrors.push_back(error);
         }
 
         if(!check("}")){
-            std::cout << "Missing } expected on line: " << given[iter].row << "\n";
-            error = true;
+            Error* error = stack->alloc<Error>();
+            error->column = given[iter - 1].column;
+            error->row = given[iter - 1].row;
+            error->errorMessage = "[" + std::to_string(given[iter - 1].row) + ", " + std::to_string(given[iter - 1].column) + "] Expected a } after the expression.";
+
+            unprocessedErrors.push_back(error);
         }
 
         //Check for an else statement.
@@ -989,8 +1056,12 @@ IfClass* Parser::IF(){
         }
 
         if(!check("}")){
-            std::cout << "Missing } expected on line: " << given[iter].row << "\n";
-            error = true;
+            Error* error = stack->alloc<Error>();
+            error->column = given[iter - 1].column;
+            error->row = given[iter - 1].row;
+            error->errorMessage = "[" + std::to_string(given[iter - 1].row) + ", " + std::to_string(given[iter - 1].column) + "] Expected a } after the expression.";
+
+            unprocessedErrors.push_back(error);
         }
 
         result = stack->alloc<IfClass>();
@@ -1006,9 +1077,9 @@ IfClass* Parser::IF(){
 }
 
 //for loop
-ForLoop* Parser::FOR(){
+Node* Parser::FOR(){
     //These first three can remain nullptrs.
-    Initialize* initializeAssignVar = nullptr;
+    Node* initializeAssignVar = nullptr;
     Node* condition = nullptr;
     Node* incrementer = nullptr;
 
@@ -1090,7 +1161,7 @@ ForLoop* Parser::FOR(){
 }
 
 //while loop
-WhileLoop* Parser::WHILE(){
+Node* Parser::WHILE(){
     if(check("while") & check("(")){
         std::string_view name = given[iter - 2].name;
         Node* condition = nullptr;
@@ -1136,7 +1207,7 @@ WhileLoop* Parser::WHILE(){
 }
 
 //Variable stuff
-Variable* Parser::variable(){
+Node* Parser::variable(){
     if(!hasTokens(2)){
         return nullptr;
     }
@@ -1151,7 +1222,7 @@ Variable* Parser::variable(){
     return nullptr;
 }
 
-Initialize* Parser::initialize(){
+Node* Parser::initialize(){
     if(!hasTokens(3)){
         return nullptr;
     }
@@ -1190,6 +1261,14 @@ Initialize* Parser::initialize(){
         if(bool3){
             iter++;
             result->code = commonStatements();
+        } else {
+            Error* error = stack->alloc<Error>();
+            error->column = given[iter - 1].column;
+            error->row = given[iter - 1].row;
+            error->errorMessage = "[" + std::to_string(given[iter - 1].row) + ", " + std::to_string(given[iter - 1].column) + "] Expected an expression after the = operator.";
+
+            unprocessedErrors.push_back(error);
+            return error;
         }
 
         return result;
@@ -1199,9 +1278,10 @@ Initialize* Parser::initialize(){
     return nullptr;
 }
 
-Assignment* Parser::assignment(){
+Node* Parser::assignment(){
     Start start = currInfo();
-    Node* left = dereference(stack->currentScope).first;
+
+    Node* left = dereference(stack->currentScope);
     if(left == nullptr){
         return nullptr;
     }
@@ -1213,18 +1293,24 @@ Assignment* Parser::assignment(){
             result = stack->alloc<Assignment>();
             result->left = left;
             result->right = right;
+
             return result;
         }
 
-        reset(start);
-        return nullptr;
+        Error* error = stack->alloc<Error>();
+        error->column = given[iter - 1].column;
+        error->row = given[iter - 1].row;
+        error->errorMessage = "[" + std::to_string(given[iter - 1].row) + ", " + std::to_string(given[iter - 1].column) + "] Expected an expression after the = operator.";
+
+        unprocessedErrors.push_back(error);
+        return error;
     }
 
     reset(start);
     return nullptr;
 }
 
-ObjectClass* Parser::object(){
+Node* Parser::object(){
     if(!hasTokens(3)){
         return nullptr;
     }
@@ -1273,74 +1359,57 @@ ObjectClass* Parser::object(){
 
 }
 
-Pair<Node, Scope> Parser::dereference(Scope* input){
-    Pair<Node, Scope> left;
-    Pair<Node, Scope> right;
-    Pair<Node, Scope> result;
-    Dereference* subresult = nullptr;
+Node* Parser::dereference(Scope* input){
+    Node* left = nullptr;
+    Node* right = nullptr;
+    Dereference* result = nullptr;
 
     left = memberAccess(input);
-    if(left.first == nullptr){
-        return result;
+    if(left == nullptr){
+        return nullptr;
     }
 
     if(!check("->")){
         return left;
     }
 
-    right = dereference(left.second);
-    if(right.first == nullptr){
+    right = dereference(input);
+    if(right == nullptr){
         //Error
     }
 
-    subresult = stack->alloc<Dereference>();
-    subresult->left = left.first;
-    subresult->right = right.first;
-
-    result.first = subresult;
-    result.second = right.second;
-    if(result.first != nullptr){
-        result.first->type = left.first->type;
-    }
+    result = stack->alloc<Dereference>();
+    result->left = left;
+    result->right = right;
 
     return result;
 
 }
 
-Pair<Node, Scope> Parser::memberAccess(Scope* inputOffset){
-    Variable* left;
-    Pair<Node, Scope> right;
-    Pair<Node, Scope> result;
-    MemberAccess* subresult = nullptr;
+Node* Parser::memberAccess(Scope* input){
+    Variable* left = nullptr;
+    Node* right = nullptr;
+    MemberAccess* result;
 
-    if(inputOffset->hasVariable(given[iter].name)){
-        left = inputOffset->getVariable(given[iter].name);
+    if(input->hasVariable(given[iter].name)){
+        left = input->getVariable(given[iter].name);
         if(left == nullptr){
             return result;
         }
         iter++;
 
         if(!check(".")){
-            right.first = left;
-            if(left->objectType != nullptr){
-                right.second = left->objectType->code;
-            }
-            right.first->type = left->type;
-
             return right;
         }
 
         right = memberAccess(left->objectType->code);
-        if(right.first == nullptr){
+        if(right == nullptr){
             //Error
         }
 
-        subresult = stack->alloc<MemberAccess>();
-        subresult->left = left;
-        subresult->right = right.first;
-
-        result.first = subresult;
-        result.second = right.second;
+        result = stack->alloc<MemberAccess>();
+        result->left = left;
+        result->right = right;
 
         return result;
     }
@@ -1352,7 +1421,7 @@ Pair<Node, Scope> Parser::memberAccess(Scope* inputOffset){
 
 
 //Function stuff
-Function* Parser::function(){
+Node* Parser::function(){
     if(!hasTokens(3)){
         return nullptr;
     }
@@ -1401,6 +1470,7 @@ Function* Parser::function(){
         iter++;
         iter++;
 
+        //Rewrite as an arguments() method.
         Initialize* hasInitialization = initialize();
         if(hasInitialization->thisVariable->objectType == nullptr){
             firstHalfStackSize += allocationSize(hasInitialization->thisVariable->type);
@@ -1452,7 +1522,54 @@ Function* Parser::function(){
 
 }
 
-FunctionCall* Parser::call(){
+Node* Parser::arguments(){
+    Arguments* result = nullptr;
+    Node* argument = nullptr;
+
+    argument = returnableExpressions();
+    //Check to see if there was an expression.
+    if(argument != nullptr){
+        result->current = argument;
+        if(check(",")){
+            result->next = arguments();
+        }
+        return result;
+    }
+    return nullptr;
+}
+
+Node* Parser::returnableExpressions(){
+    Node* result;
+
+    result = call();
+    if(result != nullptr){
+        return result;
+    }
+
+    result = assignment();
+    if(result != nullptr){
+        if(!check(";")){
+            Error* error = stack->alloc<Error>();
+            error->column = given[iter - 1].column;
+            error->row = given[iter - 1].row;
+            error->errorMessage = "[" + std::to_string(given[iter - 1].row) + ", " + std::to_string(given[iter - 1].column) + "] Expected a ; after the expression.";
+
+            unprocessedErrors.push_back(error);
+            return error;
+        }
+        return result;
+    }
+
+    result = OR();
+    if(result != nullptr){
+        return result;
+    }
+
+    //Reaching this IS a problem.
+    return nullptr;
+}
+
+Node* Parser::call(){
     if(!hasTokens(3)){
         return nullptr;
     }
@@ -1480,18 +1597,8 @@ FunctionCall* Parser::call(){
         result->function = tempScope->funGet(name);
         //Adjust the scope here.
         stack->currentScope = result->function->code;
-        Arguments* arguments = stack->alloc<Arguments>();
-        result->arguments = arguments;
-        arguments->current = commonStatements();
+        result->arguments = arguments();
         
-        //Check for all arguments.
-        while(check(",")){
-            //Move along the "linked list" of arguments.
-            arguments->next = stack->alloc<Arguments>();
-            arguments->current = commonStatements();
-            arguments = arguments->next;
-        }
-
         if(!check(")")){
             error = true;
             return nullptr;
@@ -1508,7 +1615,7 @@ FunctionCall* Parser::call(){
 
 }
 
-ReturnClass* Parser::Return(){
+Node* Parser::Return(){
     if(!hasTokens(2)){
         return nullptr;
     }

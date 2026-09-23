@@ -1718,21 +1718,15 @@ std::string assignPad(FloridaType input, char where){
 
 
 
-//Fetch
-    Fetch::Fetch(){
+//Error messages
+    Error::Error(){
         //Do nothing
     }
 
-    void Fetch::ToString(std::string inLeft, std::string inRight){
-        body->ToString(inLeft, inRight);
+    void Error::ToString(std::string inLeft, std::string inRight){
+        
     }
 
-    void Fetch::FLVMCodeGen(Instructions* inInstructions){
-        types result;
-        //Generate the body of code
-        body->FLVMCodeGen(inInstructions);
-        //Generate a fetch instruction.
-        result.operation[0] = Operation::IFetch;
-        inInstructions->push(result);
-
+    void Dereference::FLVMCodeGen(Instructions* inInstructions){
+        //Do nothing
     }

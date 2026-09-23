@@ -45,6 +45,10 @@ public:
     std::vector<std::string> errorStack;
     //The given vector of tokens to be parsed into a program.
     std::vector<Token> given;
+    //The vector that contains all errors.
+    std::vector<Error*> errors;
+    //The vector that contains all unprocessed errors.
+    std::vector<Error*> unprocessedErrors;
     //The StackAllocator keeps my program slightly tidier.
     StackAllocator* stack = nullptr;
     //scopeCount will be used for the VM to keep track of uniqueScopes.
@@ -64,19 +68,19 @@ public:
 //Variables and related operations
 
     //Check for a variable.
-    Variable* variable();
+    Node* variable();
     //Check for an initialization with or without assignment.
-    Initialize* initialize();
+    Node* initialize();
     //Check for an assignment.
-    Assignment* assignment();
+    Node* assignment();
     //Check for a class declaration.
-    ObjectClass* object();
+    Node* object();
     //Determine the size of an object.
     uint64_t allocationSize(FloridaType input);
     //Convenient method for getting a dereference or a member access.
-    Pair<Node, Scope> dereference(Scope* input);
+    Node* dereference(Scope* input);
     //Convenient method for getting a member access.
-    Pair<Node, Scope> memberAccess(Scope* input);
+    Node* memberAccess(Scope* input);
 
 //Tree related functions.
 
@@ -88,6 +92,8 @@ public:
     Node* commonExpressions();
     //Small subexpressions.
     Node* commonStatements();
+    //Guaranteed returnable expressions.
+    Node* returnableExpressions();
     bool hasTokens();
     bool hasTokens(int64_t input);
 
@@ -122,18 +128,19 @@ public:
     Node* AND();            //left: compare(), right: AND()
 
     //if statement
-    IfClass* IF();
+    Node* IF();
 
     //loops
-    ForLoop* FOR();
-    WhileLoop* WHILE();
+    Node* FOR();
+    Node* WHILE();
 
     //Functions and methods
-    Function* function();
+    Node* function();
+    Node* arguments();
     void functionAppend(Function* input);
     void addScope(Scope* input);
-    FunctionCall* call();
-    ReturnClass* Return();
+    Node* call();
+    Node* Return();
 
     //TO-DO
     //This is so I can "pretty print" the number of errors found.
@@ -162,6 +169,8 @@ public:
     }
 
     Parser(std::vector<Token> inTokens, long size){
+        errors = std::vector<Error*>();
+        unprocessedErrors = std::vector<Error*>();
         stack = new StackAllocator(size);
         //This is the Global scope.
         stack->currentScope = nullptr;

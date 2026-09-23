@@ -432,7 +432,7 @@ public:
 class Arguments : public Node{
 public:
     Node* current = nullptr;
-    Arguments* next = nullptr;
+    Node* next = nullptr;
 
     Arguments();
     void ToString(std::string inLeft, std::string inRight) override;
@@ -443,7 +443,7 @@ public:
 class FunctionCall : public Node{
 public:
     Function* function = nullptr;
-    Arguments* arguments = nullptr;
+    Node* arguments = nullptr;
     int64_t argumentByteSize = 0;
 
     FunctionCall();
@@ -546,20 +546,13 @@ public:
 
 
 
-//This class is for convenience.
-template<typename T, typename U>
-class Pair{
+class Error : public Node{
 public:
-    T* first = nullptr;
-    U* second = nullptr;
-};
+    int64_t row = -1;
+    int64_t column = -1;
+    std::string errorMessage = "";
 
-class Fetch : public Node{
-public:
-    Node* body = nullptr;
-    int64_t whichScope = -1;
-
-    Fetch();
+    Error();
     void ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
 };
