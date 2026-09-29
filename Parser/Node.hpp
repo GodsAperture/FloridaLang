@@ -409,6 +409,8 @@ public:
     bool returnable = false;
     //This is where the instruction set begins.
     int64_t position = -1;
+    //This is where all of the function arguments (if any) are.
+    Node* allArguments = nullptr;
     //This is how many arguments the function has.
     int64_t argumentCount = 0;
     //This is the full function

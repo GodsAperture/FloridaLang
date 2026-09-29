@@ -122,10 +122,10 @@ public:
     Node* compare();
 
     //0 priority
-    Node* OR();             //left: AND(), right: OR()
+    Node* OR();
 
     //1 priority
-    Node* AND();            //left: compare(), right: AND()
+    Node* AND();
 
     //if statement
     Node* IF();
@@ -137,6 +137,8 @@ public:
     //Functions and methods
     Node* function();
     Node* arguments();
+    //Generate a linked list of initializations.
+    Node* initializeArguments();
     void functionAppend(Function* input);
     void addScope(Scope* input);
     Node* call();

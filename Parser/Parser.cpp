@@ -239,6 +239,7 @@ Node* Parser::divide(){
 }
 
 Node* Parser::primitive(){
+    Node* pointer = nullptr;
     if(!hasTokens(1)){
         return nullptr;
     }
@@ -251,17 +252,9 @@ Node* Parser::primitive(){
 
         return expression;
     }
-    //Check for expression within parentheses.
-    if(check("(")){
-        Parentheses* expression = stack->alloc<Parentheses>();
-        Node* subexpression = add();
-        expression->subexpression = subexpression;
-        //Increment for the right parenthesis;
-        if(!check(")")){
-            errorStack.push_back("Missing ')' on line " + std::to_string(given[iter].row));
-        }
-
-        return expression;
+    pointer = parentheses();
+    if(pointer != nullptr){
+        return pointer;
     }
 
 
@@ -367,15 +360,33 @@ Node* Parser::primitive(){
             return result;
         }
     }
+    //Check for function calls.
     Node* thisCall = call();
     if(thisCall != nullptr){
         return thisCall;
     }
+    //Check for variables.
     Node* thisVariable = variable();
     if(thisVariable != nullptr){
         return thisVariable;
     }
     //No primitives were found.
+    return nullptr;
+}
+
+Node* Parser::parentheses(){
+    Parentheses* result = nullptr;
+    if(check("(")){
+        result = stack->alloc<Parentheses>();
+
+        result->subexpression = arguments();
+        if(check(")")){
+            return result;
+        } else {
+            //Error
+            return result;
+        }
+    }
     return nullptr;
 }
 
@@ -1451,7 +1462,6 @@ Node* Parser::function(){
         stack->allFunctions = result;
 
         result->type = returnType;
-        int64_t variableCount = 0;
         Scope* newScope = stack->alloc<Scope>();
         addScope(newScope);
         newScope->associatedFunction = result;
@@ -1470,26 +1480,8 @@ Node* Parser::function(){
         iter++;
         iter++;
 
-        //Rewrite as an arguments() method.
-        Initialize* hasInitialization = initialize();
-        if(hasInitialization->thisVariable->objectType == nullptr){
-            firstHalfStackSize += allocationSize(hasInitialization->thisVariable->type);
-        } else {
-            firstHalfStackSize += hasInitialization->thisVariable->objectType->memorySize;
-        }
-        if(hasInitialization != nullptr){
-            variableCount++;
-            //Check for more initializations.
-            while(check(",")){
-                hasInitialization = initialize();
-                variableCount++;
-                if(hasInitialization->thisVariable->objectType == nullptr){
-                    firstHalfStackSize += allocationSize(hasInitialization->thisVariable->type);
-                } else {
-                    firstHalfStackSize += hasInitialization->thisVariable->objectType->memorySize;
-                }
-            }
-        }
+        //Get all argument initializations, if any.
+        result->allArguments = initializeArguments();
 
         if(!check(")") & !check("{")){
             error = true;
@@ -1498,8 +1490,6 @@ Node* Parser::function(){
 
         //It doesn't matter if this is a nullptr or not.
         result->code->body = body();
-        //How many arguments are expected in the function.
-        result->argumentCount = variableCount;
 
         if(!check("}")){
             error = true;
@@ -1520,6 +1510,23 @@ Node* Parser::function(){
 
     return nullptr;
 
+}
+
+Node* Parser::initializeArguments(){
+    Arguments* result = nullptr;
+    Node* subresult = nullptr;
+
+    subresult = initialize();
+    if(subresult != nullptr){
+        result->current = subresult;
+        if(check(",")){
+            result->next = initializeArguments();
+        }
+
+        return result;
+    }
+
+    return nullptr;
 }
 
 Node* Parser::arguments(){
