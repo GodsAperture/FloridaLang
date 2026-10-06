@@ -1613,11 +1613,10 @@ std::string assignPad(FloridaType input, char where){
 
     void Arguments::FLVMCodeGen(Instructions* inInstructions){
         Arguments* currArgs = this;
-        while(currArgs->next != nullptr){
-            currArgs->current->FLVMCodeGen(inInstructions);
-            currArgs = currArgs->next;
-        }
         currArgs->current->FLVMCodeGen(inInstructions);
+        if(currArgs->next != nullptr){
+            currArgs->next->FLVMCodeGen(inInstructions);
+        }
     }
 
 
@@ -1727,6 +1726,6 @@ std::string assignPad(FloridaType input, char where){
         
     }
 
-    void Dereference::FLVMCodeGen(Instructions* inInstructions){
+    void Error::FLVMCodeGen(Instructions* inInstructions){
         //Do nothing
     }

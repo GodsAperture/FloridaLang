@@ -113,6 +113,9 @@ Node* Parser::add(){
         return left;
     }
 
+    result = stack->alloc<Addition>();
+    result->left = left;
+
     right = add();
     if(right == nullptr){
         Error* error = stack->alloc<Error>();
@@ -125,8 +128,6 @@ Node* Parser::add(){
         return result;
     }
 
-    result = stack->alloc<Addition>();
-    result->left = left;
     result->right = right;
     result->type = returnType(left->type, right->type);
 
@@ -148,6 +149,9 @@ Node* Parser::subtract(){
         return left;
     }
 
+    result = stack->alloc<Subtraction>();
+    result->left = left;
+
     right = subtract();
     if(right == nullptr){
         Error* error = stack->alloc<Error>();
@@ -160,8 +164,6 @@ Node* Parser::subtract(){
         return result;
     }
 
-    result = stack->alloc<Subtraction>();
-    result->left = left;
     result->right = right;
     result->type = returnType(left->type, right->type);
 
@@ -183,6 +185,9 @@ Node* Parser::multiply(){
         return left;
     }
 
+    result = stack->alloc<Multiplication>();
+    result->left = left;
+
     right = multiply();
     if(right == nullptr){
         Error* error = stack->alloc<Error>();
@@ -195,8 +200,7 @@ Node* Parser::multiply(){
         return result;
     }
 
-    result = stack->alloc<Multiplication>();
-    result->left = left;
+    
     result->right = right;
     result->type = returnType(left->type, right->type);
 
@@ -218,6 +222,9 @@ Node* Parser::divide(){
         return left;
     }
 
+    result = stack->alloc<Division>();
+    result->left = left;
+
     right = divide();
     if(right == nullptr){
         Error* error = stack->alloc<Error>();
@@ -230,8 +237,6 @@ Node* Parser::divide(){
         return result;
     }
 
-    result = stack->alloc<Division>();
-    result->left = left;
     result->right = right;
     result->type = returnType(left->type, right->type);
 
@@ -793,7 +798,6 @@ Node* Parser::compare(){
 
 
 Node* Parser::OR(){
-    Start start = currInfo();
     Node* left = nullptr;
     Node* right = nullptr;
     Or* result = nullptr;
@@ -803,9 +807,10 @@ Node* Parser::OR(){
         return nullptr;
     }
 
-    if(check("OR")){
+    if(!check("OR")){
         return left;
     }
+    result = stack->alloc<Or>();
 
     right = OR();
     if(right == nullptr){
@@ -824,7 +829,6 @@ Node* Parser::OR(){
 }
 
 Node* Parser::AND(){
-    Start start = currInfo();
     Node* left = nullptr;
     Node* right = nullptr;
     And* result = nullptr;
@@ -834,9 +838,10 @@ Node* Parser::AND(){
         return nullptr;
     }
 
-    if(check("AND")){
+    if(!check("AND")){
         return left;
     }
+    result = stack->alloc<And>();
 
     right = AND();
     if(right == nullptr){
@@ -1272,14 +1277,15 @@ Node* Parser::initialize(){
         if(bool3){
             iter++;
             result->code = commonStatements();
-        } else {
-            Error* error = stack->alloc<Error>();
-            error->column = given[iter - 1].column;
-            error->row = given[iter - 1].row;
-            error->errorMessage = "[" + std::to_string(given[iter - 1].row) + ", " + std::to_string(given[iter - 1].column) + "] Expected an expression after the = operator.";
+            if(result->code == nullptr){
+                Error* error = stack->alloc<Error>();
+                error->column = given[iter - 1].column;
+                error->row = given[iter - 1].row;
+                error->errorMessage = "[" + std::to_string(given[iter - 1].row) + ", " + std::to_string(given[iter - 1].column) + "] Expected an expression after the = operator.";
 
-            unprocessedErrors.push_back(error);
-            return error;
+                unprocessedErrors.push_back(error);
+                return result;
+            }
         }
 
         return result;
@@ -1348,7 +1354,7 @@ Node* Parser::object(){
         Initialize* currentInitialize = result->code->allInitializations;
         //Use this to determine the size of the object in memory.
         if(currentInitialize != nullptr){
-            //The tail end of `memoryOrder` will have the the variable
+            //The tail end of `memoryOrder` will have the variable
             //with the highest `stackBytePosition`. If I addOffset its
             //stackBytePosition to its size in memory, then I know
             //how large this object will be.
@@ -1400,12 +1406,12 @@ Node* Parser::dereference(Scope* input){
 Node* Parser::memberAccess(Scope* input){
     Variable* left = nullptr;
     Node* right = nullptr;
-    MemberAccess* result;
+    MemberAccess* result = nullptr;
 
     if(input->hasVariable(given[iter].name)){
         left = input->getVariable(given[iter].name);
         if(left == nullptr){
-            return result;
+            return nullptr;
         }
         iter++;
 
@@ -1443,11 +1449,12 @@ Node* Parser::function(){
     //Grab the function's name as a string_view.
     std::string_view name = given[iter + 1].name;
     bool bool2 = given[iter + 1].getType() == FloridaType::Identifier;
-    bool bool3 = given[iter + 2].getName() == "(";
 
-    if(bool1 & bool2 & bool3){
+    if(bool1 & bool2 & (given[iter + 2].name == "(")){
         Function* result = stack->alloc<Function>();
-        int64_t firstHalfStackSize = 0;
+        //I forgot to comment what this is.
+        //I dunno what it is.
+        //int64_t firstHalfStackSize = 0;
         result->previous = stack->currentFunction;  
         stack->currentFunction = result;
         result->returnable = returnable;
@@ -1483,7 +1490,12 @@ Node* Parser::function(){
         //Get all argument initializations, if any.
         result->allArguments = initializeArguments();
 
-        if(!check(")") & !check("{")){
+        if(!check(")")){
+            //Error
+            return nullptr;
+        }
+
+        if(!check("{")){
             error = true;
             return nullptr;
         }
@@ -1518,6 +1530,7 @@ Node* Parser::initializeArguments(){
 
     subresult = initialize();
     if(subresult != nullptr){
+        result = stack->alloc<Arguments>();
         result->current = subresult;
         if(check(",")){
             result->next = initializeArguments();
@@ -1582,10 +1595,10 @@ Node* Parser::call(){
     }
 
     bool bool1 = given[iter].type == FloridaType::Identifier;
-    std::string name = given[iter].getName();   
-    bool bool2 = given[iter + 1].getName() == "(";
+    std::string name = given[iter].getName();
+    Node* args = parentheses();
 
-    if(bool1 & bool2){
+    if(bool1 & (args != nullptr)){
         //Find out which function it is.
         Scope* tempScope = stack->currentScope;
         Scope* oldScope = tempScope;
@@ -1602,6 +1615,7 @@ Node* Parser::call(){
         //If I don't, variables/functions might not be grabbed from the proper scope.
         FunctionCall* result = stack->alloc<FunctionCall>();
         result->function = tempScope->funGet(name);
+        result->arguments = args;
         //Adjust the scope here.
         stack->currentScope = result->function->code;
         result->arguments = arguments();

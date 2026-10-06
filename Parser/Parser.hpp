@@ -41,8 +41,6 @@ public:
     uint64_t iter = 0;
     //Error flag for errors.
     bool error = false;
-    //All the errors logged.
-    std::vector<std::string> errorStack;
     //The given vector of tokens to be parsed into a program.
     std::vector<Token> given;
     //The vector that contains all errors.
@@ -164,9 +162,10 @@ public:
     }
 
     //Error handler
-    void errorPrint(){
-        for(size_t i = 0; i < errorStack.size(); i++){
-            std::cout << sizer(i) << errorStack[i] << "\n";
+    void errorReport(){
+        for(size_t i = 0; i < errors.size(); i++){
+            std::cout << "[" << i << "]";
+            errors[i]->ToString("", "");
         }
     }
 
