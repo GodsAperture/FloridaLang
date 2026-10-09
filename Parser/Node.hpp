@@ -36,7 +36,8 @@ public:
     Node& operator=(const Node&&) = delete;
 
     //Prints the program back to the user in a proper format.
-    virtual void ToString(std::string inLeft, std::string inRight) = 0;
+    virtual void CodePrint(std::string inLeft, std::string inRight) = 0;
+    virtual std::string ToString(std::string inLeft, std::string inRight) = 0;
     virtual void FLVMCodeGen(Instructions* inInstructions) = 0;
     //virtual Node* differentiate(int64_t input) = 0;
     virtual ~Node(){};
@@ -49,7 +50,8 @@ public:
 
     Body();
     Body* append(Body* input);
-    void ToString(std::string inLeft, std::string inRight) override;
+    void CodePrint(std::string inLeft, std::string inRight) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
 };
 
@@ -77,7 +79,8 @@ public:
         this->objectType = input->objectType;
     };
     void append(Variable* input, void* head);
-    void ToString(std::string inLeft, std::string inRight) override;
+    void CodePrint(std::string inLeft, std::string inRight) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
 };
 
@@ -148,7 +151,8 @@ class Scope : public Node{
 
         //Standard methods.
         Scope();
-        void ToString(std::string inLeft, std::string inRight) override;
+        void CodePrint(std::string inLeft, std::string inRight) override;
+        std::string ToString(std::string inLeft, std::string inRight) override;
         void FLVMCodeGen(Instructions* inInstructions) override;
         
     };
@@ -164,7 +168,8 @@ public:
     Node* code = nullptr;
 
     Initialize();
-    void ToString(std::string inLeft, std::string inRight) override;
+    void CodePrint(std::string inLeft, std::string inRight) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
     //Append the `input` to the end of the linked list `next` of Initializations.
     void append(Initialize* input, void* head);
@@ -179,7 +184,8 @@ public:
     Node* right = nullptr;
 
     Assignment();
-    void ToString(std::string inLeft, std::string inRight) override;
+    void CodePrint(std::string inLeft, std::string inRight) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
 };
 
@@ -192,7 +198,8 @@ public:
     Node* right = nullptr;
 
     Addition();
-    void ToString(std::string inLeft, std::string inRight) override;
+    void CodePrint(std::string inLeft, std::string inRight) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
 };
 
@@ -202,7 +209,8 @@ public:
     Node* right = nullptr;
 
     Subtraction();
-    void ToString(std::string inLeft, std::string inRight) override;
+    void CodePrint(std::string inLeft, std::string inRight) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
 };
 
@@ -212,7 +220,8 @@ public:
     Node* right = nullptr;
 
     Multiplication();
-    void ToString(std::string inLeft, std::string inRight) override;
+    void CodePrint(std::string inLeft, std::string inRight) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
 };
 
@@ -222,7 +231,8 @@ public:
     Node* right = nullptr;
 
     Division();
-    void ToString(std::string inLeft, std::string inRight) override;
+    void CodePrint(std::string inLeft, std::string inRight) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
 };
 
@@ -233,7 +243,8 @@ public:
     Node* subexpression = nullptr;
 
     Parentheses();
-    void ToString(std::string inLeft, std::string inRight) override;
+    void CodePrint(std::string inLeft, std::string inRight) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
 };
 
@@ -242,7 +253,8 @@ public:
     Node* right = nullptr;
 
     Negative();
-    void ToString(std::string inLeft, std::string inRight) override;
+    void CodePrint(std::string inLeft, std::string inRight) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
 };
 
@@ -254,7 +266,8 @@ public:
     types value;
 
     Primitive();
-    void ToString(std::string inLeft, std::string inRight) override;
+    void CodePrint(std::string inLeft, std::string inRight) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
 };
 
@@ -267,7 +280,8 @@ public:
     Node* body = nullptr;
 
     TypecastClass();
-    void ToString(std::string inLeft, std::string inRight) override;
+    void CodePrint(std::string inLeft, std::string inRight) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
 };
 
@@ -280,7 +294,8 @@ public:
     Node* right = nullptr;
 
     Equal();
-    void ToString(std::string inLeft, std::string inRight) override;
+    void CodePrint(std::string inLeft, std::string inRight) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
 };
 
@@ -290,7 +305,8 @@ public:
     Node* right = nullptr;
 
     NotEqual();
-    void ToString(std::string inLeft, std::string inRight) override;
+    void CodePrint(std::string inLeft, std::string inRight) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
 };
 
@@ -300,7 +316,8 @@ public:
     Node* right = nullptr;
 
     GreaterThan();
-    void ToString(std::string inLeft, std::string inRight) override;
+    void CodePrint(std::string inLeft, std::string inRight) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
 };
 
@@ -310,7 +327,8 @@ public:
     Node* right = nullptr;
 
     GreaterThanOr();
-    void ToString(std::string inLeft, std::string inRight) override;
+    void CodePrint(std::string inLeft, std::string inRight) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
 };
 
@@ -320,7 +338,8 @@ public:
     Node* right = nullptr;
 
     LessThan();
-    void ToString(std::string inLeft, std::string inRight) override;
+    void CodePrint(std::string inLeft, std::string inRight) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
 };
 
@@ -330,7 +349,8 @@ public:
     Node* right = nullptr;
 
     LessThanOr();
-    void ToString(std::string inLeft, std::string inRight) override;
+    void CodePrint(std::string inLeft, std::string inRight) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
 };
 
@@ -343,7 +363,8 @@ public:
     Node* right = nullptr;
 
     Or();
-    void ToString(std::string inLeft, std::string inRight) override;
+    void CodePrint(std::string inLeft, std::string inRight) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
 };
 
@@ -353,7 +374,8 @@ public:
     Node* right = nullptr;
 
     And();
-    void ToString(std::string inLeft, std::string inRight) override;
+    void CodePrint(std::string inLeft, std::string inRight) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
 };
 
@@ -362,7 +384,8 @@ public:
     Node* right = nullptr;
 
     Not();
-    void ToString(std::string inLeft, std::string inRight) override;
+    void CodePrint(std::string inLeft, std::string inRight) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
 };
 
@@ -377,7 +400,8 @@ public:
     size_t elseVarCount = 0;
 
     IfClass();
-    void ToString(std::string inLeft, std::string inRight) override;
+    void CodePrint(std::string inLeft, std::string inRight) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
 };
 
@@ -389,7 +413,8 @@ public:
     Scope* body = nullptr;
 
     ForLoop();
-    void ToString(std::string inLeft, std::string inRight) override;
+    void CodePrint(std::string inLeft, std::string inRight) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
 };
 
@@ -399,7 +424,8 @@ public:
     Scope* body = nullptr;
 
     WhileLoop();
-    void ToString(std::string inLeft, std::string inRight) override;
+    void CodePrint(std::string inLeft, std::string inRight) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
 };
 
@@ -426,7 +452,8 @@ public:
     bool alreadyGenerated = false;
 
     Function();
-    void ToString(std::string inLeft, std::string inRight) override;
+    void CodePrint(std::string inLeft, std::string inRight) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
     void append(Initialize* input);
 };
@@ -437,7 +464,8 @@ public:
     Node* next = nullptr;
 
     Arguments();
-    void ToString(std::string inLeft, std::string inRight) override;
+    void CodePrint(std::string inLeft, std::string inRight) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
     void append(Arguments* input, Node* head);
 };
@@ -449,7 +477,8 @@ public:
     int64_t argumentByteSize = 0;
 
     FunctionCall();
-    void ToString(std::string inLeft, std::string inRight) override;
+    void CodePrint(std::string inLeft, std::string inRight) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
 };
 
@@ -460,7 +489,8 @@ public:
     Node* statement = nullptr;
 
     ReturnClass();
-    void ToString(std::string inLeft, std::string inRight) override;
+    void CodePrint(std::string inLeft, std::string inRight) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
 };
 
@@ -487,8 +517,8 @@ public:
 //     bool alreadyGenerated = false;
 //
 //     Method();
-//     void ToString(std::string inLeft, std::string inRight) override;
-//     
+//     void CodePrint(std::string inLeft, std::string inRight) override;
+//     std::string ToString(std::string inLeft, std::string inRight) override;
 //     void FLVMCodeGen(Instructions* inInstructions) override;
 //     void append(Variable* input);
 //     
@@ -510,7 +540,8 @@ public:
     ObjectClass* heapNext = nullptr;
 
     ObjectClass();
-    void ToString(std::string inLeft, std::string inRight) override;
+    void CodePrint(std::string inLeft, std::string inRight) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
     //Given some variable name, get the offset for the object from this class' stack.
     int64_t whereVariable(std::string input);
@@ -527,7 +558,8 @@ public:
     Node* right = nullptr;
     
     MemberAccess();
-    void ToString(std::string inLeft, std::string inRight) override;
+    void CodePrint(std::string inLeft, std::string inRight) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
     int64_t offset();
 };
@@ -541,7 +573,8 @@ public:
     ObjectClass* objectType = nullptr;
     
     Dereference();
-    void ToString(std::string inLeft, std::string inRight) override;
+    void CodePrint(std::string inLeft, std::string inRight) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
     int64_t offset();
 };
@@ -552,10 +585,14 @@ class Error : public Node{
 public:
     int64_t row = -1;
     int64_t column = -1;
+    Node* body = nullptr;
+    std::string placeHolder = "";
     std::string errorMessage = "";
 
     Error();
-    void ToString(std::string inLeft, std::string inRight) override;
+    void CodePrint(std::string inLeft, std::string inRight) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
+    std::string ErrorPrint();
     void FLVMCodeGen(Instructions* inInstructions) override;
 };
 

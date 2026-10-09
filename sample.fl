@@ -1,12 +1,1 @@
-object thing1{
-    float8 first;
-    float8 second;
-    float8 third;
-}
-
-float8 fun1(float8 y){
-    return y * y;
-}
-
-thing1 y;
-y.third = 2.0 * fun1(3.14);
+3 + * 4

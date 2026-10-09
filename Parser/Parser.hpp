@@ -39,14 +39,12 @@ public:
 
     //The iterator points to the current token.
     uint64_t iter = 0;
-    //Error flag for errors.
-    bool error = false;
     //The given vector of tokens to be parsed into a program.
     std::vector<Token> given;
     //The vector that contains all errors.
-    std::vector<Error*> errors;
-    //The vector that contains all unprocessed errors.
-    std::vector<Error*> unprocessedErrors;
+    std::vector<Error*> errors = std::vector<Error*>();
+    //This will be a stack of the currently most active body.
+    std::vector<Node*> bodyStack = std::vector<Node*>();
     //The StackAllocator keeps my program slightly tidier.
     StackAllocator* stack = nullptr;
     //scopeCount will be used for the VM to keep track of uniqueScopes.
@@ -142,41 +140,29 @@ public:
     Node* call();
     Node* Return();
 
-    //TO-DO
-    //This is so I can "pretty print" the number of errors found.
-    //Example, if I have 99 errors I can print out:
-    //[ 9] ...
-    //[10] ...
-    std::string sizer(size_t input){
-        std::string result = "[";
-        //Get how many decimal places the number is.
-        size_t size = ceil(log10((double) errorStack.size()));
-        std::string currentNumber = std::to_string(input);
-        
-        for(size_t i = 1; i < size; i++){
-            result += " ";
-        }
-
-        return result + currentNumber + "]: ";
-
-    }
+    //Error related methods
+    Error* MissingSubexpression();
+    Error* MissingLParentheses();
+    Error* MissingRParentheses();
+    Error* MissingLCurlyBrace();
+    Error* MissingRCurlyBrace();
+    Error* MissingLBracket();
+    Error* MissingRBracket();
+    Error* MissingSemicolon();
 
     //Error handler
     void errorReport(){
         for(size_t i = 0; i < errors.size(); i++){
-            std::cout << "[" << i << "]";
-            errors[i]->ToString("", "");
+            std::cout << "[" << i << "]" << errors[i]->ToString("", "");
         }
     }
 
     Parser(std::vector<Token> inTokens, long size){
-        errors = std::vector<Error*>();
-        unprocessedErrors = std::vector<Error*>();
         stack = new StackAllocator(size);
         //This is the Global scope.
         stack->currentScope = nullptr;
         given = inTokens;
-        errorStack = std::vector<std::string>();
+        errors = std::vector<Error*>();
     }
 
     //For the love of God, don't forget this.

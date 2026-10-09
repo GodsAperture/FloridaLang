@@ -228,8 +228,12 @@ std::string assignPad(FloridaType input, char where){
         type = FloridaType::Typecast;
     }
 
-    void TypecastClass::ToString(std::string inLeft, std::string inRight){
-        body->ToString(inLeft, inRight);
+    void TypecastClass::CodePrint(std::string inLeft, std::string inRight){
+        body->CodePrint(inLeft, inRight);
+    }
+
+    std::string TypecastClass::ToString(std::string inLeft, std::string inRight){   
+        return body->ToString(inLeft, inRight);
     }
 
     void TypecastClass::FLVMCodeGen(Instructions* inInstructions){
@@ -442,9 +446,17 @@ std::string assignPad(FloridaType input, char where){
 
 
     
-    void Scope::ToString(std::string inLeft, std::string inRight){
+    void Scope::CodePrint(std::string inLeft, std::string inRight){
         if(body != nullptr){
-            body->ToString(inLeft, ";");
+            body->CodePrint(inLeft, ";");
+        }
+    }
+
+    std::string Scope::ToString(std::string inLeft, std::string inRight){
+        if(body != nullptr){
+            return body->ToString(inLeft, ";");
+        } else {
+            return "";
         }
     }
 
@@ -614,7 +626,7 @@ std::string assignPad(FloridaType input, char where){
         //The type will be determined after a Primitive is created.
     }
 
-    void Primitive::ToString(std::string inLeft, std::string inRight){
+    void Primitive::CodePrint(std::string inLeft, std::string inRight){
         switch(type){
             case ufixed1:
                 std::cout << std::to_string(value.ufixed1[0]);
@@ -659,6 +671,52 @@ std::string assignPad(FloridaType input, char where){
         }
     }
 
+    std::string Primitive::ToString(std::string inLeft, std::string inRight){
+        switch(type){
+            case ufixed1:
+                return std::to_string(value.ufixed1[0]);
+                break;
+            case ufixed2:
+                return std::to_string(value.ufixed2[0]);
+                break;
+            case ufixed4:
+                return std::to_string(value.ufixed4[0]);
+                break;
+            case ufixed8:
+                return std::to_string(value.ufixed8);
+                break;
+            case fixed1:
+                return std::to_string(value.fixed1[0]);
+                break;
+            case fixed2:
+                return std::to_string(value.fixed2[0]);
+                break;
+            case fixed4:
+                return std::to_string(value.fixed4[0]);
+                break;
+            case fixed8:
+                return std::to_string(value.fixed8);
+                break;
+            case float4:
+                return std::to_string(value.float4[0]);
+                break;
+            case float8:
+                return std::to_string(value.float8);
+                break;
+            case Bool:
+                if(value.boolean[0]){
+                    return "\x1b[32mtrue\x1b[0m";
+                } else {
+                    return "\x1b[31mfalse\x1b[0m";
+                }
+                break;
+            default:
+                return "";
+                break;
+            //Error
+        }
+    }
+
     void Primitive::FLVMCodeGen(Instructions* inInstructions){
         types result;
         //Generate a push instruction.
@@ -696,12 +754,20 @@ std::string assignPad(FloridaType input, char where){
 
     }
 
-    void Body::ToString(std::string inLeft, std::string inRight){
-        current->ToString(inLeft, inRight);
+    void Body::CodePrint(std::string inLeft, std::string inRight){
+        current->CodePrint(inLeft, inRight);
         if(next != nullptr){
             std::cout << '\n';
-            next->ToString(inLeft, inRight);
+            next->CodePrint(inLeft, inRight);
         }
+    }
+
+    std::string Body::ToString(std::string inLeft, std::string inRight){
+        if(next != nullptr){
+            return current->ToString(inLeft, inRight) + next->ToString(inLeft, inRight);
+        } else {
+            return current->ToString(inLeft, inRight);
+        }   
     }
 
     void Body::FLVMCodeGen(Instructions* inInstructions){
@@ -736,7 +802,7 @@ std::string assignPad(FloridaType input, char where){
 
     }
 
-    void Variable::ToString(std::string inLeft, std::string inRight){
+    void Variable::CodePrint(std::string inLeft, std::string inRight){
         std::cout << thisToken.getName();
     }
 
@@ -776,12 +842,12 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing.
     };
 
-    void Initialize::ToString(std::string inLeft, std::string inRight){
+    void Initialize::CodePrint(std::string inLeft, std::string inRight){
         if(thisVariable->objectType != nullptr){
             if(code != nullptr){
                 std::cout <<  inLeft << std::string(thisVariable->objectType->name);
                 std::cout << " " << thisVariable->thisToken.getName() << " = ";
-                code->ToString(inLeft, inRight);
+                code->CodePrint(inLeft, inRight);
                 std::cout << inRight;
                 return;
             } else {
@@ -790,10 +856,29 @@ std::string assignPad(FloridaType input, char where){
         } else {
             if(code != nullptr){
                 std::cout << inLeft << typeString(thisVariable->thisToken.type) << " " << thisVariable->thisToken.getName() << " = ";
-                code->ToString(inLeft, inRight);
+                code->CodePrint(inLeft, inRight);
                 std::cout << inRight;
             } else {
                 std::cout << inLeft << typeString(thisVariable->thisToken.type) << " " << thisVariable->thisToken.getName() << inRight;
+            }
+        }
+    }
+
+    std::string Initialize::ToString(std::string inLeft, std::string inRight){
+        if(thisVariable->objectType != nullptr){
+            if(code != nullptr){
+                return  inLeft + std::string(thisVariable->objectType->name) + 
+                " " + thisVariable->thisToken.getName() + " = " + 
+                code->ToString(inLeft, inRight) + inRight;
+            } else {
+                return inLeft + std::string(thisVariable->objectType->name) + " " + thisVariable->thisToken.getName() + inRight;
+            }
+        } else {
+            if(code != nullptr){
+                return inLeft + typeString(thisVariable->thisToken.type) + " " + thisVariable->thisToken.getName() + " = " +
+                code->ToString(inLeft, inRight) + inRight;
+            } else {
+                return inLeft + typeString(thisVariable->thisToken.type) + " " + thisVariable->thisToken.getName() + inRight;
             }
         }
     }
@@ -855,13 +940,20 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     };
 
-    void Assignment::ToString(std::string inLeft, std::string inRight){
+    void Assignment::CodePrint(std::string inLeft, std::string inRight){
         std::cout << inLeft;
-        left->ToString(inLeft, inRight);
+        left->CodePrint(inLeft, inRight);
         std::cout << " = ";
-        right->ToString(inLeft, inRight);
+        right->CodePrint(inLeft, inRight);
         std::cout << inRight;
     }
+
+    std::string Assignment::ToString(std::string inLeft, std::string inRight){
+        return inLeft + left->ToString(inLeft, inRight) + 
+        " = " + 
+        right->ToString(inLeft, inRight) + inRight;
+    }
+
 
     void Assignment::FLVMCodeGen(Instructions* inInstructions){
         //Evaluate the right hand side before assigning.
@@ -898,11 +990,18 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    void Addition::ToString(std::string inLeft, std::string inRight){
-        left->ToString(inLeft, inRight);
+    void Addition::CodePrint(std::string inLeft, std::string inRight){
+        left->CodePrint(inLeft, inRight);
         std::cout << " + ";
+        right->CodePrint(inLeft, inRight);
+    }
+
+    std::string Addition::ToString(std::string inLeft, std::string inRight){
+        return left->ToString(inLeft, inRight) + 
+        " + " +
         right->ToString(inLeft, inRight);
     }
+
 
     void Addition::FLVMCodeGen(Instructions* inInstructions){
         types result;
@@ -929,9 +1028,15 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    void Subtraction::ToString(std::string inLeft, std::string inRight){
-        left->ToString(inLeft, inRight);
+    void Subtraction::CodePrint(std::string inLeft, std::string inRight){
+        left->CodePrint(inLeft, inRight);
         std::cout << " - ";
+        right->CodePrint(inLeft, inRight);
+    }
+
+    std::string Subtraction::ToString(std::string inLeft, std::string inRight){
+        return left->ToString(inLeft, inRight) + 
+        " - " +
         right->ToString(inLeft, inRight);
     }
 
@@ -960,9 +1065,15 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    void Multiplication::ToString(std::string inLeft, std::string inRight){
-        left->ToString(inLeft, inRight);
+    void Multiplication::CodePrint(std::string inLeft, std::string inRight){
+        left->CodePrint(inLeft, inRight);
         std::cout << " * ";
+        right->CodePrint(inLeft, inRight);
+    }
+
+    std::string Multiplication::ToString(std::string inLeft, std::string inRight){
+        return left->ToString(inLeft, inRight) + 
+        " * " + 
         right->ToString(inLeft, inRight);
     }
 
@@ -991,9 +1102,15 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     };
 
-    void Division::ToString(std::string inLeft, std::string inRight){
-        left->ToString(inLeft, inRight);
+    void Division::CodePrint(std::string inLeft, std::string inRight){
+        left->CodePrint(inLeft, inRight);
         std::cout << " / ";
+        right->CodePrint(inLeft, inRight);
+    }
+
+    std::string Division::ToString(std::string inLeft, std::string inRight){
+        return left->ToString(inLeft, inRight) +
+        " / " +
         right->ToString(inLeft, inRight);
     }
 
@@ -1022,10 +1139,14 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    void Parentheses::ToString(std::string inLeft, std::string inRight){
+    void Parentheses::CodePrint(std::string inLeft, std::string inRight){
         std::cout << "(";
-        subexpression->ToString(inLeft, inRight);
+        subexpression->CodePrint(inLeft, inRight);
         std::cout << ")";
+    }
+
+    std::string Parentheses::ToString(std::string inLeft, std::string inRight){
+        return "(" + subexpression->ToString(inLeft, inRight) + ")";
     }
 
     void Parentheses::FLVMCodeGen(Instructions* inInstructions){
@@ -1040,9 +1161,13 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing;
     }
 
-    void Negative::ToString(std::string inLeft, std::string inRight){
+    void Negative::CodePrint(std::string inLeft, std::string inRight){
         std::cout << "-";
-        right->ToString(inLeft, inRight);
+        right->CodePrint(inLeft, inRight);
+    }
+
+    std::string Negative::ToString(std::string inLeft, std::string inRight){
+        return "-" + right->ToString(inLeft, inRight);
     }
 
     void Negative::FLVMCodeGen(Instructions* inInstructions){
@@ -1061,10 +1186,14 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    void Equal::ToString(std::string inLeft, std::string inRight){
-        left->ToString(inLeft, inRight);
+    void Equal::CodePrint(std::string inLeft, std::string inRight){
+        left->CodePrint(inLeft, inRight);
         std::cout << " == ";
-        right->ToString(inLeft, inRight);
+        right->CodePrint(inLeft, inRight);
+    }
+
+    std::string Equal::ToString(std::string inLeft, std::string inRight){
+        return left->ToString(inLeft, inRight) + " == " + right->ToString(inLeft, inRight);
     }
 
     void Equal::FLVMCodeGen(Instructions* inInstructions){
@@ -1083,10 +1212,14 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    void NotEqual::ToString(std::string inLeft, std::string inRight){
-        left->ToString(inLeft, inRight);
+    void NotEqual::CodePrint(std::string inLeft, std::string inRight){
+        left->CodePrint(inLeft, inRight);
         std::cout << " != ";
-        right->ToString(inLeft, inRight);
+        right->CodePrint(inLeft, inRight);
+    }
+
+    std::string NotEqual::ToString(std::string inLeft, std::string inRight){
+        return left->ToString(inLeft, inRight) + " != " + right->ToString(inLeft, inRight);
     }
 
     void NotEqual::FLVMCodeGen(Instructions* inInstructions){
@@ -1105,10 +1238,14 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    void GreaterThan::ToString(std::string inLeft, std::string inRight){
-        left->ToString(inLeft, inRight);
+    void GreaterThan::CodePrint(std::string inLeft, std::string inRight){
+        left->CodePrint(inLeft, inRight);
         std::cout << " > ";
-        right->ToString(inLeft, inRight);
+        right->CodePrint(inLeft, inRight);
+    }
+
+    std::string GreaterThan::ToString(std::string inLeft, std::string inRight){
+        return left->ToString(inLeft, inRight) + " > " + right->ToString(inLeft, inRight);
     }
 
     void GreaterThan::FLVMCodeGen(Instructions* inInstructions){
@@ -1127,10 +1264,14 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    void GreaterThanOr::ToString(std::string inLeft, std::string inRight){
-        left->ToString(inLeft, inRight);
+    void GreaterThanOr::CodePrint(std::string inLeft, std::string inRight){
+        left->CodePrint(inLeft, inRight);
         std::cout << " >= ";
-        right->ToString(inLeft, inRight);
+        right->CodePrint(inLeft, inRight);
+    }
+
+    std::string GreaterThanOr::ToString(std::string inLeft, std::string inRight){
+        return left->ToString(inLeft, inRight) + " >= " + right->ToString(inLeft, inRight);
     }
 
     void GreaterThanOr::FLVMCodeGen(Instructions* inInstructions){
@@ -1149,10 +1290,14 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    void LessThan::ToString(std::string inLeft, std::string inRight){
-        left->ToString(inLeft, inRight);
+    void LessThan::CodePrint(std::string inLeft, std::string inRight){
+        left->CodePrint(inLeft, inRight);
         std::cout << " < ";
-        right->ToString(inLeft, inRight);
+        right->CodePrint(inLeft, inRight);
+    }
+
+    std::string LessThan::ToString(std::string inLeft, std::string inRight){
+        return left->ToString(inLeft, inRight) + " < " + right->ToString(inLeft, inRight);
     }
 
     void LessThan::FLVMCodeGen(Instructions* inInstructions){
@@ -1171,10 +1316,14 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    void LessThanOr::ToString(std::string inLeft, std::string inRight){
-        left->ToString(inLeft, inRight);
+    void LessThanOr::CodePrint(std::string inLeft, std::string inRight){
+        left->CodePrint(inLeft, inRight);
         std::cout << " <= ";
-        right->ToString(inLeft, inRight);
+        right->CodePrint(inLeft, inRight);
+    }
+
+    std::string LessThanOr::ToString(std::string inLeft, std::string inRight){
+        return left->ToString(inLeft, inRight) + " <= " + right->ToString(inLeft, inRight);
     }
 
     void LessThanOr::FLVMCodeGen(Instructions* inInstructions){
@@ -1193,10 +1342,14 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     };
 
-    void Or::ToString(std::string inLeft, std::string inRight){
-        left->ToString(inLeft, inRight);
+    void Or::CodePrint(std::string inLeft, std::string inRight){
+        left->CodePrint(inLeft, inRight);
         std::cout << " OR ";
-        right->ToString(inLeft, inRight);
+        right->CodePrint(inLeft, inRight);
+    }
+
+    std::string Or::ToString(std::string inLeft, std::string inRight){
+        return left->ToString(inLeft, inRight) + " OR " + right->ToString(inLeft, inRight);
     }
 
     void Or::FLVMCodeGen(Instructions* inInstructions){
@@ -1215,10 +1368,14 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    void And::ToString(std::string inLeft, std::string inRight){
-        left->ToString(inLeft, inRight);
+    void And::CodePrint(std::string inLeft, std::string inRight){
+        left->CodePrint(inLeft, inRight);
         std::cout << " AND ";
-        right->ToString(inLeft, inRight);
+        right->CodePrint(inLeft, inRight);
+    }
+
+    std::string And::ToString(std::string inLeft, std::string inRight){
+        return left->ToString(inLeft, inRight) + " AND " + right->ToString(inLeft, inRight);
     }
 
     void And::FLVMCodeGen(Instructions* inInstructions){
@@ -1237,9 +1394,13 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    void Not::ToString(std::string inLeft, std::string inRight){
+    void Not::CodePrint(std::string inLeft, std::string inRight){
         std::cout << "!";
-        right->ToString(inLeft, inRight);
+        right->CodePrint(inLeft, inRight);
+    }
+
+    std::string Not::ToString(std::string inLeft, std::string inRight){
+        return "!" + right->ToString(inLeft, inRight);
     }
 
     void Not::FLVMCodeGen(Instructions* inInstructions){
@@ -1257,21 +1418,39 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     };
 
-    void IfClass::ToString(std::string inLeft, std::string inRight){
+    void IfClass::CodePrint(std::string inLeft, std::string inRight){
         if(elseBody == nullptr){
-            std::cout << inLeft << "\x1b[36mif\x1b[0m(";
-            condition->ToString(inLeft, inRight);
+            std::cout << inLeft << "if(";
+            condition->CodePrint(inLeft, inRight);
             std::cout << "){\n";
-                ifBody->ToString("  " + inLeft, ";");
+                ifBody->CodePrint("  " + inLeft, ";");
             std::cout << "\n" << inLeft << "}\n";
         } else {
             std::cout << inLeft + "\x1b[36mif\x1b[0m(";
-            condition->ToString(inLeft, ";");
+            condition->CodePrint(inLeft, ";");
             std::cout << "){\n";
-                ifBody->ToString("  " + inLeft, inRight);
+                ifBody->CodePrint("  " + inLeft, inRight);
             std::cout << "\n" << inLeft << "} else {\n";
-                elseBody->ToString("  " + inLeft, ";");
+                elseBody->CodePrint("  " + inLeft, ";");
             std::cout << "\n" << inLeft << "}\n";
+        }
+    }
+
+    std::string IfClass::ToString(std::string inLeft, std::string inRight){
+        if(elseBody == nullptr){
+            return inLeft + "if(" + 
+            condition->ToString(inLeft, inRight) +
+            "){\n" + 
+                ifBody->ToString("  " + inLeft, ";") +
+            "\n" + inLeft + "}\n";
+        } else {
+            return inLeft + "if(" +
+            condition->ToString(inLeft, ";") +
+            "){\n" +
+                ifBody->ToString("  " + inLeft, inRight) +
+            "\n" + inLeft + "} else {\n" + 
+                elseBody->ToString("  " + inLeft, ";") +
+            "\n" + inLeft + "}\n";
         }
     }
 
@@ -1345,28 +1524,51 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     };
 
-    void ForLoop::ToString(std::string inLeft, std::string inRight){
-        std::cout << inLeft << "\x1b[34mfor\x1b[0m(";
+    void ForLoop::CodePrint(std::string inLeft, std::string inRight){
+        std::cout << inLeft << "for(";
         if(assign != nullptr){
-            assign->ToString("", "");
+            assign->CodePrint("", "");
             std::cout << "; ";
         } else {
             std::cout << ";";
         }
 
         if(condition != nullptr){
-            condition->ToString("", "");
+            condition->CodePrint("", "");
             std::cout << "; ";
         } else {
             std::cout << ";";
         }
 
         if(incrementer != nullptr){
-            incrementer->ToString("", "");
+            incrementer->CodePrint("", "");
         }
         std::cout << "){\n";
-        body->ToString("  " + inLeft, inRight);
+        body->CodePrint("  " + inLeft, inRight);
         std::cout << "\n" << inLeft << "}\n";
+    }
+
+    std::string ForLoop::ToString(std::string inLeft, std::string inRight){
+        std::string temp = "";
+        std::cout << inLeft << "for(";
+        if(assign != nullptr){
+            temp += assign->ToString("", "") + ";";
+        } else {
+            temp += ";";
+        }
+
+        if(condition != nullptr){
+            temp += condition->ToString("", "") + ";";
+        } else {
+            temp += ";";
+        }
+
+        if(incrementer != nullptr){
+            temp += incrementer->ToString("", "");
+        }
+        return inLeft + "for(" + temp + "){\n" +
+        body->ToString("  " + inLeft, inRight) +
+        "\n" + inLeft + "}\n";
     }
 
     void ForLoop::FLVMCodeGen(Instructions* inInstructions){
@@ -1437,16 +1639,32 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     };
 
-    void WhileLoop::ToString(std::string inLeft, std::string inRight){
+    void WhileLoop::CodePrint(std::string inLeft, std::string inRight){
         std::cout << inLeft << "while(";
         if(condition != nullptr){
-            condition->ToString(inLeft, inRight);
+            condition->CodePrint(inLeft, inRight);
         }
         std::cout << "){\n";
         if(body != nullptr){
-            body->ToString("  " + inLeft, inRight);
+            body->CodePrint("  " + inLeft, inRight);
         }
         std::cout << "\n" << inLeft << "}\n";
+    }
+
+    std::string WhileLoop::ToString(std::string inLeft, std::string inRight){
+        std::string SCondition = "";
+        std::string SBody = "";
+
+        if(condition != nullptr){
+            SCondition = condition->ToString(inLeft, inRight);
+        }
+
+        if(body != nullptr){
+            SBody = body->ToString("  " + inLeft, inRight);
+        }
+        return inLeft + "while(" + SCondition + "){\n" +
+        inLeft + SBody + "\n" +
+        inLeft + "}\n";
     }
 
     void WhileLoop::FLVMCodeGen(Instructions* inInstructions){
@@ -1507,25 +1725,20 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     };
 
-    void Function::ToString(std::string inLeft, std::string inRight){
-        Initialize* currInit = code->allInitializations;
-
-        std::cout << inLeft + "\x1b[36m" + typeString(type) + "\x1b[35m " + std::string(name) + "\x1b[0m(";
-        
-        //Combine all the variables, if any.
-        if(code->allInitializations != nullptr){
-            //Stop right before the last variable to not append an extra comma.
-            for(int i = 1; i < argumentCount; i++){
-                std::cout << "\x1b[36m" + typeString(currInit->thisVariable->thisToken.type) << "\x1b[0m " << currInit->thisVariable->thisToken.getName() << ", ";
-                currInit = currInit->next;
-            }
-            //Append the last variable without an extra comma.
-            std::cout << "\x1b[36m" << typeString(currInit->thisVariable->thisToken.type) << "\x1b[0m " << currInit->thisVariable->thisToken.getName();
-        }
-        //Return the function printed in the only correct format.
-        std::cout << inLeft << "){\n";
-        code->ToString("  " + inLeft, ";");
+    void Function::CodePrint(std::string inLeft, std::string inRight){
+        std::cout << inLeft + typeString(type) + " " + std::string(name) + "(";
+        allArguments->CodePrint(inLeft, inRight);
+        std::cout << "){\n";
+        code->CodePrint("  " + inLeft, ";");
         std::cout << "\n" << inLeft + "}\n";
+    }
+
+    std::string Function::ToString(std::string inLeft, std::string inRight){
+        return inLeft + typeString(type) + " " + std::string(name) + "(" +
+        allArguments->ToString(inLeft, inRight) +
+        "){\n" +
+        code->ToString("  " + inLeft, ";") +
+        "\n" + inLeft + "}\n";
     }
 
     void Function::append(Initialize* input){
@@ -1562,10 +1775,14 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    void FunctionCall::ToString(std::string inLeft, std::string inRight){
+    void FunctionCall::CodePrint(std::string inLeft, std::string inRight){
         std::cout << "\x1b[35m" + std::string(function->name) + "\x1b[0m(";
-        arguments->ToString(inLeft, "");
+        arguments->CodePrint(inLeft, "");
         std::cout << ")";
+    }
+
+    std::string FunctionCall::ToString(std::string inLeft, std::string inRight){
+        return std::string(function->name) + "(" + arguments->ToString(inLeft, "") + ")";
     }
 
     void FunctionCall::FLVMCodeGen(Instructions* inInstructions){
@@ -1601,13 +1818,21 @@ std::string assignPad(FloridaType input, char where){
         //The default settings are already in place.
     }
 
-    void Arguments::ToString(std::string inLeft, std::string inRight){
+    void Arguments::CodePrint(std::string inLeft, std::string inRight){
         if(next != nullptr){
-            current->ToString(inLeft, "");
+            current->CodePrint("", "");
             std::cout << ", ";
-            next->ToString(inLeft, "");
+            next->CodePrint("", "");
         } else {
-            return current->ToString(inLeft, "");
+            return current->CodePrint("", "");
+        }
+    }
+
+    std::string Arguments::ToString(std::string inLeft, std::string inRight){
+        if(next != nullptr){
+            return current->ToString("", "") + "," + next->ToString("", "");
+        } else {
+            return current->ToString("", "");
         }
     }
 
@@ -1626,10 +1851,14 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    void ReturnClass::ToString(std::string inLeft, std::string inRight){
-        std::cout << inLeft << "\x1b[34mreturn\x1b[0m ";
-        statement->ToString(inLeft, inRight);
+    void ReturnClass::CodePrint(std::string inLeft, std::string inRight){
+        std::cout << inLeft << "return ";
+        statement->CodePrint(inLeft, inRight);
         std::cout << inRight;
+    }
+
+    std::string ReturnClass::ToString(std::string inLeft, std::string inRight){
+        return inLeft + "return " + statement->ToString(inLeft, inRight) + inRight;
     }
 
     void ReturnClass::FLVMCodeGen(Instructions* inInstructions){
@@ -1650,12 +1879,22 @@ std::string assignPad(FloridaType input, char where){
         type = FloridaType::Object;
     }
 
-    void ObjectClass::ToString(std::string inLeft, std::string inRight){
-        std::cout << "object " + std::string(name) + "{\n";
+    void ObjectClass::CodePrint(std::string inLeft, std::string inRight){
         if(code != nullptr){
-            code->body->ToString("  " + inLeft, inRight);
+            std::cout << "object " << std::string(name) << "{\n";
+            code->body->CodePrint("  " + inLeft, inRight);
+            std::cout << "\n" << inLeft << "}\n";
+        } else {
+            std::cout << "object " << std::string(name) << "{}\n";
         }
-        std::cout << inLeft << "\n}\n";
+    }
+
+    std::string ObjectClass::ToString(std::string inLeft, std::string inRight){
+        if(code != nullptr){
+            return "object " + std::string(name) + "{\n" + code->body->ToString("  " + inLeft, inRight) + "\n" + inLeft + "}\n";
+        } else {
+            return "object " + std::string(name) + "{}\n";
+        }
     }
 
     void ObjectClass::FLVMCodeGen(Instructions* inInstructions){
@@ -1669,10 +1908,14 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    void MemberAccess::ToString(std::string inLeft, std::string inRight){
-        left->ToString(inLeft, inRight);
+    void MemberAccess::CodePrint(std::string inLeft, std::string inRight){
+        left->CodePrint(inLeft, inRight);
         std::cout << ".";
-        right->ToString(inLeft, inRight);
+        right->CodePrint(inLeft, inRight);
+    }
+
+    std::string MemberAccess::ToString(std::string inLeft, std::string inRight){
+        return left->ToString(inLeft, inRight) + "." + right->ToString(inLeft, inRight);
     }
 
     void MemberAccess::FLVMCodeGen(Instructions* inInstructions){
@@ -1705,10 +1948,14 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    void Dereference::ToString(std::string inLeft, std::string inRight){
-        left->ToString(inLeft, inRight);
+    void Dereference::CodePrint(std::string inLeft, std::string inRight){
+        left->CodePrint(inLeft, inRight);
         std::cout << "->";
-        right->ToString(inLeft, inRight);
+        right->CodePrint(inLeft, inRight);
+    }
+
+    std::string Dereference::ToString(std::string inLeft, std::string inRight){
+        return left->ToString(inLeft, inRight) + "->" + right->ToString(inLeft, inRight);
     }
 
     void Dereference::FLVMCodeGen(Instructions* inInstructions){
@@ -1722,10 +1969,21 @@ std::string assignPad(FloridaType input, char where){
         //Do nothing
     }
 
-    void Error::ToString(std::string inLeft, std::string inRight){
-        
+    void Error::CodePrint(std::string inLeft, std::string inRight){
+        //May or may not do anything, not sure yet.
+    }
+
+    std::string Error::ToString(std::string inLeft, std::string inRight){
+        //May or may not do anything, not sure yet.
+        return "";
+    }
+
+    std::string Error::ErrorPrint(){
+        return errorMessage;
     }
 
     void Error::FLVMCodeGen(Instructions* inInstructions){
         //Do nothing
+        //I may or may not generate a "bad instruction" for this
+        //just so the user can have partial print outs of IR code.
     }
