@@ -37,23 +37,23 @@ void Parser::parse(){
     Scope* result = scope();
     //The entire program is essentially a scope.
     stack->AST = result;
-    //Just a "useful" debugger to make sure I'm creating the AST properly.
-    if(error){
-        std::cout << "The parser failed to parse the full file.\n";
-    }
 };
 
-void Parser::ToString(){
+std::string Parser::ToString(){
+    return stack->AST->ToString("", "");
+}
+
+void Parser::CodePrint(){
     stack->AST->CodePrint("", "");
-    std::cout << "\n";
 }
 
 bool Parser::hasTokens(){
     return iter < given.size();
 }
 
+//Check if `given` has at least `input` tokens available.
 bool Parser::hasTokens(int64_t input){
-    return iter + input < given.size() + 1;
+    return iter + input <= given.size();
 }
 
 bool Parser::check(std::string inString){
@@ -65,6 +65,33 @@ bool Parser::check(std::string inString){
         iter++;
         return true;
     }
+    return false;
+}
+
+bool Parser::checkType(FloridaType input){
+    if(iter >= given.size()){
+        return false;
+    }
+    if(given[iter].type == input){
+        iter++;
+        return true;
+    }
+
+    return false;
+}
+
+bool Parser::check(std::initializer_list<std::string> input){
+    if(given.size() == iter){
+        return false;
+    }
+    std::vector args = input;
+    for(size_t i = 0; i < args.size(); i++){
+        if(given[iter].name == args[i]){
+            iter++;
+            return true;
+        }
+    }
+
     return false;
 }
 
@@ -95,14 +122,133 @@ inline FloridaType returnType(FloridaType left, FloridaType right){
     }
 }
 
+std::vector<Function*> Parser::findFunctions(){
+    std::vector<Function*> result = std::vector<Function*>();
+    Scope* currentScope = stack->currentScope;
+    Function* currentFunction = nullptr;
+    if(iter == given.size()){
+        return result;
+    }
+
+    std::string name = std::string(given[iter].name);
+    iter++;
+    while(currentScope != nullptr){
+        currentFunction = currentScope->functions;
+        while(currentFunction != nullptr){
+            if(currentFunction->name == name){
+                result.push_back(currentFunction);
+            }
+        }
+        currentScope = currentScope->parent;
+    }
+
+    return result;
+
+}
+
 
 
 //Error related methods.
 Error* Parser::MissingSubexpression(){
     Error* result = stack->alloc<Error>();
 
+    result->errorType = PError::PMissingSubexpression;
+    result->body = bodyStack[bodyStack.size() - 1];
+    result->row = given[iter - 1].row;
+    result->column = given[iter - 1].column;
     result->placeHolder = "???";
-    result->errorMessage = "[R: " + std::to_string(given[iter - 1].row) + ", C: " + std::to_string(given[iter - 1].column) + "] " + bodyStack[bodyStack.size() - 1]->ToString("", "") + " ???";
+
+    errors.push_back(result);
+    return result;
+}
+
+Error* Parser::MissingLParentheses(){
+    Error* result = stack->alloc<Error>();
+
+    result->errorType = PError::PMissingLParentheses;
+    result->body = bodyStack[bodyStack.size() - 1];
+    result->row = given[iter - 1].row;
+    result->column = given[iter - 1].column;
+    result->placeHolder = "\"(\"";
+
+    errors.push_back(result);
+    return result;
+}
+
+Error* Parser::MissingRParentheses(){
+    Error* result = stack->alloc<Error>();
+
+    result->errorType = PError::PMissingRParentheses;
+    result->body = bodyStack[bodyStack.size() - 1];
+    result->row = given[iter - 1].row;
+    result->column = given[iter - 1].column;
+    result->placeHolder = "\")\"";
+
+    errors.push_back(result);
+    return result;
+}
+
+Error* Parser::MissingLCurlyBrace(){
+    Error* result = stack->alloc<Error>();
+
+    result->errorType = PError::PMissingLCurlyBrace;
+    result->body = bodyStack[bodyStack.size() - 1];
+    result->row = given[iter - 1].row;
+    result->column = given[iter - 1].column;
+    result->placeHolder = "\"{\"";
+
+    errors.push_back(result);
+    return result;
+}
+
+Error* Parser::MissingRCurlyBrace(){
+    Error* result = stack->alloc<Error>();
+
+    result->errorType = PError::PMissingRCurlyBrace;
+    result->body = bodyStack[bodyStack.size() - 1];
+    result->row = given[iter - 1].row;
+    result->column = given[iter - 1].column;
+    result->placeHolder = "\")\"";
+
+    errors.push_back(result);
+    return result;
+}
+
+Error* Parser::MissingLBracket(){
+    Error* result = stack->alloc<Error>();
+
+    result->errorType = PError::PMissingLBracket;
+    result->body = bodyStack[bodyStack.size() - 1];
+    result->row = given[iter - 1].row;
+    result->column = given[iter - 1].column;
+    result->placeHolder = "\"[\"";
+
+    errors.push_back(result);
+    return result;
+}
+
+Error* Parser::MissingRBracket(){
+    Error* result = stack->alloc<Error>();
+
+    result->errorType = PError::PMissingLBracket;
+    result->body = bodyStack[bodyStack.size() - 1];
+    result->row = given[iter - 1].row;
+    result->column = given[iter - 1].column;
+    result->placeHolder = "\"]\"";
+
+    errors.push_back(result);
+    return result;
+}
+
+Error* Parser::MissingSemicolon(){
+    Error* result = stack->alloc<Error>();
+
+    result->errorType = PError::PMissingSemicolon;
+    result->body = bodyStack[bodyStack.size() - 1];
+    result->row = given[iter - 1].row;
+    result->column = given[iter - 1].column;
+    result->placeHolder = "\";\"";
+
     errors.push_back(result);
     return result;
 }
@@ -130,7 +276,8 @@ Node* Parser::add(){
 
     right = add();
     if(right == nullptr){
-        return MissingSubexpression();
+        result->right = MissingSubexpression();
+        return result;
     }
 
     result->right = right;
@@ -188,7 +335,8 @@ Node* Parser::multiply(){
 
     right = multiply();
     if(right == nullptr){
-        return MissingSubexpression();
+        result->right = MissingSubexpression();
+        return result;
     }
 
     
@@ -229,12 +377,7 @@ Node* Parser::divide(){
 
 Node* Parser::primitive(){
     Node* pointer = nullptr;
-    if(!hasTokens(1)){
-        return nullptr;
-    }
 
-    //Check for negations
-    std::string current = given[iter].getName();
     if(check("-")){
         Negative* expression = stack->alloc<Negative>();
         expression->right = multiply();
@@ -249,83 +392,73 @@ Node* Parser::primitive(){
 
 
     //Check for numbers.
-    if((given[iter].type == FloridaType::ufixed8) and (given[iter].getName() != "ufixed8")){
+    if(checkType(FloridaType::ufixed8)){
         Primitive* number = stack->alloc<Primitive>();
-        number->value.ufixed8 = std::stod(given[iter].getName());
+        number->value.ufixed8 = std::stoull(given[iter - 1].getName());
         number->type = FloridaType::ufixed8;
-        iter++;
 
         return number;
     }
-    if((given[iter].type == FloridaType::ufixed4) and (given[iter].getName() != "ufixed4")){
+    if(checkType(FloridaType::ufixed4)){
         Primitive* number = stack->alloc<Primitive>();
-        number->value.ufixed4[0] = std::stol(given[iter].getName());
+        number->value.ufixed4[0] = std::stoul(given[iter - 1].getName());
         number->type = FloridaType::ufixed4;
-        iter++;
 
         return number;
     }
-    if((given[iter].type == FloridaType::ufixed2) and (given[iter].getName() != "ufixed2")){
+    if(checkType(FloridaType::ufixed2)){
         Primitive* number = stack->alloc<Primitive>();
-        number->value.ufixed2[0] = std::stol(given[iter].getName());
+        number->value.ufixed2[0] = std::stoul(given[iter - 1].getName());
         number->type = FloridaType::ufixed2;
-        iter++;
 
         return number;
     }
-    if((given[iter].type == FloridaType::ufixed1) and (given[iter].getName() != "ufixed1")){
+    if(checkType(FloridaType::ufixed1)){
         Primitive* number = stack->alloc<Primitive>();
-        number->value.ufixed1[0] = std::stol(given[iter].getName());
+        number->value.ufixed1[0] = std::stoul(given[iter - 1].getName());
         number->type = FloridaType::ufixed1;
-        iter++;
 
         return number;
     }
-    if((given[iter].type == FloridaType::fixed8) and (given[iter].getName() != "fixed8")){
+    if(checkType(FloridaType::fixed8)){
         Primitive* number = stack->alloc<Primitive>();
-        number->value.fixed8 = std::stod(given[iter].getName());
+        number->value.fixed8 = std::stoll(given[iter - 1].getName());
         number->type = FloridaType::fixed8;
-        iter++;
 
         return number;
     }
-    if((given[iter].type == FloridaType::fixed4) and (given[iter].getName() != "fixed4")){
+    if(checkType(FloridaType::fixed4)){
         Primitive* number = stack->alloc<Primitive>();
-        number->value.fixed4[0] = std::stod(given[iter].getName());
+        number->value.fixed4[0] = std::stol(given[iter - 1].getName());
         number->type = FloridaType::fixed4;
-        iter++;
 
        return number;
     }
-    if((given[iter].type == FloridaType::fixed2) and (given[iter].getName() != "fixed2")){
+    if(checkType(FloridaType::fixed2)){
         Primitive* number = stack->alloc<Primitive>();
-        number->value.fixed2[0] = std::stod(given[iter].getName());
+        number->value.fixed2[0] = std::stol(given[iter - 1].getName());
         number->type = FloridaType::fixed2;
-        iter++;
 
         return number;
     }
-    if((given[iter].type == FloridaType::fixed1) and (given[iter].getName() != "fixed1")){
+    if(checkType(FloridaType::fixed1)){
         Primitive* number = stack->alloc<Primitive>();
-        number->value.fixed1[0] = std::stod(given[iter].getName());
+        number->value.fixed1[0] = std::stol(given[iter - 1].getName());
         number->type = FloridaType::fixed1;
-        iter++;
 
         return number;
     }
-    if((given[iter].type == FloridaType::float8) and (given[iter].getName() != "float8")){
+    if(checkType(FloridaType::float8)){
         Primitive* number = stack->alloc<Primitive>();
-        number->value.float8 = std::stod(given[iter].getName());
+        number->value.float8 = std::stod(given[iter - 1].getName());
         number->type = FloridaType::float8;
-        iter++;
 
         return number;
     }
-    if((given[iter].type == FloridaType::float4) and (given[iter].getName() != "float4")){
+    if(checkType(FloridaType::float4)){
         Primitive* number = stack->alloc<Primitive>();
-        number->value.float4[0] = std::stod(given[iter].getName());
+        number->value.float4[0] = std::stof(given[iter - 1].getName());
         number->type = FloridaType::float4;
-        iter++;
 
         return number;
     }
@@ -333,31 +466,30 @@ Node* Parser::primitive(){
 
     
     //Check for booleans.
-    if((given[iter].type == FloridaType::Bool) and (given[iter].getName() != "boolean")){
+    if(checkType(FloridaType::Bool)){
         Primitive* result = stack->alloc<Primitive>();
-        if(given[iter].getName() == "true"){
+        if(given[iter - 1].getName() == "true"){
             result->value.boolean[0] = true;
             result->type = FloridaType::Bool;
-            iter++;
 
             return result;
         } else {
             result->value.boolean[0] = false;
             result->type = FloridaType::Bool;
-            iter++;
             
             return result;
         }
     }
+
     //Check for function calls.
-    Node* thisCall = call();
-    if(thisCall != nullptr){
-        return thisCall;
+    pointer = call();
+    if(pointer != nullptr){
+        return pointer;
     }
     //Check for variables.
-    Node* thisVariable = variable();
-    if(thisVariable != nullptr){
-        return thisVariable;
+    pointer = variable();
+    if(pointer != nullptr){
+        return pointer;
     }
     //No primitives were found.
     return nullptr;
@@ -369,266 +501,91 @@ Node* Parser::parentheses(){
         result = stack->alloc<Parentheses>();
 
         result->subexpression = arguments();
+        if(result->subexpression == nullptr){
+            return MissingSubexpression();
+        }
+
         if(check(")")){
             return result;
         } else {
-            return MissingRParentheses();
+            Error* thing = MissingRParentheses();
+            thing->body = result->subexpression;
+            return thing;
         }
     }
+
     return nullptr;
 }
 
 
 
-//Comparisons
-Node* Parser::equal(){
-    if(!hasTokens(3)){
-        return nullptr;
-    }
-    Start start = currInfo();
-    Node* left = nullptr;
-    Node* right = nullptr;
-    Equal* result = nullptr;
-
-    left = add();
-    if(left == nullptr){
-        reset(start);
-        return nullptr;
-    }
-
-    if(!check("==")){
-        reset(start);
-        return nullptr;
-    }
-
-    right = add();
-    if(right == nullptr){
-        return MissingSubexpression();
-    }
-
-    result = stack->alloc<Equal>();
-    result->left = left;
-    result->right = right;
-    result->type = FloridaType::Bool;
-
-    return result;
-
-}
-
-Node* Parser::notEqual(){
-    if(!hasTokens(3)){
-        return nullptr;
-    }
-
-    Start start = currInfo();
-    Node* left = nullptr;
-    Node* right = nullptr;
-    NotEqual* result = nullptr;
-
-    left = add();
-    if(left == nullptr){
-        reset(start);
-        return nullptr;
-    }
-
-    if(given[iter].getName() == "!="){
-        iter++;
-    } else {
-        reset(start);
-        return nullptr;
-    }
-
-    right = add();
-    if(right == nullptr){
-        return MissingSubexpression();
-    }
-
-    result = stack->alloc<NotEqual>();
-    result->left = left;
-    result->right = right;
-    result->type = FloridaType::Bool;
-
-    return result;
-
-}
-
-Node* Parser::greaterThan(){
-    if(!hasTokens(3)){
-        return nullptr;
-    }
-
-    Start start = currInfo();
-    Node* left = nullptr;
-    Node* right = nullptr;
-    GreaterThan* result = nullptr;
-
-    left = add();
-    if(left == nullptr){
-        reset(start);
-        return nullptr;
-    }
-
-    if(!check(">")){
-        reset(start);
-        return nullptr;
-    }
-
-    right = add();
-    if(right == nullptr){
-        return MissingSubexpression();
-    }
-
-    result = stack->alloc<GreaterThan>();
-    result->left = left;
-    result->right = right;
-    result->type = FloridaType::Bool;
-
-    return result;
-
-}
-
-Node* Parser::greaterThanOr(){
-    GreaterThanOr* result = nullptr;
-    if(!hasTokens(3)){
-        return nullptr;
-    }
-
-    Start start = currInfo();
-    Node* left = nullptr;
-    Node* right = nullptr;
-
-    left = add();
-    if(left == nullptr){
-        reset(start);
-        return nullptr;
-    }
-
-    if(!check(">=")){
-        reset(start);
-        return nullptr;
-    }
-
-    right = add();
-    if(right == nullptr){
-        return MissingSubexpression();
-    }
-
-    result = stack->alloc<GreaterThanOr>();
-    result->left = left;
-    result->right = right;
-    result->type = FloridaType::Bool;
-
-    return result;
-
-}
-
-Node* Parser::lessThan(){   
-    if(!hasTokens(3)){
-        return nullptr;
-    }
-
-    Start start = currInfo();
-    Node* left = nullptr;
-    Node* right = nullptr;
-    LessThan* result = nullptr;
-
-    left = add();
-    if(left == nullptr){
-        reset(start);
-        return nullptr;
-    }
-
-    if(!check("<")){
-        reset(start);
-        return nullptr;
-    }
-
-    right = add();
-    if(right == nullptr){
-        return MissingSubexpression();
-    }
-
-    result = stack->alloc<LessThan>();
-    result->left = left;
-    result->right = right;
-    result->type = FloridaType::Bool;
-
-    return result;
-
-}
-
-Node* Parser::lessThanOr(){
-    if(!hasTokens(3)){
-        return nullptr;
-    }
-
-    Start start = currInfo();
-    Node* left = nullptr;
-    Node* right = nullptr;
-    LessThanOr* result = nullptr;
-
-    left = add();
-    if(left == nullptr){
-        reset(start);
-        return nullptr;
-    }
-
-    if(!check("<=")){
-        reset(start);
-        return nullptr;
-    }
-
-    right = add();
-    if(right == nullptr){
-        return MissingSubexpression();
-    }
-
-    result = stack->alloc<LessThanOr>();
-    result->left = left;
-    result->right = right;
-    result->type = FloridaType::Bool;
-
-    return result;
-
-}
-
 //Helper function for comparisons.
 Node* Parser::compare(){
-    Node* thing = nullptr;
+    Node* left = nullptr;
+    Node* right = nullptr;
+    std::string name = "";
+
+    left = add();
+    if(left == nullptr){
+        return nullptr;
+    }
     
-    thing = equal();
-    if(thing != nullptr){
-        return thing;
+    int64_t namePlacement = iter;
+    if(!check({"==", "!=", ">", ">=", "<", "<="})){
+        return left;
     }
 
-    thing = notEqual();
-    if(thing != nullptr){
-        return thing;
+    right = add();
+    if(right == nullptr){
+        right = MissingSubexpression();
     }
 
-    thing = greaterThan();
-    if(thing != nullptr){
-        return thing;
+    if(std::string(given[namePlacement].name) == "=="){
+        Equal* result = stack->alloc<Equal>();
+        result->left = left;
+        result->right = right;
+
+        return result;
     }
 
-    thing = greaterThanOr();
-    if(thing != nullptr){
-        return thing;
+    if(std::string(given[namePlacement].name) == "!="){
+        NotEqual* result = stack->alloc<NotEqual>();
+        result->left = left;
+        result->right = right;
+
+        return result;
     }
 
-    thing = lessThan();
-    if(thing != nullptr){
-        return thing;
+    if(std::string(given[namePlacement].name) == ">"){
+        GreaterThan* result = stack->alloc<GreaterThan>();
+        result->left = left;
+        result->right = right;
+
+        return result;
     }
 
-    thing = lessThanOr();
-    if(thing != nullptr){
-        return thing;
+    if(std::string(given[namePlacement].name) == ">="){
+        GreaterThanOr* result = stack->alloc<GreaterThanOr>();
+        result->left = left;
+        result->right = right;
+
+        return result;
     }
 
-    thing = add();
-    if(thing != nullptr){
-        return thing;
+    if(std::string(given[namePlacement].name) == "<"){
+        LessThan* result = stack->alloc<LessThan>();
+        result->left = left;
+        result->right = right;
+
+        return result;
+    }
+
+    if(std::string(given[namePlacement].name) == "<="){
+        LessThanOr* result = stack->alloc<LessThanOr>();
+        result->left = left;
+        result->right = right;
+
+        return result;
     }
 
     return nullptr;
@@ -638,7 +595,6 @@ Node* Parser::compare(){
 
 Node* Parser::OR(){
     Node* left = nullptr;
-    Node* right = nullptr;
     Or* result = nullptr;
 
     left = AND();
@@ -651,18 +607,18 @@ Node* Parser::OR(){
     }
     result = stack->alloc<Or>();
 
-    right = OR();
-    if(right == nullptr){
+    result->left = left;
+    result->right = OR();
+    if(result->right == nullptr){
         return MissingSubexpression();
     }
 
-    return left;
+    return result;
 
 }
 
 Node* Parser::AND(){
     Node* left = nullptr;
-    Node* right = nullptr;
     And* result = nullptr;
 
     left = compare();
@@ -675,12 +631,12 @@ Node* Parser::AND(){
     }
     result = stack->alloc<And>();
 
-    right = AND();
-    if(right == nullptr){
+    result->right = AND();
+    if(result->right == nullptr){
         return MissingSubexpression();
     }
 
-    return left;
+    return result;
 }
 
 void Parser::addScope(Scope* input){
@@ -779,13 +735,7 @@ Node* Parser::commonExpressions(){
     result = assignment();
     if(result != nullptr){
         if(!check(";")){
-            Error* error = stack->alloc<Error>();
-            error->column = given[iter - 1].column;
-            error->row = given[iter - 1].row;
-            error->errorMessage = "[" + std::to_string(given[iter - 1].row) + ", " + std::to_string(given[iter - 1].column) + "] Expected a ; after the expression.";
-
-            unprocessedErrors.push_back(error);
-            return error;
+            MissingSemicolon();
         }
         return result;
     }
@@ -793,13 +743,7 @@ Node* Parser::commonExpressions(){
     result = initialize();
     if(result != nullptr){
         if(!check(";")){
-            Error* error = stack->alloc<Error>();
-            error->column = given[iter - 1].column;
-            error->row = given[iter - 1].row;
-            error->errorMessage = "[" + std::to_string(given[iter - 1].row) + ", " + std::to_string(given[iter - 1].column) + "] Expected a ; after the expression.";
-
-            unprocessedErrors.push_back(error);
-            return error;
+            MissingSemicolon();
         }
         return result;
     }
@@ -811,6 +755,9 @@ Node* Parser::commonExpressions(){
 
     result = OR();
     if(result != nullptr){
+        if(!check(";")){
+            MissingSemicolon();
+        }
         return result;
     }
 
@@ -857,8 +804,8 @@ Node* Parser::IF(){
     //Check to see if the syntax matches properly.
     if(check("if")){
         result = stack->alloc<IfClass>();
-        result->ifBody->name = given[iter - 1];
-        uint64_t ifPosition = iter - 2;
+        result->ifBody->name = given[iter - 1].name;
+        uint64_t ifPosition = iter - 2; 
 
         condition = OR();
         //Get the condition of the if statement.
@@ -876,19 +823,26 @@ Node* Parser::IF(){
 
         //Check for the if body.
         result->ifBody = scope();
+        result->ifBody->name = given[ifPosition].name;
         if(!check("}")){
             MissingRCurlyBrace();
         }
 
-        if(check("else")){
-            uint64_t elsePosition = iter - 2;
-            elseScope = scope();
-            elseScope->name = given[elsePosition].name;
-            //Assign each variable a placement on the stack.
-            elseScope->byteAssign();
-            addScope(elseScope);
-        } else {
+        //Check for an else body.
+        if(!check("else")){
             return result;
+        }
+
+        if(!check("{")){
+            MissingLCurlyBrace();
+        }
+
+        uint64_t elsePosition = iter - 2;
+        result->elseBody = scope();
+        result->elseBody->name = given[elsePosition].name;
+
+        if(!check("}")){
+            MissingRCurlyBrace();
         }
 
         return result;
@@ -1074,8 +1028,6 @@ Node* Parser::initialize(){
 }
 
 Node* Parser::assignment(){
-    Start start = currInfo();
-
     Node* left = dereference(stack->currentScope);
     if(left == nullptr){
         return nullptr;
@@ -1083,26 +1035,21 @@ Node* Parser::assignment(){
     Assignment* result = nullptr;
 
     if(check("=")){
-        Node* right = commonExpressions();
-        if(right != nullptr){
-            result = stack->alloc<Assignment>();
-            result->left = left;
-            result->right = right;
+        result = stack->alloc<Assignment>();
+        result->left = left;
+        result->right = commonExpressions();
 
-            return result;
+        return result;
+        if(result->right == nullptr){
+            result->right = MissingSubexpression();
         }
 
-        Error* error = stack->alloc<Error>();
-        error->column = given[iter - 1].column;
-        error->row = given[iter - 1].row;
-        error->errorMessage = "[" + std::to_string(given[iter - 1].row) + ", " + std::to_string(given[iter - 1].column) + "] Expected an expression after the = operator.";
-
-        unprocessedErrors.push_back(error);
-        return error;
+        return result;
     }
 
-    reset(start);
-    return nullptr;
+    //This could be an object that has a method applied to it.
+    //"Object.method();" as an exmaple.
+    return left;
 }
 
 Node* Parser::object(){
@@ -1155,6 +1102,9 @@ Node* Parser::object(){
 }
 
 Node* Parser::dereference(Scope* input){
+    if(!hasTokens(1)){
+        return nullptr;
+    }
     Node* left = nullptr;
     Node* right = nullptr;
     Dereference* result = nullptr;
@@ -1182,6 +1132,9 @@ Node* Parser::dereference(Scope* input){
 }
 
 Node* Parser::memberAccess(Scope* input){
+    if(!hasTokens(1)){
+        return nullptr;
+    }
     Variable* left = nullptr;
     Node* right = nullptr;
     MemberAccess* result = nullptr;
@@ -1324,15 +1277,19 @@ Node* Parser::arguments(){
     argument = returnableExpressions();
     //Check to see if there was an expression.
     if(argument != nullptr){
-        result->current = argument;
         if(check(",")){
+            result = stack->alloc<Arguments>();
+            result->current = argument;
             result->next = arguments();
             //If nothing was returned when there is an expected expression,
             //then it is an error.
-            if(result->next = nullptr){
+            if((result->next = nullptr)){
                 result->next = MissingSubexpression();
             }
+        } else {
+            return argument;
         }
+
         return result;
     }
     return nullptr;
@@ -1349,13 +1306,7 @@ Node* Parser::returnableExpressions(){
     result = assignment();
     if(result != nullptr){
         if(!check(";")){
-            Error* error = stack->alloc<Error>();
-            error->column = given[iter - 1].column;
-            error->row = given[iter - 1].row;
-            error->errorMessage = "[" + std::to_string(given[iter - 1].row) + ", " + std::to_string(given[iter - 1].column) + "] Expected a ; after the expression.";
-
-            unprocessedErrors.push_back(error);
-            return error;
+            MissingSubexpression();
         }
         return result;
     }
@@ -1369,57 +1320,67 @@ Node* Parser::returnableExpressions(){
     return nullptr;
 }
 
+//TO FIX
 Node* Parser::call(){
-    if(!hasTokens(3)){
+    //If there are any functions of this name in the
+    //current scope or higher scope, then they will be found.
+    std::vector<Function*> allNamedFunctions = findFunctions();
+    FunctionCall* result = nullptr;
+
+    if(allNamedFunctions.size() == 0){
         return nullptr;
     }
-
-    bool bool1 = given[iter].type == FloridaType::Identifier;
-    std::string name = given[iter].getName();
-    Node* args = parentheses();
-
-    if(bool1){
-        //Find out which function it is.
-        Scope* tempScope = stack->currentScope;
-        Scope* oldScope = tempScope;
-        while(tempScope->funGet(given[iter].getName()) == nullptr){
-            tempScope = tempScope->parent;
-            if(tempScope == nullptr){
-                std::cout << "Function '" << name << "' was not found in any reachable scope.\n";
-                return nullptr;
-            }
-        }
-        iter++;
-        iter++;
-        //Create the call object, and adjust the scope to a new scope.
-        //If I don't, variables/functions might not be grabbed from the proper scope.
-        FunctionCall* result = stack->alloc<FunctionCall>();
-        result->function = tempScope->funGet(name);
-        result->arguments = args;
-        //Adjust the scope here.
-        stack->currentScope = result->function->code;
-        result->arguments = arguments();
-        
-        if(!check(")")){
-            error = true;
-            return nullptr;
-        }
-
-        //Readjust the scope to the previous scope.
-        stack->currentScope = oldScope;
-
-        return result;
-
+    if(check("(")){
+        Node* args = arguments();
+    } else {
+        //Something about returning a function pointer.
+        return nullptr;
     }
+    if(check(")")){
+
+    } else {
+        Error* error = MissingRParentheses();
+        error->body = result;
+        return error;
+    }
+    // if(false){
+    //     //Find out which function it is.
+    //     Scope* tempScope = stack->currentScope;
+    //     Scope* oldScope = tempScope;
+    //     while(tempScope->funGet(given[iter].getName()) == nullptr){
+    //         tempScope = tempScope->parent;
+    //         if(tempScope == nullptr){
+    //             std::cout << "Function '" << name << "' was not found in any reachable scope.\n";
+    //             return nullptr;
+    //         }
+    //     }
+    //     iter++;
+    //     iter++;
+    //     //Create the call object, and adjust the scope to a new scope.
+    //     //If I don't, variables/functions might not be grabbed from the proper scope.
+    //     FunctionCall* result = stack->alloc<FunctionCall>();
+    //     result->function = tempScope->funGet(name);
+    //     result->arguments = args;
+    //     //Adjust the scope here.
+    //     stack->currentScope = result->function->code;
+    //     result->arguments = arguments();
+        
+    //     if(!check(")")){
+    //         MissingRParentheses();
+    //     }
+
+    //     //Readjust the scope to the previous scope.
+    //     stack->currentScope = oldScope;
+
+    //     return result;
+
+    // }
 
     return nullptr;
 
 }
 
 Node* Parser::Return(){
-    if(!hasTokens(2)){
-        return nullptr;
-    }
     //Check for the string and then the statement that follows.
     if(check("return")){
         Node* statement = commonStatements();
@@ -1441,8 +1402,7 @@ Node* Parser::Return(){
         result->returnCount = returnCount;
 
         if(!check(";")){
-            error = true;
-            std::cout << "Missing ';' expected at [" + std::to_string(given[iter].row) + ", " + std::to_string(given[iter].column) +"]\n";
+            MissingSemicolon();
         }
 
         //Check if the return type differs from what is on the return line.

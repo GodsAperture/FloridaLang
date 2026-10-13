@@ -53,7 +53,7 @@ std::string typeString(FloridaType input){
 FloridaType typeReturn(std::string inString){
     //Void
     if(inString == "void"){
-        return FloridaType::tvoid;
+        return FloridaType::TVoid;
     }
     //Boolean
     if(inString == "boolean"){
@@ -804,6 +804,10 @@ std::string assignPad(FloridaType input, char where){
 
     void Variable::CodePrint(std::string inLeft, std::string inRight){
         std::cout << thisToken.getName();
+    }
+
+    std::string Variable::ToString(std::string inLeft, std::string inRight){
+        return std::string(thisToken.name);
     }
 
     void Variable::FLVMCodeGen(Instructions* inInstructions){
@@ -1768,6 +1772,11 @@ std::string assignPad(FloridaType input, char where){
         }
     }
 
+    bool Function::contains(Arguments* input){
+        bool result = true;
+
+    }
+
 
 
 //Function calls
@@ -1842,6 +1851,20 @@ std::string assignPad(FloridaType input, char where){
         if(currArgs->next != nullptr){
             currArgs->next->FLVMCodeGen(inInstructions);
         }
+    }
+
+    bool Arguments::equals(Arguments* input){
+        if(input == nullptr){
+            return false;
+        }
+
+        if(current->type == input->current->type){
+            if(dynamic_cast<Arguments*>(next) != nullptr){
+                return dynamic_cast<Arguments*>(next)->equals(dynamic_cast<Arguments*>(input->next));
+            }
+            return false;
+        }
+        return false;
     }
 
 
@@ -1970,16 +1993,87 @@ std::string assignPad(FloridaType input, char where){
     }
 
     void Error::CodePrint(std::string inLeft, std::string inRight){
-        //May or may not do anything, not sure yet.
+        switch(errorType){
+            case PError::PMissingSubexpression:
+                body->CodePrint("", "");
+                std::cout << "???";
+                return;
+            case PError::PMissingLParentheses:
+                std::cout << "\"(\"";
+                body->CodePrint("", "");
+                return;
+            case PError::PMissingRParentheses:
+                std::cout << "\"(\"";
+                body->CodePrint("", "");
+                std::cout << "\")\"";
+                return;
+            case PError::PMissingLCurlyBrace:
+                std::cout << "\"{\"";
+                body->CodePrint("", "");
+                return;
+            case PError::PMissingRCurlyBrace:
+                body->CodePrint("", "");
+                std::cout << "\"}\"\n";
+                return;
+            case PError::PMissingLBracket:
+                std::cout << "\"[\"";
+                body->CodePrint("", "");
+                return;
+            case PError::PMissingRBracket:
+                body->CodePrint("", "");
+                std::cout << "\"]\"";
+                return;
+            case PError::PMissingSemicolon:
+                body->CodePrint("", "");
+                std::cout << "\";\"";
+                return;
+        }
     }
 
     std::string Error::ToString(std::string inLeft, std::string inRight){
-        //May or may not do anything, not sure yet.
+        switch(errorType){
+            case PError::PMissingSubexpression:
+                return "???";
+            case PError::PMissingLParentheses:
+                return "\"(\"" + body->ToString("", "") + ")";
+            case PError::PMissingRParentheses:
+                return "(" + body->ToString("", "") + "\")\"";
+            case PError::PMissingLCurlyBrace:
+                return "\"{\"" + body->ToString("", "");
+            case PError::PMissingRCurlyBrace:
+                return body->ToString("", "") + "\"}\"";
+            case PError::PMissingLBracket:
+                return "\"[\"" + body->ToString("", "");
+            case PError::PMissingRBracket:
+                return body->ToString("", "") + "\"]\"\n";
+            case PError::PMissingSemicolon:
+                return body->ToString("", "") + "\";\"";
+        }
+
         return "";
     }
 
     std::string Error::ErrorPrint(){
-        return errorMessage;
+        switch(errorType){
+            case PError::PMissingSubexpression:
+                return "[R: " + std::to_string(row) + ", C: " + std::to_string(column) + "]\n\tMissing subexpression: " + body->ToString("", "") + "\n";
+            case PError::PMissingLParentheses:
+                return "[R: " + std::to_string(row) + ", C: " + std::to_string(column) + "]\n\tMissing left parentheses: " + "\"(\"" + body->ToString("", "") + "\n";
+            case PError::PMissingRParentheses:
+                return "[R: " + std::to_string(row) + ", C: " + std::to_string(column) + "]\n\tMissing right parentheses: " + "(" + body->ToString("", "")+ "\")\"\n";
+            case PError::PMissingLCurlyBrace:
+                return "[R: " + std::to_string(row) + ", C: " + std::to_string(column) + "]\n\tMissing left curly brace: " + "\"{\"" + body->ToString("", "") + "\n";
+            case PError::PMissingRCurlyBrace:
+                return "[R: " + std::to_string(row) + ", C: " + std::to_string(column) + "]\n\tMissing right curly brace: " + body->ToString("", "") + "\"}\"\n";
+            case PError::PMissingLBracket:
+                return "[R: " + std::to_string(row) + ", C: " + std::to_string(column) + "]\n\tMissing left bracket: " + "\"[\"" + body->ToString("", "") + "\n";
+            case PError::PMissingRBracket:
+                return "[R: " + std::to_string(row) + ", C: " + std::to_string(column) + "]\n\tMissing right bracket: " + body->ToString("", "") + "\"]\"\n";
+            case PError::PMissingSemicolon:
+                return "[R: " + std::to_string(row) + ", C: " + std::to_string(column) + "]\n\tMissing semicolon: " + body->ToString("", "") + "\";\"\n";
+        }
+
+        return "";
     }
 
     void Error::FLVMCodeGen(Instructions* inInstructions){

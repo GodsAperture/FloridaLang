@@ -456,6 +456,7 @@ public:
     std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
     void append(Initialize* input);
+    bool contains(Arguments* input);
 };
 
 class Arguments : public Node{
@@ -468,6 +469,7 @@ public:
     std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
     void append(Arguments* input, Node* head);
+    bool equals(Arguments* input);
 };
 
 class FunctionCall : public Node{
@@ -581,13 +583,24 @@ public:
 
 
 
+enum PError{
+    PMissingSubexpression,
+    PMissingLParentheses,
+    PMissingRParentheses,
+    PMissingLCurlyBrace,
+    PMissingRCurlyBrace,
+    PMissingLBracket,
+    PMissingRBracket,
+    PMissingSemicolon
+};
+
 class Error : public Node{
 public:
+    PError errorType = PMissingSubexpression;
     int64_t row = -1;
     int64_t column = -1;
     Node* body = nullptr;
     std::string placeHolder = "";
-    std::string errorMessage = "";
 
     Error();
     void CodePrint(std::string inLeft, std::string inRight) override;

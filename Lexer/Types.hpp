@@ -5,7 +5,7 @@
 //2 byte type information
 enum FloridaType : int16_t {
     //Void
-    tvoid,
+    TVoid,
     //Default type, for errors;
     Null,
     //Adjectives describe what type an object is.

@@ -15,12 +15,10 @@ public:
 
     class Start{
     public:
-        void* startNode;
-        int64_t startIter;
+        void* startNode = nullptr;
+        int64_t startIter = 0;
 
         Start(){
-            startNode = nullptr;
-            startIter = 0;
         }
 
         Start(void* inStart, int64_t inIter){
@@ -51,6 +49,8 @@ public:
     int64_t scopeCount = 0;
 
     bool check(std::string inString);
+    bool checkType(FloridaType input);
+    bool check(std::initializer_list<std::string> input);
 
 //Program related functions.
 
@@ -59,7 +59,9 @@ public:
     //Generate the code.
     void FLVMCodeGen();
     //Print out the tree for debugging purposes.
-    void ToString();
+    std::string ToString();
+    //Print out the tree in a different way.
+    void CodePrint();
 
 //Variables and related operations
 
@@ -105,15 +107,6 @@ public:
     Node* parentheses();    //subexpression: p0();Node
 
 //Booleans
-
-    //Comparisons
-    Node* equal();
-    Node* notEqual();
-    Node* greaterThan();
-    Node* lessThan();
-    Node* greaterThanOr();
-    Node* lessThanOr();
-
     //Helper function for comparisons
     Node* compare();
 
@@ -139,6 +132,8 @@ public:
     void addScope(Scope* input);
     Node* call();
     Node* Return();
+    //Generate a vector of all functions of a particular name.
+    std::vector<Function*> findFunctions();
 
     //Error related methods
     Error* MissingSubexpression();
@@ -152,8 +147,11 @@ public:
 
     //Error handler
     void errorReport(){
+        if(errors.size() != 0){
+            std::cout << "Errors have been found. Here is a list of them:\n";
+        }
         for(size_t i = 0; i < errors.size(); i++){
-            std::cout << "[" << i << "]" << errors[i]->ToString("", "");
+            std::cout << "[" << i << "]" << errors[i]->ErrorPrint();
         }
     }
 
@@ -173,7 +171,10 @@ public:
     }
 
     Start currInfo(){
-        return Start(stack->current, iter);
+        Start result;
+        result.startIter = iter;
+        result.startNode = stack->current;
+        return result;
     }
 
     void reset(Start input){
