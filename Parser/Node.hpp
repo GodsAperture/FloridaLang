@@ -448,6 +448,10 @@ public:
     Function* previous = nullptr;
     //This connects all functions across scopes.
     Function* allFunctions = nullptr;
+    //This connects all overloaded functions of the same name.
+    Function* overloadForward = nullptr;
+    //This connects all overloaded functions of the same name.
+    Function* overloadBackward = nullptr;
     //This makes sure code isn't generated twice.
     bool alreadyGenerated = false;
 
@@ -456,7 +460,7 @@ public:
     std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
     void append(Initialize* input);
-    bool contains(Arguments* input);
+    bool contains(Node* input);
 };
 
 class Arguments : public Node{
@@ -469,7 +473,8 @@ public:
     std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
     void append(Arguments* input, Node* head);
-    bool equals(Arguments* input);
+    bool equals(Node* input);
+    bool hasErrors();
 };
 
 class FunctionCall : public Node{
@@ -555,7 +560,7 @@ public:
 class MemberAccess : public Node{
 public:
     //`left` will only be a `Variable`.
-    Variable* left = nullptr;
+    Node* left = nullptr;
     //`right` will either be a `MemberAccess` or a `Variable`.
     Node* right = nullptr;
     

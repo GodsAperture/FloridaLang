@@ -135,6 +135,11 @@ public:
     //Generate a vector of all functions of a particular name.
     std::vector<Function*> findFunctions();
 
+    //Returns the nullptr if false, otherwise returns the correct pointer.
+    //Checks given[iter] for the variable name,
+    //then checks each scope from current up.
+    Variable* findVariable();
+
     //Error related methods
     Error* MissingSubexpression();
     Error* MissingLParentheses();

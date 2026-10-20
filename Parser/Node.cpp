@@ -1772,9 +1772,14 @@ std::string assignPad(FloridaType input, char where){
         }
     }
 
-    bool Function::contains(Arguments* input){
+    bool Function::contains(Node* input){
         bool result = true;
+        Arguments* args = dynamic_cast<Arguments*>(input);
 
+        if(args == nullptr){
+            return false;
+        }
+        
     }
 
 
@@ -1853,16 +1858,34 @@ std::string assignPad(FloridaType input, char where){
         }
     }
 
-    bool Arguments::equals(Arguments* input){
-        if(input == nullptr){
+    bool Arguments::equals(Node* input){
+        if(dynamic_cast<Arguments*>(input) == nullptr){
             return false;
         }
 
-        if(current->type == input->current->type){
+        if(current->type == dynamic_cast<Arguments*>(input)->current->type){
             if(dynamic_cast<Arguments*>(next) != nullptr){
-                return dynamic_cast<Arguments*>(next)->equals(dynamic_cast<Arguments*>(input->next));
+                return dynamic_cast<Arguments*>(next)->equals(dynamic_cast<Arguments*>(dynamic_cast<Arguments*>(input)->next));
             }
             return false;
+        }
+        return false;
+    }
+
+    bool Arguments::hasErrors(){
+        //Check to see if `current` is an error.
+        if(dynamic_cast<Error*>(current) == nullptr){
+            //If there is no next, return true.
+            if(next != nullptr){
+                //Check to see if `next` contains an error.
+                if(dynamic_cast<Arguments*>(next) != nullptr){
+                    return dynamic_cast<Arguments*>(next)->hasErrors();
+                } else {
+                    return false;
+                }
+            } else {
+                return true;
+            }
         }
         return false;
     }

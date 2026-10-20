@@ -56,6 +56,30 @@ bool Parser::hasTokens(int64_t input){
     return iter + input <= given.size();
 }
 
+Variable* Parser::findVariable(){
+    if(iter >= given.size()){
+        return nullptr;
+    }
+    std::string_view name = given[iter].name;
+    Scope* theScope = stack->currentScope;
+    Initialize* theInitialization = nullptr;
+
+    //Search each parent scope.
+    while(theScope != nullptr){
+        theInitialization = theScope->allInitializations;
+        //Check all variables in a given scope.
+        while(theInitialization != nullptr){
+            if(theInitialization->thisVariable->thisToken.name == name){
+                return theInitialization->thisVariable;
+            }
+            theInitialization = theInitialization->next;
+        }
+        theScope = theScope->parent;
+    }
+
+    return nullptr;
+}
+
 bool Parser::check(std::string inString){
     if(given.size() == iter){
         return false;
@@ -126,14 +150,18 @@ std::vector<Function*> Parser::findFunctions(){
     std::vector<Function*> result = std::vector<Function*>();
     Scope* currentScope = stack->currentScope;
     Function* currentFunction = nullptr;
-    if(iter == given.size()){
+    //Check to see if there are any tokens to consume.
+    if(iter >= given.size()){
         return result;
     }
 
+    //Find all functions whose name match the token.
     std::string name = std::string(given[iter].name);
     iter++;
+    //This is a while loop.
     while(currentScope != nullptr){
         currentFunction = currentScope->functions;
+        //If the name matches, it goes into the vector.
         while(currentFunction != nullptr){
             if(currentFunction->name == name){
                 result.push_back(currentFunction);
@@ -962,14 +990,11 @@ Node* Parser::WHILE(){
 
 //Variable stuff
 Node* Parser::variable(){
-    if(!hasTokens(1)){
-        return nullptr;
-    }
+    Node* result = nullptr;
 
-    //Check to see if the variable is accessible from the current scope.
-    if(stack->currentScope->hasVariable(given[iter].name)){
-        iter++;
-        return stack->currentScope->getVariable(given[iter - 1].name);
+    result = findVariable();
+    if(result != nullptr){
+        return result;
     }
 
     //This isn't an error, just that a variable wasn't found.
@@ -1132,37 +1157,66 @@ Node* Parser::dereference(Scope* input){
 }
 
 Node* Parser::memberAccess(Scope* input){
-    if(!hasTokens(1)){
+    if((!hasTokens(1)) or (input == nullptr)){
         return nullptr;
     }
-    Variable* left = nullptr;
+    Node* left = nullptr;
     Node* right = nullptr;
     MemberAccess* result = nullptr;
 
-    if(input->hasVariable(given[iter].name)){
-        left = input->getVariable(given[iter].name);
-        if(left == nullptr){
-            return nullptr;
+    left = call();
+    //Check to see if it's a call instead of an error.
+    if(dynamic_cast<FunctionCall*>(left) != nullptr){
+        FunctionCall* leftCall = dynamic_cast<FunctionCall*>(left);
+        if(leftCall == nullptr){
+            return left;
         }
-        iter++;
 
         if(!check(".")){
-            return right;
+            return left;
         }
-
-        right = memberAccess(left->objectType->code);
-        if(right == nullptr){
-            //Error
-        }
-
         result = stack->alloc<MemberAccess>();
         result->left = left;
+
+        right = memberAccess(leftCall->function->code);
+        if(right == nullptr){
+            result->right = MissingSubexpression();
+
+            return result;
+        }
+
         result->right = right;
 
         return result;
     }
 
-    return result;
+    left = variable();
+    //Check to see if it's a variable instead of an error.
+    if(left != nullptr){
+        Variable* leftVariable = dynamic_cast<Variable*>(left);
+        if(leftVariable == nullptr){
+            return left;
+        }
+
+        if(!check(".")){
+            return left;
+        }
+        result = stack->alloc<MemberAccess>();
+        result->left = left;
+
+        right = memberAccess(leftVariable->objectType->code);
+        if(right == nullptr){
+            result->right = MissingSubexpression();
+
+            return result;
+        }
+
+        result->right = right;
+
+        return result;
+    }
+
+    return nullptr;
 
 }
 
@@ -1326,23 +1380,39 @@ Node* Parser::call(){
     //current scope or higher scope, then they will be found.
     std::vector<Function*> allNamedFunctions = findFunctions();
     FunctionCall* result = nullptr;
+    Node* args = nullptr;
+    Arguments* arguments = nullptr;
 
+    //Check to see if there are any matching functions.
+    //If not, then return a nullptr to show nothing was found.
     if(allNamedFunctions.size() == 0){
         return nullptr;
     }
-    if(check("(")){
-        Node* args = arguments();
-    } else {
-        //Something about returning a function pointer.
+    //Check for any arguments.
+    args = parentheses();
+    if(args == nullptr){
+        //Something something return a function pointer.
+        //For future me to fix.
         return nullptr;
     }
-    if(check(")")){
+    //Check to see if the returned pointer is not an error.
+    if(dynamic_cast<Parentheses*>(args) != nullptr){
+        arguments = dynamic_cast<Arguments*>(dynamic_cast<Parentheses*>(args));
+        //Check to see if the whole thing was an error.
+        if(arguments != nullptr){
+            //If the whole thing wasn't an error, then check to see if any do exist.
+            //Otherwise, we can FINALLY check for a fitting function.
+            if(arguments->hasErrors()){
+                //Something something return bad function call error, maybe??
+            } else {
 
+            }
+        }
     } else {
-        Error* error = MissingRParentheses();
-        error->body = result;
-        return error;
+        //This is some kind of error regarding the function's arguments.
     }
+    result->arguments = args;
+    
     // if(false){
     //     //Find out which function it is.
     //     Scope* tempScope = stack->currentScope;
