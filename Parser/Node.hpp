@@ -240,7 +240,9 @@ public:
 
 class Parentheses : public Node{
 public:
+    Error* MissingLP = nullptr;
     Node* subexpression = nullptr;
+    Error* MissingRP = nullptr;
 
     Parentheses();
     void CodePrint(std::string inLeft, std::string inRight) override;
@@ -393,11 +395,15 @@ public:
 
 class IfClass : public Node{
 public:
+    Error* MissingLP = nullptr;
     Node* condition = nullptr;
+    Error* MissingRP = nullptr;
+    Error* MissingIfLCB = nullptr;
     Scope* ifBody = nullptr;
+    Error* MissingIfRCB = nullptr;
+    Error* MissingElseLCB = nullptr;
     Scope* elseBody = nullptr;
-    size_t ifVarCount = 0;
-    size_t elseVarCount = 0;
+    Error* MissingElseRCB = nullptr;
 
     IfClass();
     void CodePrint(std::string inLeft, std::string inRight) override;
@@ -410,7 +416,9 @@ public:
     Node* assign = nullptr;
     Node* condition = nullptr;
     Node* incrementer = nullptr;
+    Error* MissingLCB = nullptr;
     Scope* body = nullptr;
+    Error* MissingRCB = nullptr;
 
     ForLoop();
     void CodePrint(std::string inLeft, std::string inRight) override;
@@ -421,7 +429,9 @@ public:
 class WhileLoop : public Node{
 public:
     Node* condition = nullptr;
+    Error* MissingLCB = nullptr;
     Scope* body = nullptr;
+    Error* MissingRCB = nullptr;
 
     WhileLoop();
     void CodePrint(std::string inLeft, std::string inRight) override;
@@ -466,21 +476,22 @@ public:
 class Arguments : public Node{
 public:
     Node* current = nullptr;
-    Node* next = nullptr;
+    Arguments* next = nullptr;
 
     Arguments();
     void CodePrint(std::string inLeft, std::string inRight) override;
     std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
-    void append(Arguments* input, Node* head);
-    bool equals(Node* input);
+    //void append(Arguments* input, Node* head);
+    bool equals(Arguments* input);
+    int64_t length();
     bool hasErrors();
 };
 
 class FunctionCall : public Node{
 public:
     Function* function = nullptr;
-    Node* arguments = nullptr;
+    Arguments* arguments = nullptr;
     int64_t argumentByteSize = 0;
 
     FunctionCall();

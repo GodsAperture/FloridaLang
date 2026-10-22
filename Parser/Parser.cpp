@@ -180,6 +180,7 @@ std::vector<Function*> Parser::findFunctions(){
 Error* Parser::MissingSubexpression(){
     Error* result = stack->alloc<Error>();
 
+    result->type = FloridaType::TError;
     result->errorType = PError::PMissingSubexpression;
     result->body = bodyStack[bodyStack.size() - 1];
     result->row = given[iter - 1].row;
@@ -193,6 +194,7 @@ Error* Parser::MissingSubexpression(){
 Error* Parser::MissingLParentheses(){
     Error* result = stack->alloc<Error>();
 
+    result->type = FloridaType::TError;
     result->errorType = PError::PMissingLParentheses;
     result->body = bodyStack[bodyStack.size() - 1];
     result->row = given[iter - 1].row;
@@ -206,6 +208,7 @@ Error* Parser::MissingLParentheses(){
 Error* Parser::MissingRParentheses(){
     Error* result = stack->alloc<Error>();
 
+    result->type = FloridaType::TError;
     result->errorType = PError::PMissingRParentheses;
     result->body = bodyStack[bodyStack.size() - 1];
     result->row = given[iter - 1].row;
@@ -219,6 +222,7 @@ Error* Parser::MissingRParentheses(){
 Error* Parser::MissingLCurlyBrace(){
     Error* result = stack->alloc<Error>();
 
+    result->type = FloridaType::TError;
     result->errorType = PError::PMissingLCurlyBrace;
     result->body = bodyStack[bodyStack.size() - 1];
     result->row = given[iter - 1].row;
@@ -232,6 +236,7 @@ Error* Parser::MissingLCurlyBrace(){
 Error* Parser::MissingRCurlyBrace(){
     Error* result = stack->alloc<Error>();
 
+    result->type = FloridaType::TError;
     result->errorType = PError::PMissingRCurlyBrace;
     result->body = bodyStack[bodyStack.size() - 1];
     result->row = given[iter - 1].row;
@@ -245,6 +250,7 @@ Error* Parser::MissingRCurlyBrace(){
 Error* Parser::MissingLBracket(){
     Error* result = stack->alloc<Error>();
 
+    result->type = FloridaType::TError;
     result->errorType = PError::PMissingLBracket;
     result->body = bodyStack[bodyStack.size() - 1];
     result->row = given[iter - 1].row;
@@ -258,6 +264,7 @@ Error* Parser::MissingLBracket(){
 Error* Parser::MissingRBracket(){
     Error* result = stack->alloc<Error>();
 
+    result->type = FloridaType::TError;
     result->errorType = PError::PMissingLBracket;
     result->body = bodyStack[bodyStack.size() - 1];
     result->row = given[iter - 1].row;
@@ -271,6 +278,7 @@ Error* Parser::MissingRBracket(){
 Error* Parser::MissingSemicolon(){
     Error* result = stack->alloc<Error>();
 
+    result->type = FloridaType::TError;
     result->errorType = PError::PMissingSemicolon;
     result->body = bodyStack[bodyStack.size() - 1];
     result->row = given[iter - 1].row;
@@ -523,22 +531,44 @@ Node* Parser::primitive(){
     return nullptr;
 }
 
-Node* Parser::parentheses(){
+Parentheses* Parser::mandatoryParentheses(){
+    Parentheses* result = stack->alloc<Parentheses>();
+    if(check("(")){
+        result->subexpression = arguments();
+
+        if(check(")")){
+            return result;
+        } else {
+            result->MissingRP = MissingRParentheses();
+            return result;
+        }
+    } else {
+        result->MissingLP = MissingLParentheses();
+        result->subexpression = arguments();
+        if(result->subexpression == nullptr){
+            result->subexpression = MissingSubexpression();
+        }
+
+        if(!check(")")){
+            result->MissingRP = MissingRParentheses();
+        }
+
+        return result;
+    }
+}
+
+Parentheses* Parser::parentheses(){
     Parentheses* result = nullptr;
     if(check("(")){
         result = stack->alloc<Parentheses>();
 
         result->subexpression = arguments();
-        if(result->subexpression == nullptr){
-            return MissingSubexpression();
-        }
 
         if(check(")")){
             return result;
         } else {
-            Error* thing = MissingRParentheses();
-            thing->body = result->subexpression;
-            return thing;
+            result->MissingRP = MissingRParentheses();
+            return result;
         }
     }
 
@@ -833,44 +863,50 @@ Node* Parser::IF(){
     if(check("if")){
         result = stack->alloc<IfClass>();
         result->ifBody->name = given[iter - 1].name;
-        uint64_t ifPosition = iter - 2; 
+        uint64_t ifPosition = iter - 2;
+
+        //Check for a left parentheses.
+        if(!check("(")){
+            result->MissingLP = MissingLParentheses();
+        }
 
         condition = OR();
         //Get the condition of the if statement.
         if(condition == nullptr){
             result->condition = MissingSubexpression();
         }
-        //Check to see if the parentheses is there.
+        //Check for a right parentheses.
         if(!check(")")){
-            MissingLParentheses();
+            result->MissingRP = MissingRParentheses();
         }
-        //Check for the end of the condition and the start of the body.
+        //Check for a left curly brace.
         if(!check("{")){
-            MissingLCurlyBrace();
+            result->MissingIfLCB = MissingLCurlyBrace();
         }
 
         //Check for the if body.
         result->ifBody = scope();
         result->ifBody->name = given[ifPosition].name;
+        //Check for a right curly brace.
         if(!check("}")){
-            MissingRCurlyBrace();
+            result->MissingIfRCB = MissingRCurlyBrace();
         }
 
         //Check for an else body.
         if(!check("else")){
             return result;
         }
+        uint64_t elsePosition = iter - 1;
 
         if(!check("{")){
-            MissingLCurlyBrace();
+            result->MissingElseLCB = MissingLCurlyBrace();
         }
 
-        uint64_t elsePosition = iter - 2;
         result->elseBody = scope();
         result->elseBody->name = given[elsePosition].name;
 
         if(!check("}")){
-            MissingRCurlyBrace();
+           result->MissingElseRCB = MissingRCurlyBrace();
         }
 
         return result;
@@ -1223,6 +1259,7 @@ Node* Parser::memberAccess(Scope* input){
 
 
 //Function stuff
+//TO FIX
 Node* Parser::function(){
     if(!hasTokens(3)){
         return nullptr;
@@ -1306,7 +1343,7 @@ Node* Parser::function(){
 
 }
 
-Node* Parser::initializeArguments(){
+Arguments* Parser::initializeArguments(){
     Arguments* result = nullptr;
     Node* subresult = nullptr;
 
@@ -1324,29 +1361,23 @@ Node* Parser::initializeArguments(){
     return nullptr;
 }
 
-Node* Parser::arguments(){
-    Arguments* result = nullptr;
-    Node* argument = nullptr;
+Arguments* Parser::arguments(){
+    Arguments* result = stack->alloc<Arguments>();
 
-    argument = returnableExpressions();
-    //Check to see if there was an expression.
-    if(argument != nullptr){
-        if(check(",")){
-            result = stack->alloc<Arguments>();
-            result->current = argument;
-            result->next = arguments();
-            //If nothing was returned when there is an expected expression,
-            //then it is an error.
-            if((result->next = nullptr)){
-                result->next = MissingSubexpression();
-            }
-        } else {
-            return argument;
+    //Check for any sort  of subexpression.
+    result->current = returnableExpressions();
+
+    //If there is a comma, then there is another argument.
+    if(check(",")){
+        result->next = arguments();
+        //If there isn't a subexpression,
+        //then place an error and continue checking.
+        if(result->next->current == nullptr){
+            result->next->current = MissingSubexpression();
         }
-
-        return result;
     }
-    return nullptr;
+
+    return result;
 }
 
 Node* Parser::returnableExpressions(){
@@ -1380,8 +1411,8 @@ Node* Parser::call(){
     //current scope or higher scope, then they will be found.
     std::vector<Function*> allNamedFunctions = findFunctions();
     FunctionCall* result = nullptr;
-    Node* args = nullptr;
-    Arguments* arguments = nullptr;
+    Arguments* args = nullptr;
+    Parentheses* par = nullptr;
 
     //Check to see if there are any matching functions.
     //If not, then return a nullptr to show nothing was found.
@@ -1389,20 +1420,20 @@ Node* Parser::call(){
         return nullptr;
     }
     //Check for any arguments.
-    args = parentheses();
-    if(args == nullptr){
+    par = parentheses();
+    if(par == nullptr){
         //Something something return a function pointer.
         //For future me to fix.
         return nullptr;
     }
     //Check to see if the returned pointer is not an error.
     if(dynamic_cast<Parentheses*>(args) != nullptr){
-        arguments = dynamic_cast<Arguments*>(dynamic_cast<Parentheses*>(args));
+        args = dynamic_cast<Arguments*>(par->subexpression);
         //Check to see if the whole thing was an error.
         if(arguments != nullptr){
             //If the whole thing wasn't an error, then check to see if any do exist.
             //Otherwise, we can FINALLY check for a fitting function.
-            if(arguments->hasErrors()){
+            if(args->hasErrors()){
                 //Something something return bad function call error, maybe??
             } else {
 

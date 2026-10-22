@@ -82,6 +82,9 @@ enum FloridaType : int16_t {
     //Non-overloadable characters.
     Comma, Semicolon,
 
+    //Errors, useful for catching actual errors in the parser.
+    TError,
+
     //Bad tokens, only exists to make the lexer not shit itself.
     BadToken
 };

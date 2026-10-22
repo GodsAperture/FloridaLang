@@ -1858,12 +1858,20 @@ std::string assignPad(FloridaType input, char where){
         }
     }
 
-    bool Arguments::equals(Node* input){
-        if(dynamic_cast<Arguments*>(input) == nullptr){
-            return false;
+    int64_t Arguments::length(){
+        if(current != nullptr){
+            if(next != nullptr){
+                return 1 + next->length();
+            } else{
+                return 1;
+            }
+        } else {
+            return 0;
         }
+    }
 
-        if(current->type == dynamic_cast<Arguments*>(input)->current->type){
+    bool Arguments::equals(Arguments* input){
+        if(current->type == input->current->type){
             if(dynamic_cast<Arguments*>(next) != nullptr){
                 return dynamic_cast<Arguments*>(next)->equals(dynamic_cast<Arguments*>(dynamic_cast<Arguments*>(input)->next));
             }
@@ -1964,6 +1972,7 @@ std::string assignPad(FloridaType input, char where){
         return left->ToString(inLeft, inRight) + "." + right->ToString(inLeft, inRight);
     }
 
+    //TO FIX
     void MemberAccess::FLVMCodeGen(Instructions* inInstructions){
         types result;
         //Push the push operation to the stack.
@@ -2004,6 +2013,7 @@ std::string assignPad(FloridaType input, char where){
         return left->ToString(inLeft, inRight) + "->" + right->ToString(inLeft, inRight);
     }
 
+    //TO FIX
     void Dereference::FLVMCodeGen(Instructions* inInstructions){
         //Do nothing for now
     }

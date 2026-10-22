@@ -102,18 +102,16 @@ public:
     Node* multiply();
     Node* divide();
 
-    //2 priority
-    Node* primitive();      //numbers, booleans.
-    Node* parentheses();    //subexpression: p0();Node
+    Node* primitive();
+    Parentheses* mandatoryParentheses();
+    Parentheses* parentheses();
 
 //Booleans
     //Helper function for comparisons
     Node* compare();
-
-    //0 priority
+    
+    //Boolean algebra
     Node* OR();
-
-    //1 priority
     Node* AND();
 
     //if statement
@@ -125,9 +123,9 @@ public:
 
     //Functions and methods
     Node* function();
-    Node* arguments();
+    Arguments* arguments();
     //Generate a linked list of initializations.
-    Node* initializeArguments();
+    Arguments* initializeArguments();
     void functionAppend(Function* input);
     void addScope(Scope* input);
     Node* call();
