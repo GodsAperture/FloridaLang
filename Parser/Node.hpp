@@ -21,6 +21,7 @@ bool typeCheck(FloridaType inType);
 class StackAllocator;
 class ExistingScope;
 class Scope;
+class Arguments;
 
 //If you need to be told what a node is, God help you.
 class Node{
@@ -69,15 +70,15 @@ public:
     ObjectClass* objectType = nullptr;
     
     Variable();
-    //I get this comes off as really janky, but whatever, it's convenient.
-    void operator=(Variable* input){
-        this->thisToken = input->thisToken;
-        this->owner = input->owner;
-        this->stackBytePosition = input->stackBytePosition;
-        this->value = input->value;
-        this->next = input->next;
-        this->objectType = input->objectType;
-    };
+    void append(Variable* input, void* head);
+    void CodePrint(std::string inLeft, std::string inRight) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
+    void FLVMCodeGen(Instructions* inInstructions) override;
+};
+
+class ThisKeyword : public Variable {
+public:
+    ThisKeyword();
     void append(Variable* input, void* head);
     void CodePrint(std::string inLeft, std::string inRight) override;
     std::string ToString(std::string inLeft, std::string inRight) override;
@@ -241,7 +242,7 @@ public:
 class Parentheses : public Node{
 public:
     Error* MissingLP = nullptr;
-    Node* subexpression = nullptr;
+    Arguments* subexpression = nullptr;
     Error* MissingRP = nullptr;
 
     Parentheses();
@@ -441,14 +442,16 @@ public:
 
 class Function : public Node{
 public:
+    //The `this` keyword relative to this function.
+    //This will never be a nullptr.
+    ObjectClass* thisPointer = nullptr;
+    //The function's name, hopefully that's obvious.
     std::string_view name;
     bool returnable = false;
     //This is where the instruction set begins.
     int64_t position = -1;
     //This is where all of the function arguments (if any) are.
-    Node* allArguments = nullptr;
-    //This is how many arguments the function has.
-    int64_t argumentCount = 0;
+    Arguments* allArguments = nullptr;
     //This is the full function
     Scope* code = nullptr;
     //For use in the parser and VM.
@@ -484,6 +487,7 @@ public:
     void FLVMCodeGen(Instructions* inInstructions) override;
     //void append(Arguments* input, Node* head);
     bool equals(Arguments* input);
+    int64_t matchCount(Arguments* input);
     int64_t length();
     bool hasErrors();
 };

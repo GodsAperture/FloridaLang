@@ -40,9 +40,11 @@ public:
     //The given vector of tokens to be parsed into a program.
     std::vector<Token> given;
     //The vector that contains all errors.
-    std::vector<Error*> errors = std::vector<Error*>();
+    std::vector<Error*> errorStack = std::vector<Error*>();
     //This will be a stack of the currently most active body.
-    std::vector<Node*> bodyStack = std::vector<Node*>();
+    std::vector<Body*> bodyStack = std::vector<Body*>();
+    //This will be a stack of the currently active classes.
+    std::vector<ObjectClass*> objectStack = std::vector<ObjectClass*>();
     //The StackAllocator keeps my program slightly tidier.
     StackAllocator* stack = nullptr;
     //scopeCount will be used for the VM to keep track of uniqueScopes.
@@ -66,7 +68,9 @@ public:
 //Variables and related operations
 
     //Check for a variable.
-    Node* variable();
+    Variable* variable(Scope* input);
+    //Check for the `This` keyword.
+    ThisKeyword* checkForThis(Scope* input);
     //Check for an initialization with or without assignment.
     Node* initialize();
     //Check for an assignment.
@@ -132,11 +136,15 @@ public:
     Node* Return();
     //Generate a vector of all functions of a particular name.
     std::vector<Function*> findFunctions();
+    //Given the vector of functions and the arguments,
+    //find the best fitting function, if any.
+    //The nullptr indicates none may fit.
+    Function* findClosestFunction(std::vector<Function*> functions, Arguments* input);
 
     //Returns the nullptr if false, otherwise returns the correct pointer.
     //Checks given[iter] for the variable name,
     //then checks each scope from current up.
-    Variable* findVariable();
+    Variable* findVariable(Scope* input);
 
     //Error related methods
     Error* MissingSubexpression();
@@ -150,11 +158,11 @@ public:
 
     //Error handler
     void errorReport(){
-        if(errors.size() != 0){
+        if(errorStack.size() != 0){
             std::cout << "Errors have been found. Here is a list of them:\n";
         }
-        for(size_t i = 0; i < errors.size(); i++){
-            std::cout << "[" << i << "]" << errors[i]->ErrorPrint();
+        for(size_t i = 0; i < errorStack.size(); i++){
+            std::cout << "[" << i << "]" << errorStack[i]->ErrorPrint();
         }
     }
 
@@ -163,7 +171,7 @@ public:
         //This is the Global scope.
         stack->currentScope = nullptr;
         given = inTokens;
-        errors = std::vector<Error*>();
+        errorStack = std::vector<Error*>();
     }
 
     //For the love of God, don't forget this.

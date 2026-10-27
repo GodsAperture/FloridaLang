@@ -1,1 +1,14 @@
-(4 + 3 * 
+float8 fun(float8 x, float8 y){
+    return x * y;
+}
+
+float8 x = 3.14;
+float8 y = 2.718;
+
+fun(x, y);
+
+if(x > 2.0){
+    fun(2 * x, y);
+} else {
+    x = x + 2.1;
+}

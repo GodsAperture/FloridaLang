@@ -4,6 +4,57 @@
 #include <cstring>
 #include <iostream>
 
+Function* Parser::findClosestFunction(std::vector<Function*> functions, Arguments* input){
+    Function* result = nullptr;
+    std::vector<Function*> similarFunctions = std::vector<Function*>();
+
+    //Edge case: `input` is a nullptr because there are no arguments.
+    if(input == nullptr){
+        for(size_t i = 0; i < functions.size(); i++){
+            if(functions[i]->allArguments == nullptr){
+                return functions[i];
+            }
+        }
+
+        //No matching function was found, throw an error.
+        return nullptr;
+    }
+
+    //Filter all the functions for the ones with equal lengths.
+    for(size_t i = 0; i < functions.size(); i++){
+        if(functions[i]->allArguments->length() == input->length()){
+            similarFunctions.push_back(functions[i]);
+        }
+    }
+
+    //Edge case error, no matching function was found.
+    if(similarFunctions.size() == 0){
+        return nullptr;
+    }
+    
+    int64_t count = input->matchCount(functions[0]->allArguments);
+    result = functions[0];
+
+    //Check for anything that perfectly matches the function.
+    //If one isn't found, this will also check for the closest matching one.
+    for(size_t i = 0; i < similarFunctions.size(); i++){
+        //If it's a perfect match, return it.
+        if(similarFunctions[i]->allArguments->equals(input)){
+            return similarFunctions[i];
+        //Otherwise, just check to see if it's a better match or not.
+        } else {
+            //If it's a closer match, then use it instead.
+            if(input->matchCount(functions[i]->allArguments) > count){
+                count = input->matchCount(functions[i]->allArguments);
+                result = functions[i];
+            }
+        }
+    }
+
+    //This is the closest matching function that is not a perfect match.
+    return result;
+}
+
 uint64_t Parser::allocationSize(FloridaType input){
     switch(input){
         case FloridaType::Bool:
@@ -56,12 +107,12 @@ bool Parser::hasTokens(int64_t input){
     return iter + input <= given.size();
 }
 
-Variable* Parser::findVariable(){
+Variable* Parser::findVariable(Scope* input){
     if(iter >= given.size()){
         return nullptr;
     }
     std::string_view name = given[iter].name;
-    Scope* theScope = stack->currentScope;
+    Scope* theScope = input;
     Initialize* theInitialization = nullptr;
 
     //Search each parent scope.
@@ -78,6 +129,14 @@ Variable* Parser::findVariable(){
     }
 
     return nullptr;
+}
+
+ThisKeyword* Parser::checkForThis(Scope* input){
+    if(check("this")){
+        ThisKeyword* result = stack->alloc<ThisKeyword>();
+        result->objectType = objectStack[objectStack.size() - 1];
+        return result;
+    }
 }
 
 bool Parser::check(std::string inString){
@@ -187,7 +246,7 @@ Error* Parser::MissingSubexpression(){
     result->column = given[iter - 1].column;
     result->placeHolder = "???";
 
-    errors.push_back(result);
+    errorStack.push_back(result);
     return result;
 }
 
@@ -201,7 +260,7 @@ Error* Parser::MissingLParentheses(){
     result->column = given[iter - 1].column;
     result->placeHolder = "\"(\"";
 
-    errors.push_back(result);
+    errorStack.push_back(result);
     return result;
 }
 
@@ -215,7 +274,7 @@ Error* Parser::MissingRParentheses(){
     result->column = given[iter - 1].column;
     result->placeHolder = "\")\"";
 
-    errors.push_back(result);
+    errorStack.push_back(result);
     return result;
 }
 
@@ -229,7 +288,7 @@ Error* Parser::MissingLCurlyBrace(){
     result->column = given[iter - 1].column;
     result->placeHolder = "\"{\"";
 
-    errors.push_back(result);
+    errorStack.push_back(result);
     return result;
 }
 
@@ -243,7 +302,7 @@ Error* Parser::MissingRCurlyBrace(){
     result->column = given[iter - 1].column;
     result->placeHolder = "\")\"";
 
-    errors.push_back(result);
+    errorStack.push_back(result);
     return result;
 }
 
@@ -257,7 +316,7 @@ Error* Parser::MissingLBracket(){
     result->column = given[iter - 1].column;
     result->placeHolder = "\"[\"";
 
-    errors.push_back(result);
+    errorStack.push_back(result);
     return result;
 }
 
@@ -271,7 +330,7 @@ Error* Parser::MissingRBracket(){
     result->column = given[iter - 1].column;
     result->placeHolder = "\"]\"";
 
-    errors.push_back(result);
+    errorStack.push_back(result);
     return result;
 }
 
@@ -285,7 +344,7 @@ Error* Parser::MissingSemicolon(){
     result->column = given[iter - 1].column;
     result->placeHolder = "\";\"";
 
-    errors.push_back(result);
+    errorStack.push_back(result);
     return result;
 }
 
@@ -523,7 +582,7 @@ Node* Parser::primitive(){
         return pointer;
     }
     //Check for variables.
-    pointer = variable();
+    pointer = variable(stack->currentScope);
     if(pointer != nullptr){
         return pointer;
     }
@@ -545,9 +604,6 @@ Parentheses* Parser::mandatoryParentheses(){
     } else {
         result->MissingLP = MissingLParentheses();
         result->subexpression = arguments();
-        if(result->subexpression == nullptr){
-            result->subexpression = MissingSubexpression();
-        }
 
         if(!check(")")){
             result->MissingRP = MissingRParentheses();
@@ -745,7 +801,6 @@ Scope* Parser::scope(){
 }
 
 Body* Parser::body(){
-    Start start = currInfo();
     Node* temp = nullptr;
     Body* result = stack->alloc<Body>();
     bodyStack.push_back(result);
@@ -753,7 +808,6 @@ Body* Parser::body(){
     //Look out for anything familiar such as assignments or if statements.
     temp = commonExpressions();
     if(temp == nullptr){
-        reset(start);
         bodyStack.pop_back();
         return nullptr;
     }
@@ -855,7 +909,7 @@ Node* Parser::commonStatements(){
 }
 
 //if statement
-Node* Parser::IF(){ 
+Node* Parser::IF(){
     Node* condition = nullptr;
     IfClass* result = nullptr;
 
@@ -1025,10 +1079,15 @@ Node* Parser::WHILE(){
 }
 
 //Variable stuff
-Node* Parser::variable(){
-    Node* result = nullptr;
+Variable* Parser::variable(Scope* input){
+    Variable* result = nullptr;
 
-    result = findVariable();
+    result = findVariable(input);
+    if(result != nullptr){
+        return result;
+    }
+
+    result = checkForThis(input);
     if(result != nullptr){
         return result;
     }
@@ -1041,6 +1100,8 @@ Node* Parser::initialize(){
     if(!hasTokens(3)){
         return nullptr;
     }
+
+    //int64_t adverbs = descriptor();
     
     //Check to see if this matches a valid initialization.
     bool bool1 = (given[iter].getType() == FloridaType::Adjective) or stack->currentScope->hasObject(given[iter].name);
@@ -1226,7 +1287,7 @@ Node* Parser::memberAccess(Scope* input){
         return result;
     }
 
-    left = variable();
+    left = variable(stack->currentScope);
     //Check to see if it's a variable instead of an error.
     if(left != nullptr){
         Variable* leftVariable = dynamic_cast<Variable*>(left);
@@ -1257,6 +1318,9 @@ Node* Parser::memberAccess(Scope* input){
 }
 
 
+
+//int64_t descriptor(){
+//}
 
 //Function stuff
 //TO FIX
@@ -1362,10 +1426,18 @@ Arguments* Parser::initializeArguments(){
 }
 
 Arguments* Parser::arguments(){
-    Arguments* result = stack->alloc<Arguments>();
+    Node* code = nullptr;
+    Arguments* result = nullptr;
 
     //Check for any sort  of subexpression.
-    result->current = returnableExpressions();
+    code = returnableExpressions();
+    //If there is no code, then there is no argument.
+    if(code == nullptr){
+        return nullptr;
+    }
+
+    result = stack->alloc<Arguments>();
+    result->current = code;
 
     //If there is a comma, then there is another argument.
     if(check(",")){
@@ -1427,8 +1499,8 @@ Node* Parser::call(){
         return nullptr;
     }
     //Check to see if the returned pointer is not an error.
-    if(dynamic_cast<Parentheses*>(args) != nullptr){
-        args = dynamic_cast<Arguments*>(par->subexpression);
+    if(par != nullptr){
+        args = par->subexpression;
         //Check to see if the whole thing was an error.
         if(arguments != nullptr){
             //If the whole thing wasn't an error, then check to see if any do exist.

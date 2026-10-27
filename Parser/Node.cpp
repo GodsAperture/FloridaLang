@@ -1872,12 +1872,33 @@ std::string assignPad(FloridaType input, char where){
 
     bool Arguments::equals(Arguments* input){
         if(current->type == input->current->type){
-            if(dynamic_cast<Arguments*>(next) != nullptr){
-                return dynamic_cast<Arguments*>(next)->equals(dynamic_cast<Arguments*>(dynamic_cast<Arguments*>(input)->next));
+            if(next != nullptr){
+                return next->equals(input->next);
+            } else {
+                return true;
             }
-            return false;
         }
         return false;
+    }
+
+    int64_t Arguments::matchCount(Arguments* input){
+        //Check to see if there is a next argument.
+        if((next != nullptr) and (input->next != nullptr)){
+            //Check to see if they are the same type or not.
+            if(current->type == input->current->type){
+                return 1 + next->matchCount(input->next);
+            } else {
+                return next->matchCount(input->next);
+            }
+        //Otherwise just check to see if the current arguments' type match.
+        } else {
+            //Check to see if they are the same type or not.
+            if(current->type == input->current->type){
+                return 1;
+            } else {
+                return 0;
+            }
+        }
     }
 
     bool Arguments::hasErrors(){
@@ -1982,7 +2003,7 @@ std::string assignPad(FloridaType input, char where){
         result.type[0] = FloridaType::fixed8;
         inInstructions->push(result);
         //Push the offset size to the stack.
-        result.fixed8 = left->stackBytePosition;
+        //result.fixed8 = left->stackBytePosition;
         inInstructions->push(result);
         //Generating the code for the right.
         right->FLVMCodeGen(inInstructions);
