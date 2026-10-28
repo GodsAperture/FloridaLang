@@ -80,9 +80,9 @@ public:
     //Determine the size of an object.
     uint64_t allocationSize(FloridaType input);
     //Convenient method for getting a dereference or a member access.
-    Node* dereference(Scope* input);
+    UNode dereference(Scope* input);
     //Convenient method for getting a member access.
-    Node* memberAccess(Scope* input);
+    UNode memberAccess(Scope* input);
 
 //Tree related functions.
 
@@ -91,9 +91,9 @@ public:
     Body* body();
     //Helper function for common expresssions.
     //Assignments, functions, objects with methods, etc.
-    Node* commonExpressions();
+    UNode commonExpressions();
     //Small subexpressions.
-    Node* commonStatements();
+    UNode commonStatements();
     //Guaranteed returnable expressions.
     Node* returnableExpressions();
     bool hasTokens();
@@ -101,12 +101,12 @@ public:
 
 //Mathematical expressions.
 //Technically, all mathematical expressions are subexpressions of boolean expressions.
-    Node* add();
-    Node* subtract();
-    Node* multiply();
-    Node* divide();
+    UNode add();
+    UNode subtract();
+    UNode multiply();
+    UNode divide();
 
-    Node* primitive();
+    UNode primitive();
     Parentheses* mandatoryParentheses();
     Parentheses* parentheses();
 
@@ -119,11 +119,11 @@ public:
     Node* AND();
 
     //if statement
-    Node* IF();
+    IfClass* IF();
 
     //loops
-    Node* FOR();
-    Node* WHILE();
+    ForLoop* FOR();
+    WhileLoop* WHILE();
 
     //Functions and methods
     Node* function();
@@ -132,7 +132,7 @@ public:
     Arguments* initializeArguments();
     void functionAppend(Function* input);
     void addScope(Scope* input);
-    Node* call();
+    FunctionCall* call(Scope* input);
     Node* Return();
     //Generate a vector of all functions of a particular name.
     std::vector<Function*> findFunctions();

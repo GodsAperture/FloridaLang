@@ -8,9 +8,7 @@
 #include <vector>
 //Forward declarations, idfk *why* though.
 //My C/C++ understanding is still hindering me.
-class Function;
 class ObjectClass;
-class Initialize;
 
 std::string typeString(FloridaType input);
 
@@ -19,13 +17,162 @@ FloridaType typeReturn(std::string inString);
 bool typeCheck(FloridaType inType);
 
 class StackAllocator;
-class ExistingScope;
+
+class Node;
+class Body;
+class Variable;
+class Pointer;
+class ThisKeyword;
 class Scope;
+
+class Initialize;
+class Assignment;
+
+class Addition;
+class Subtraction;
+class Multiplication;
+class Division;
+
+class Parentheses;
+class Negative;
+
+class Primitive;
+
+class TypecastClass;
+
+class Equal;
+class NotEqual;
+class GreaterThan;
+class GreaterThanOr;
+class LessThan;
+class LessThanOr;
+
+class Or;
+class And;
+class Not;
+
+class IfClass;
+class WhileLoop;
+class ForLoop;
+
+class Function;
 class Arguments;
+class FunctionCall;
+class ReturnClass;
+
+class ObjectClass;
+class MemberAccess;
+class Dereference;
+class Error;
+
+//Universal union.
+//Can be any node.
+union UUnion{
+    Node* node;
+    Body* body;
+    Variable* variable;
+    Pointer* pointer;
+    ThisKeyword* thisKeyword;
+
+    Scope* scope;
+    Initialize* initialize;
+    Assignment* assignment;
+
+    Addition* addition;
+    Subtraction* subtraction;
+    Multiplication* multiplication;
+    Division* division;
+
+    Parentheses* parentheses;
+    Negative* negative;
+
+    Primitive* primitive;
+
+    TypecastClass* typecastClass;
+
+    Equal* equal;
+    NotEqual* nEqual;
+    GreaterThan* greaterThan;
+    GreaterThanOr* greaterThanOr;
+    LessThan* lessThan;
+    LessThanOr* lessThanOr;
+
+    Or* orClass;
+    And* andClass;
+    Not* notClass;
+
+    IfClass* ifClass;
+    WhileLoop* whileLoop;
+    ForLoop* forLoop;
+
+    Function* function;
+    Arguments* arguments;
+    FunctionCall* functionCall;
+    ReturnClass* returnClass;
+
+    ObjectClass* object;
+    MemberAccess* memberAccess;
+    Dereference* dereference;
+    Error* error;
+
+    UUnion(){
+        node = nullptr;
+    }
+};
+
+enum NodeType : int8_t {
+    NTNull,
+    NTBody,
+    NTVariable,
+    NTPointer,
+    NTThisKeyword,
+    NTScope,
+
+    NTInitialize,
+    NTAssignment,
+
+    NTAddition,
+    NTSubtraction,
+    NTMultiplication,
+    NTDivision,
+
+    NTParentheses,
+    NTNegative,
+
+    NTPrimitive,
+
+    NTTypecastClass,
+
+    NTEqual,
+    NTNotEqual,
+    NTGreaterThan,
+    NTGreaterThanOr,
+    NTLessThan,
+    NTLessThanOr,
+
+    NTOr,
+    NTAnd,
+    NTNot,
+
+    NTIfClass,
+    NTWhileLoop,
+    NTForLoop,
+
+    NTFunction,
+    NTArguments,
+    NTFunctionCall,
+    NTReturnClass,
+
+    NTObjectClass,
+    NTMemberAccess,
+    NTDereference,
+    NTError,
+};
 
 //If you need to be told what a node is, God help you.
 class Node{
 public:
+    NodeType nodeType = NodeType::NTNull;
     FloridaType type = FloridaType::BadToken;
     Node(){
         //Exists for the sake of the default constructor.
@@ -46,7 +193,7 @@ public:
 
 class Body : public Node{
 public:
-    Node* current = nullptr;
+    UNode current;
     Body* next = nullptr;
 
     Body();
@@ -76,10 +223,17 @@ public:
     void FLVMCodeGen(Instructions* inInstructions) override;
 };
 
+class Pointer : public Variable{
+public:
+    Pointer();
+    void CodePrint(std::string inLeft, std::string inRight) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
+    void FLVMCodeGen(Instructions* inInstructions) override;
+};
+
 class ThisKeyword : public Variable {
 public:
     ThisKeyword();
-    void append(Variable* input, void* head);
     void CodePrint(std::string inLeft, std::string inRight) override;
     std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
@@ -195,8 +349,8 @@ public:
 //Mathematical operations
 class Addition : public Node{
 public:
-    Node* left = nullptr;
-    Node* right = nullptr;
+    UNode left;
+    UNode right;
 
     Addition();
     void CodePrint(std::string inLeft, std::string inRight) override;
@@ -206,8 +360,8 @@ public:
 
 class Subtraction : public Node{
 public:
-    Node* left = nullptr;
-    Node* right = nullptr;
+    UNode left;
+    UNode right;
 
     Subtraction();
     void CodePrint(std::string inLeft, std::string inRight) override;
@@ -217,8 +371,8 @@ public:
 
 class Multiplication : public Node{
 public: 
-    Node* left = nullptr;
-    Node* right = nullptr;
+    UNode left;
+    UNode right;
 
     Multiplication();
     void CodePrint(std::string inLeft, std::string inRight) override;
@@ -253,7 +407,7 @@ public:
 
 class Negative : public Node{
 public:
-    Node* right = nullptr;
+    UNode right;
 
     Negative();
     void CodePrint(std::string inLeft, std::string inRight) override;
@@ -440,6 +594,8 @@ public:
     void FLVMCodeGen(Instructions* inInstructions) override;
 };
 
+
+
 class Function : public Node{
 public:
     //The `this` keyword relative to this function.
@@ -461,10 +617,6 @@ public:
     Function* previous = nullptr;
     //This connects all functions across scopes.
     Function* allFunctions = nullptr;
-    //This connects all overloaded functions of the same name.
-    Function* overloadForward = nullptr;
-    //This connects all overloaded functions of the same name.
-    Function* overloadBackward = nullptr;
     //This makes sure code isn't generated twice.
     bool alreadyGenerated = false;
 
@@ -575,9 +727,9 @@ public:
 class MemberAccess : public Node{
 public:
     //`left` will only be a `Variable`.
-    Node* left = nullptr;
+    UNode left;
     //`right` will either be a `MemberAccess` or a `Variable`.
-    Node* right = nullptr;
+    UNode right;
     
     MemberAccess();
     void CodePrint(std::string inLeft, std::string inRight) override;
@@ -589,9 +741,9 @@ public:
 class Dereference : public Node{
 public:
     //`left` will either be a `Variable` or a `MemberAccess`.
-    Node* left = nullptr;
+    UNode left;
     //`right` will be a `Dereference`, a `MemberAccess`, or a `Variable`.
-    Node* right = nullptr;
+    UNode right;
     ObjectClass* objectType = nullptr;
     
     Dereference();
@@ -626,6 +778,33 @@ public:
     void CodePrint(std::string inLeft, std::string inRight) override;
     std::string ToString(std::string inLeft, std::string inRight) override;
     std::string ErrorPrint();
+    void FLVMCodeGen(Instructions* inInstructions) override;
+};
+
+
+
+class UNode : public Node{
+public:
+    UUnion joker;
+
+    UNode();
+    UNode(const UNode& input);
+
+    UNode operator=(UNode input){
+        type = input.type;
+        joker = input.joker;
+        nodeType = input.nodeType;
+
+        return *this;
+    }
+
+    void operator=(Node* right){
+        joker.node = right;
+        nodeType = right->nodeType;
+    }
+
+    void CodePrint(std::string inLeft, std::string inRight) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
 };
 

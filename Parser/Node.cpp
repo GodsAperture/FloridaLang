@@ -7,22 +7,6 @@ an example would be searching for //TypecastClass
 #include <stack>
 #include <iostream>
 
-inline std::string padding(std::string input){
-    for(size_t i = input.size(); i < 12; i++){
-        input += " ";
-    }
-
-    return input;
-}
-
-inline std::string padding2(std::string input){
-    for(size_t i = input.size(); i < 16; i++){
-        input += " ";
-    }
-
-    return input;
-}
-
 std::string typeString(FloridaType input){
     switch(input){
     //Boolean
@@ -130,102 +114,13 @@ int64_t allocationSize(FloridaType input){
         }
     }
 
-//Abuse more mathematical mapping methods to simplify this.
-std::string fetchPad(FloridaType input, char where){
-    std::string result = "fetch";
-    const int64_t bitmask = 3;
-    //Determine the byte size of the type in question.
-    input = (FloridaType) (bitmask & (input - FloridaType::ufixed1));
-
-    //Assign the appropriate locality.
-    switch(where){
-        case 0:
-            result = "l" + result;
-            break;
-        case 1:
-            result = "m" + result;
-            break;
-        case 2:
-            result = "g" + result;
-            break;
-        case 3:
-            result = "h" + result;
-            break;
-    }
-    
-    //Assign the appropriate byte size.
-    switch(input){
-        case 0:
-            result += "1";
-            break;
-        case 1:
-            result += "2";
-            break;
-        case 2:
-            result += "4";
-            break;
-        case 3:
-            result += "8";
-            break;
-        default:
-            //Do nothing, just make the compiler stop complaining.
-            break;
-    }
-
-    return result;
-}
-
-//Abuse more mathematical mapping methods to simplify this.
-std::string assignPad(FloridaType input, char where){
-    std::string result = "assign";
-    const int64_t bitmask = 3;
-    //Determine the byte size of the type in question.
-    input = (FloridaType) (bitmask & (input - FloridaType::ufixed1));
-
-    //Assign the appropriate locality.
-    switch(where){
-        case 0:
-            result = "l" + result;
-            break;
-        case 1:
-            result = "m" + result;
-            break;
-        case 2:
-            result = "g" + result;
-            break;
-        case 3:
-            result = "h" + result;
-            break;
-    }
-    
-    //Assign the appropriate byte size.
-    switch(input){
-        case 0:
-            result += "1";
-            break;
-        case 1:
-            result += "2";
-            break;
-        case 2:
-            result += "4";
-            break;
-        case 3:
-            result += "8";
-            break;
-        default:
-            //Do nothing, just make the compiler stop complaining.
-            break;
-    }
-
-    return result;
-}
-
 
 
 //TypecastClass
     TypecastClass::TypecastClass(){
         //This is just a placeholder. It will be changed later.
         type = FloridaType::Typecast;
+        nodeType = NodeType::NTTypecastClass;
     }
 
     void TypecastClass::CodePrint(std::string inLeft, std::string inRight){
@@ -255,7 +150,7 @@ std::string assignPad(FloridaType input, char where){
 
 //Scope
     Scope::Scope(){
-        //Do nothing lol
+        nodeType = NodeType::NTScope;
     }
 
     //Determine where a particular variable exists in a given scope.
@@ -622,8 +517,9 @@ std::string assignPad(FloridaType input, char where){
 
 //Primitive
     Primitive::Primitive(){
-        value.object = nullptr;
         //The type will be determined after a Primitive is created.
+        value.object = nullptr;
+        nodeType = NodeType::NTPrimitive;
     }
 
     void Primitive::CodePrint(std::string inLeft, std::string inRight){
@@ -736,6 +632,7 @@ std::string assignPad(FloridaType input, char where){
     Body::Body(){
         current = nullptr;
         next = nullptr;
+        nodeType = NodeType::NTBody;
     }
 
     //Append the body to the end of the linked list.
@@ -787,7 +684,7 @@ std::string assignPad(FloridaType input, char where){
 
 //Variable
     Variable::Variable(){
-        //Do nothing. It's not a problem.
+        nodeType = NodeType::NTVariable;
     }
 
     void Variable::append(Variable* input, void* head){
@@ -841,9 +738,49 @@ std::string assignPad(FloridaType input, char where){
 
 
 
+//Pointers
+    Pointer::Pointer(){
+        nodeType = NodeType::NTPointer;
+    }
+
+    void Pointer::CodePrint(std::string inLeft, std::string inRight){
+        std::cout << thisToken.getName();
+    }
+
+    std::string Pointer::ToString(std::string inLeft, std::string inRight){
+        return thisToken.getName();
+    }
+
+    //TO DO
+    void Pointer::FLVMCodeGen(Instructions* inInstructions){
+        //TO DO
+    }
+
+
+
+//This keyword
+    ThisKeyword::ThisKeyword(){
+        nodeType = NodeType::NTThisKeyword;
+    }
+
+    void ThisKeyword::CodePrint(std::string inLeft, std::string inRight){
+        std::cout << "this";
+    }
+
+    std::string ThisKeyword::ToString(std::string inLeft, std::string inRight){
+        return "this";
+    }
+
+    //TO DO
+    void ThisKeyword::FLVMCodeGen(Instructions* inInstructions){
+        //TO DO
+    }
+
+
+
 //Initialize
     Initialize::Initialize(){
-        //Do nothing.
+        nodeType = NodeType::NTInitialize;
     };
 
     void Initialize::CodePrint(std::string inLeft, std::string inRight){
@@ -941,7 +878,7 @@ std::string assignPad(FloridaType input, char where){
 
 //Assignment =
     Assignment::Assignment(){
-        //Do nothing
+        nodeType = NodeType::NTAssignment;
     };
 
     void Assignment::CodePrint(std::string inLeft, std::string inRight){
@@ -991,7 +928,7 @@ std::string assignPad(FloridaType input, char where){
     
 //Add +
     Addition::Addition(){
-        //Do nothing
+        nodeType = NodeType::NTAddition;
     }
 
     void Addition::CodePrint(std::string inLeft, std::string inRight){
@@ -1029,7 +966,7 @@ std::string assignPad(FloridaType input, char where){
 
 //Subtraction -
     Subtraction::Subtraction(){
-        //Do nothing
+        nodeType = NodeType::NTSubtraction;
     }
 
     void Subtraction::CodePrint(std::string inLeft, std::string inRight){
@@ -1066,7 +1003,7 @@ std::string assignPad(FloridaType input, char where){
 
 //Multiply *
     Multiplication::Multiplication(){
-        //Do nothing
+        nodeType = NodeType::NTMultiplication;
     }
 
     void Multiplication::CodePrint(std::string inLeft, std::string inRight){
@@ -1103,7 +1040,7 @@ std::string assignPad(FloridaType input, char where){
 
 //Division /
     Division::Division(){
-        //Do nothing
+        nodeType = NodeType::NTDivision;
     };
 
     void Division::CodePrint(std::string inLeft, std::string inRight){
@@ -1140,7 +1077,7 @@ std::string assignPad(FloridaType input, char where){
 
 //Parentheses ()
     Parentheses::Parentheses(){
-        //Do nothing
+       nodeType = NodeType::NTParentheses;
     }
 
     void Parentheses::CodePrint(std::string inLeft, std::string inRight){
@@ -1162,7 +1099,7 @@ std::string assignPad(FloridaType input, char where){
 
 //Negative -
     Negative::Negative(){
-        //Do nothing;
+        nodeType = NodeType::NTNegative;
     }
 
     void Negative::CodePrint(std::string inLeft, std::string inRight){
@@ -1187,7 +1124,7 @@ std::string assignPad(FloridaType input, char where){
 
 //Equal ==
     Equal::Equal(){
-        //Do nothing
+        nodeType = NodeType::NTEqual;
     }
 
     void Equal::CodePrint(std::string inLeft, std::string inRight){
@@ -1213,7 +1150,7 @@ std::string assignPad(FloridaType input, char where){
 
 //Not equal !=
     NotEqual::NotEqual(){
-        //Do nothing
+        nodeType = NodeType::NTNotEqual;
     }
 
     void NotEqual::CodePrint(std::string inLeft, std::string inRight){
@@ -1239,7 +1176,7 @@ std::string assignPad(FloridaType input, char where){
 
 //Greater than >
     GreaterThan::GreaterThan(){
-        //Do nothing
+        nodeType = NodeType::NTGreaterThan;
     }
 
     void GreaterThan::CodePrint(std::string inLeft, std::string inRight){
@@ -1265,7 +1202,7 @@ std::string assignPad(FloridaType input, char where){
 
 //Greater than or equal to >=
     GreaterThanOr::GreaterThanOr(){
-        //Do nothing
+        nodeType = NodeType::NTGreaterThanOr;
     }
 
     void GreaterThanOr::CodePrint(std::string inLeft, std::string inRight){
@@ -1291,7 +1228,7 @@ std::string assignPad(FloridaType input, char where){
 
 //Less than <
     LessThan::LessThan(){
-        //Do nothing
+        nodeType = NodeType::NTLessThan;
     }
 
     void LessThan::CodePrint(std::string inLeft, std::string inRight){
@@ -1317,7 +1254,7 @@ std::string assignPad(FloridaType input, char where){
 
 //Less than or equal to <=
     LessThanOr::LessThanOr(){
-        //Do nothing
+        nodeType = NodeType::NTLessThanOr;
     }
 
     void LessThanOr::CodePrint(std::string inLeft, std::string inRight){
@@ -1343,7 +1280,7 @@ std::string assignPad(FloridaType input, char where){
 
 //Or OR
     Or::Or(){
-        //Do nothing
+        nodeType = NodeType::NTOr;
     };
 
     void Or::CodePrint(std::string inLeft, std::string inRight){
@@ -1369,7 +1306,7 @@ std::string assignPad(FloridaType input, char where){
 
 //And AND
     And::And(){
-        //Do nothing
+        nodeType = NodeType::NTAnd;
     }
 
     void And::CodePrint(std::string inLeft, std::string inRight){
@@ -1395,7 +1332,7 @@ std::string assignPad(FloridaType input, char where){
 
 //Not !
     Not::Not(){
-        //Do nothing
+        nodeType = NodeType::NTNot;
     }
 
     void Not::CodePrint(std::string inLeft, std::string inRight){
@@ -1419,7 +1356,7 @@ std::string assignPad(FloridaType input, char where){
 
 //if
     IfClass::IfClass(){
-        //Do nothing
+        nodeType = NodeType::NTIfClass;
     };
 
     void IfClass::CodePrint(std::string inLeft, std::string inRight){
@@ -1525,7 +1462,7 @@ std::string assignPad(FloridaType input, char where){
 
 //for
     ForLoop::ForLoop(){
-        //Do nothing
+        nodeType = NodeType::NTForLoop;
     };
 
     void ForLoop::CodePrint(std::string inLeft, std::string inRight){
@@ -1640,7 +1577,7 @@ std::string assignPad(FloridaType input, char where){
 
 //while
     WhileLoop::WhileLoop(){
-        //Do nothing
+        nodeType = NodeType::NTWhileLoop;
     };
 
     void WhileLoop::CodePrint(std::string inLeft, std::string inRight){
@@ -1726,7 +1663,7 @@ std::string assignPad(FloridaType input, char where){
 
 //Function
     Function::Function(){
-        //Do nothing
+        nodeType = NodeType::NTFunction;
     };
 
     void Function::CodePrint(std::string inLeft, std::string inRight){
@@ -1773,12 +1710,13 @@ std::string assignPad(FloridaType input, char where){
     }
 
     bool Function::contains(Node* input){
-        bool result = true;
         Arguments* args = dynamic_cast<Arguments*>(input);
 
         if(args == nullptr){
             return false;
         }
+
+        return false;
         
     }
 
@@ -1786,7 +1724,7 @@ std::string assignPad(FloridaType input, char where){
 
 //Function calls
     FunctionCall::FunctionCall(){
-        //Do nothing
+        nodeType = NodeType::NTFunctionCall;
     }
 
     void FunctionCall::CodePrint(std::string inLeft, std::string inRight){
@@ -1828,8 +1766,7 @@ std::string assignPad(FloridaType input, char where){
 
 //Arguments
     Arguments::Arguments(){
-        //Do nothing lmfao
-        //The default settings are already in place.
+        nodeType = NodeType::NTArguments;
     }
 
     void Arguments::CodePrint(std::string inLeft, std::string inRight){
@@ -1923,7 +1860,7 @@ std::string assignPad(FloridaType input, char where){
 
 //Return statements
     ReturnClass::ReturnClass(){
-        //Do nothing
+        nodeType = NodeType::NTReturnClass;
     }
 
     void ReturnClass::CodePrint(std::string inLeft, std::string inRight){
@@ -1952,6 +1889,7 @@ std::string assignPad(FloridaType input, char where){
 //Objects
     ObjectClass::ObjectClass(){
         type = FloridaType::Object;
+        nodeType = NodeType::NTObjectClass;
     }
 
     void ObjectClass::CodePrint(std::string inLeft, std::string inRight){
@@ -1980,7 +1918,7 @@ std::string assignPad(FloridaType input, char where){
 
 //MemberAccess
     MemberAccess::MemberAccess(){
-        //Do nothing
+        nodeType = NodeType::NTMemberAccess;
     }
 
     void MemberAccess::CodePrint(std::string inLeft, std::string inRight){
@@ -2021,7 +1959,7 @@ std::string assignPad(FloridaType input, char where){
 
 //Dereference
     Dereference::Dereference(){
-        //Do nothing
+        nodeType = NodeType::NTDereference;
     }
 
     void Dereference::CodePrint(std::string inLeft, std::string inRight){
@@ -2043,7 +1981,7 @@ std::string assignPad(FloridaType input, char where){
 
 //Error messages
     Error::Error(){
-        //Do nothing
+        nodeType = NodeType::NTError;
     }
 
     void Error::CodePrint(std::string inLeft, std::string inRight){
@@ -2130,8 +2068,45 @@ std::string assignPad(FloridaType input, char where){
         return "";
     }
 
+    //TO DO
     void Error::FLVMCodeGen(Instructions* inInstructions){
         //Do nothing
         //I may or may not generate a "bad instruction" for this
         //just so the user can have partial print outs of IR code.
+    }
+
+
+
+    UNode::UNode(){
+        joker.node = nullptr;
+        nodeType = NodeType::NTNull;
+    }
+
+    UNode::UNode(const UNode& input){
+        type = input.type;
+        joker = input.joker;
+        nodeType = input.nodeType;
+    }
+
+    //TO DO
+    void UNode::CodePrint(std::string inLeft, std::string inRight){
+        if(nodeType != NodeType::NTNull){
+            joker.node->CodePrint(inLeft, inRight);
+        }
+        //This is a problem.
+        std::cout << "\n\nERROR: NTNull encountered.\n\n";
+    }
+
+    //TO DO
+    std::string UNode::ToString(std::string inLeft, std::string inRight){
+        if(nodeType != NodeType::NTNull){
+            return joker.node->ToString(inLeft, inRight);
+        }
+        //This is a problem.
+        return "\n\nERROR: NTNull encountered.\n\n";
+    }
+
+    //TO DO
+    void FLVMCodeGen(Instructions* inInstructions){
+
     }

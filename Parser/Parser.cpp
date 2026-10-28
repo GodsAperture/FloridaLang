@@ -137,6 +137,8 @@ ThisKeyword* Parser::checkForThis(Scope* input){
         result->objectType = objectStack[objectStack.size() - 1];
         return result;
     }
+
+    return nullptr;
 }
 
 bool Parser::check(std::string inString){
@@ -351,14 +353,14 @@ Error* Parser::MissingSemicolon(){
 
 
 //Mathy stuff
-Node* Parser::add(){
-    Node* left = nullptr;
-    Node* right = nullptr;
-    Addition* result = nullptr;
+UNode Parser::add(){
+    UNode left;
+    UNode right;
+    UNode result;
 
     left = subtract();
-    if(left == nullptr){
-        return nullptr;
+    if(left.joker.node == nullptr){
+        return result;
     }
 
     //Failing here is not an error.
@@ -367,28 +369,28 @@ Node* Parser::add(){
     }
 
     result = stack->alloc<Addition>();
-    result->left = left;
+    result.joker.addition->left = left;
 
     right = add();
-    if(right == nullptr){
-        result->right = MissingSubexpression();
+    if(right.joker.node == nullptr){
+        result.joker.addition->right = MissingSubexpression();
         return result;
     }
 
-    result->right = right;
-    result->type = returnType(left->type, right->type);
+    result.joker.addition->right = right;
+    result.joker.addition->type = returnType(left.joker.addition->type, right.joker.addition->type);
 
     return result;
 }
 
-Node* Parser::subtract(){
-    Node* left = nullptr;
-    Node* right = nullptr;
-    Subtraction* result = nullptr;
+UNode Parser::subtract(){
+    UNode left;
+    UNode right;
+    UNode result;
 
     left = multiply();
-    if(left == nullptr){
-        return nullptr;
+    if(left.joker.node == nullptr){
+        return result;
     }
 
     //Failing here is not an error.
@@ -397,27 +399,28 @@ Node* Parser::subtract(){
     }
 
     result = stack->alloc<Subtraction>();
-    result->left = left;
+    result.joker.subtraction->left = left;
 
     right = subtract();
-    if(right == nullptr){
-        return MissingSubexpression();
+    if(right.joker.node == nullptr){
+        result.joker.subtraction->right = MissingSubexpression();
+        return result;
     }
 
-    result->right = right;
-    result->type = returnType(left->type, right->type);
+    result.joker.subtraction->right = right;
+    result.joker.subtraction->type = returnType(left.joker.subtraction->type, right.joker.subtraction->type);
 
     return result;
 }
 
-Node* Parser::multiply(){
-    Node* left = nullptr;
-    Node* right = nullptr;
-    Multiplication* result = nullptr;
+UNode Parser::multiply(){
+    UNode left;
+    UNode right;
+    UNode result;
 
     left = divide();
-    if(left == nullptr){
-        return nullptr;
+    if(left.joker.node == nullptr){
+        return result;
     }
 
     //Failing here is not an error.
@@ -426,22 +429,21 @@ Node* Parser::multiply(){
     }
 
     result = stack->alloc<Multiplication>();
-    result->left = left;
+    result.joker.multiplication->left = left;
 
     right = multiply();
-    if(right == nullptr){
-        result->right = MissingSubexpression();
+    if(right.joker.node == nullptr){
+        result.joker.multiplication->right = MissingSubexpression();
         return result;
     }
 
-    
-    result->right = right;
-    result->type = returnType(left->type, right->type);
+    result.joker.multiplication->right = right;
+    result.joker.multiplication->type = returnType(left.joker.multiplication->type, right.joker.multiplication->type);
 
     return result;
 }
 
-Node* Parser::divide(){
+UNode Parser::divide(){
     Node* left = nullptr;
     Node* right = nullptr;
     Division* result = nullptr;
@@ -470,17 +472,18 @@ Node* Parser::divide(){
     return result;
 }
 
-Node* Parser::primitive(){
-    Node* pointer = nullptr;
+UNode Parser::primitive(){
+    UNode pointer;
 
     if(check("-")){
-        Negative* expression = stack->alloc<Negative>();
-        expression->right = multiply();
+        UNode expression;
+        expression = stack->alloc<Negative>();
+        expression.joker.negative->right = multiply();
 
         return expression;
     }
     pointer = parentheses();
-    if(pointer != nullptr){
+    if(pointer.joker.node != nullptr){
         return pointer;
     }
 
@@ -488,7 +491,8 @@ Node* Parser::primitive(){
 
     //Check for numbers.
     if(checkType(FloridaType::ufixed8)){
-        Primitive* number = stack->alloc<Primitive>();
+        UNode number;
+        number = stack->alloc<Primitive>();
         number->value.ufixed8 = std::stoull(given[iter - 1].getName());
         number->type = FloridaType::ufixed8;
 
@@ -576,18 +580,11 @@ Node* Parser::primitive(){
         }
     }
 
-    //Check for function calls.
-    pointer = call();
-    if(pointer != nullptr){
-        return pointer;
-    }
-    //Check for variables.
-    pointer = variable(stack->currentScope);
-    if(pointer != nullptr){
-        return pointer;
-    }
-    //No primitives were found.
-    return nullptr;
+    //Hail Mary attempt.
+    pointer = memberAccess(stack->currentScope);
+
+    //If a MemberAccess is not found, then fuck it, nothing was.
+    return pointer;
 }
 
 Parentheses* Parser::mandatoryParentheses(){
@@ -821,31 +818,31 @@ Body* Parser::body(){
 }
 
 //Convenient method
-Node* Parser::commonExpressions(){
-    Node* result;
+UNode Parser::commonExpressions(){
+    UNode result;
 
-    result = call();
-    if(result != nullptr){
+    result = call(stack->currentScope);
+    if(result.joker.node != nullptr){
         return result;
     }
 
     result = Return();
-    if(result != nullptr){
+    if(result.joker.node != nullptr){
         return result;
     }
 
     result = function();
-    if(result != nullptr){
+    if(result.joker.node != nullptr){
         return result;
     }
 
     result = object();
-    if(result != nullptr){
+    if(result.joker.node != nullptr){
         return result;
     }
 
     result = assignment();
-    if(result != nullptr){
+    if(result.joker.node != nullptr){
         if(!check(";")){
             MissingSemicolon();
         }
@@ -853,7 +850,7 @@ Node* Parser::commonExpressions(){
     }
 
     result = initialize();
-    if(result != nullptr){
+    if(result.joker.node != nullptr){
         if(!check(";")){
             MissingSemicolon();
         }
@@ -861,12 +858,12 @@ Node* Parser::commonExpressions(){
     }
 
     result = IF();
-    if(result != nullptr){
+    if(result.joker.node != nullptr){
         return result;
     }
 
     result = OR();
-    if(result != nullptr){
+    if(result.joker.node != nullptr){
         if(!check(";")){
             MissingSemicolon();
         }
@@ -874,42 +871,42 @@ Node* Parser::commonExpressions(){
     }
 
     result = FOR();
-    if(result != nullptr){
+    if(result.joker.node != nullptr){
         return result;
     }
     
     result = WHILE();
-    if(result != nullptr){
+    if(result.joker.node != nullptr){
         return result;
     }
 
     //Reaching this is not problematic.
-    return nullptr;
+    return result;
 }
 
 //Convenient method
-Node* Parser::commonStatements(){
-    Node* result = nullptr;
+UNode Parser::commonStatements(){
+    UNode result;
 
     //Check for comparison statements.
     result = OR();
-    if(result != nullptr){
+    if(result.joker.node != nullptr){
         return result;
     }
 
     //Check for assignments.
     result = assignment();
-    if(result != nullptr){
+    if(result.joker.node != nullptr){
         return result;
     }
 
     //Reaching this is problematic.
-    return nullptr;
+    return result;
 
 }
 
 //if statement
-Node* Parser::IF(){
+IfClass* Parser::IF(){
     Node* condition = nullptr;
     IfClass* result = nullptr;
 
@@ -972,7 +969,7 @@ Node* Parser::IF(){
 }
 
 //for loop
-Node* Parser::FOR(){
+ForLoop* Parser::FOR(){
     if(check("for")){
         //If the body is a nullptr, then the user provided no code.
         Scope* thisScope = stack->alloc<Scope>();
@@ -1039,7 +1036,7 @@ Node* Parser::FOR(){
 }
 
 //while loop
-Node* Parser::WHILE(){
+WhileLoop* Parser::WHILE(){
     if(check("while")){
         int64_t namePlacement = iter - 1;
         WhileLoop* result = stack->alloc<WhileLoop>();
@@ -1150,15 +1147,15 @@ Node* Parser::initialize(){
 }
 
 Node* Parser::assignment(){
-    Node* left = dereference(stack->currentScope);
-    if(left == nullptr){
+    UNode left = dereference(stack->currentScope);
+    if(left.joker.node == nullptr){
         return nullptr;
     }
     Assignment* result = nullptr;
 
     if(check("=")){
         result = stack->alloc<Assignment>();
-        result->left = left;
+        result->left = left.joker.node;
         result->right = commonExpressions();
 
         return result;
@@ -1171,7 +1168,7 @@ Node* Parser::assignment(){
 
     //This could be an object that has a method applied to it.
     //"Object.method();" as an exmaple.
-    return left;
+    return left.joker.node;
 }
 
 Node* Parser::object(){
@@ -1223,17 +1220,14 @@ Node* Parser::object(){
 
 }
 
-Node* Parser::dereference(Scope* input){
-    if(!hasTokens(1)){
-        return nullptr;
-    }
-    Node* left = nullptr;
-    Node* right = nullptr;
-    Dereference* result = nullptr;
+UNode Parser::dereference(Scope* input){
+    UNode left;
+    UNode right;
+    UNode result;
 
     left = memberAccess(input);
-    if(left == nullptr){
-        return nullptr;
+    if(left.joker.node == nullptr){
+        return left;
     }
 
     if(!check("->")){
@@ -1241,80 +1235,44 @@ Node* Parser::dereference(Scope* input){
     }
 
     right = dereference(input);
-    if(right == nullptr){
-        //Error
+    if(right.joker.node == nullptr){
+        right.joker.node = MissingSubexpression();
     }
 
     result = stack->alloc<Dereference>();
-    result->left = left;
-    result->right = right;
+    result.joker.dereference->left = left;
+    result.joker.dereference->right = right;
 
     return result;
-
 }
 
-Node* Parser::memberAccess(Scope* input){
-    if((!hasTokens(1)) or (input == nullptr)){
-        return nullptr;
-    }
-    Node* left = nullptr;
-    Node* right = nullptr;
-    MemberAccess* result = nullptr;
+UNode Parser::memberAccess(Scope* input){
+    UNode left;
+    Scope* leftScope = nullptr;
+    UNode right;
+    UNode result;
 
-    left = call();
+    left = call(input);
     //Check to see if it's a call instead of an error.
-    if(dynamic_cast<FunctionCall*>(left) != nullptr){
-        FunctionCall* leftCall = dynamic_cast<FunctionCall*>(left);
-        if(leftCall == nullptr){
-            return left;
-        }
-
-        if(!check(".")){
-            return left;
-        }
-        result = stack->alloc<MemberAccess>();
-        result->left = left;
-
-        right = memberAccess(leftCall->function->code);
-        if(right == nullptr){
-            result->right = MissingSubexpression();
-
-            return result;
-        }
-
-        result->right = right;
-
-        return result;
+    if(left.joker.node != nullptr){        
+        leftScope = left.joker.functionCall->function->code;
     }
 
-    left = variable(stack->currentScope);
+    left = variable(input);
     //Check to see if it's a variable instead of an error.
-    if(left != nullptr){
-        Variable* leftVariable = dynamic_cast<Variable*>(left);
-        if(leftVariable == nullptr){
-            return left;
-        }
-
-        if(!check(".")){
-            return left;
-        }
-        result = stack->alloc<MemberAccess>();
-        result->left = left;
-
-        right = memberAccess(leftVariable->objectType->code);
-        if(right == nullptr){
-            result->right = MissingSubexpression();
-
-            return result;
-        }
-
-        result->right = right;
-
-        return result;
+    if(left.joker.node != nullptr){
+        leftScope = left.joker.variable->owner;
     }
 
-    return nullptr;
+    if(!check(".")){
+        return left;
+    }
+    result = stack->alloc<MemberAccess>();
+    result.joker.memberAccess->left = left;
 
+    result.joker.memberAccess->right = memberAccess(leftScope).joker.node;
+
+    return result;
 }
 
 
@@ -1455,7 +1413,7 @@ Arguments* Parser::arguments(){
 Node* Parser::returnableExpressions(){
     Node* result;
 
-    result = call();
+    result = call(stack->currentScope);
     if(result != nullptr){
         return result;
     }
@@ -1478,12 +1436,11 @@ Node* Parser::returnableExpressions(){
 }
 
 //TO FIX
-Node* Parser::call(){
+FunctionCall* Parser::call(Scope* input){
     //If there are any functions of this name in the
     //current scope or higher scope, then they will be found.
     std::vector<Function*> allNamedFunctions = findFunctions();
     FunctionCall* result = nullptr;
-    Arguments* args = nullptr;
     Parentheses* par = nullptr;
 
     //Check to see if there are any matching functions.
@@ -1498,58 +1455,12 @@ Node* Parser::call(){
         //For future me to fix.
         return nullptr;
     }
-    //Check to see if the returned pointer is not an error.
-    if(par != nullptr){
-        args = par->subexpression;
-        //Check to see if the whole thing was an error.
-        if(arguments != nullptr){
-            //If the whole thing wasn't an error, then check to see if any do exist.
-            //Otherwise, we can FINALLY check for a fitting function.
-            if(args->hasErrors()){
-                //Something something return bad function call error, maybe??
-            } else {
 
-            }
-        }
-    } else {
-        //This is some kind of error regarding the function's arguments.
-    }
-    result->arguments = args;
-    
-    // if(false){
-    //     //Find out which function it is.
-    //     Scope* tempScope = stack->currentScope;
-    //     Scope* oldScope = tempScope;
-    //     while(tempScope->funGet(given[iter].getName()) == nullptr){
-    //         tempScope = tempScope->parent;
-    //         if(tempScope == nullptr){
-    //             std::cout << "Function '" << name << "' was not found in any reachable scope.\n";
-    //             return nullptr;
-    //         }
-    //     }
-    //     iter++;
-    //     iter++;
-    //     //Create the call object, and adjust the scope to a new scope.
-    //     //If I don't, variables/functions might not be grabbed from the proper scope.
-    //     FunctionCall* result = stack->alloc<FunctionCall>();
-    //     result->function = tempScope->funGet(name);
-    //     result->arguments = args;
-    //     //Adjust the scope here.
-    //     stack->currentScope = result->function->code;
-    //     result->arguments = arguments();
-        
-    //     if(!check(")")){
-    //         MissingRParentheses();
-    //     }
+    result = stack->alloc<FunctionCall>();
+    result->function = findClosestFunction(allNamedFunctions, par->subexpression);
+    result->arguments = par->subexpression;
 
-    //     //Readjust the scope to the previous scope.
-    //     stack->currentScope = oldScope;
-
-    //     return result;
-
-    // }
-
-    return nullptr;
+    return result;
 
 }
 
