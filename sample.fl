@@ -1,14 +1,13 @@
-float8 fun(float8 x, float8 y){
-    return x * y;
-}
-
 float8 x = 3.14;
 float8 y = 2.718;
 
-fun(x, y);
+float8 fun(float8 u, float8 v){
 
-if(x > 2.0){
-    fun(2 * x, y);
-} else {
-    x = x + 2.1;
+    if(u > 0){
+        u = u - 2.0;
+    } else {
+        v = v + 2.0;
+    }
+
+    return u * v;
 }

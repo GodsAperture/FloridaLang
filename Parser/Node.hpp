@@ -91,7 +91,7 @@ union UUnion{
     TypecastClass* typecastClass;
 
     Equal* equal;
-    NotEqual* nEqual;
+    NotEqual* notEqual;
     GreaterThan* greaterThan;
     GreaterThanOr* greaterThanOr;
     LessThan* lessThan;
@@ -124,6 +124,7 @@ enum NodeType : int8_t {
     NTNull,
     NTBody,
     NTVariable,
+    NTMemberVariable,
     NTPointer,
     NTThisKeyword,
     NTScope,
@@ -187,8 +188,43 @@ public:
     virtual void CodePrint(std::string inLeft, std::string inRight) = 0;
     virtual std::string ToString(std::string inLeft, std::string inRight) = 0;
     virtual void FLVMCodeGen(Instructions* inInstructions) = 0;
-    //virtual Node* differentiate(int64_t input) = 0;
+    //virtual UNode differentiate(int64_t input) = 0;
     virtual ~Node(){};
+};
+
+class UNode : public Node{
+public:
+    UUnion joker;
+
+    UNode();
+    UNode(const UNode& input);
+
+    UNode operator=(UNode input){
+        type = input.type;
+        joker = input.joker;
+        nodeType = input.nodeType;
+
+        return *this;
+    }
+
+    bool operator==(Node* input){
+        return joker.node == input;
+    }
+
+    bool operator!=(Node* input){
+        return joker.node != input;
+    }
+
+    void operator=(Node* right){
+        joker.node = right;
+        if(right != nullptr){
+            nodeType = right->nodeType;
+        }
+    }
+
+    void CodePrint(std::string inLeft, std::string inRight) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
+    void FLVMCodeGen(Instructions* inInstructions) override;
 };
 
 class Body : public Node{
@@ -197,7 +233,6 @@ public:
     Body* next = nullptr;
 
     Body();
-    Body* append(Body* input);
     void CodePrint(std::string inLeft, std::string inRight) override;
     std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
@@ -217,7 +252,14 @@ public:
     ObjectClass* objectType = nullptr;
     
     Variable();
-    void append(Variable* input, void* head);
+    void CodePrint(std::string inLeft, std::string inRight) override;
+    std::string ToString(std::string inLeft, std::string inRight) override;
+    void FLVMCodeGen(Instructions* inInstructions) override;
+};
+
+class MemberVariable : public Variable{
+public:
+    MemberVariable();
     void CodePrint(std::string inLeft, std::string inRight) override;
     std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
@@ -320,7 +362,7 @@ public:
     //This will be the order the variable is placed in memory to pack it tightly.
     Initialize* memoryOrder = nullptr;
     //If there is an assignment, this will hold it.
-    Node* code = nullptr;
+    UNode code;
 
     Initialize();
     void CodePrint(std::string inLeft, std::string inRight) override;
@@ -335,8 +377,8 @@ public:
 class Assignment : public Node{
 public:
     //This can either be a `MemberAccess*` or a `Variable*`.
-    Node* left = nullptr;
-    Node* right = nullptr;
+    UNode left;
+    UNode right;
 
     Assignment();
     void CodePrint(std::string inLeft, std::string inRight) override;
@@ -382,8 +424,8 @@ public:
 
 class Division : public Node{
 public: 
-    Node* left = nullptr;
-    Node* right = nullptr;
+    UNode left;
+    UNode right;
 
     Division();
     void CodePrint(std::string inLeft, std::string inRight) override;
@@ -434,7 +476,7 @@ public:
 class TypecastClass : public Node{
 public:
     FloridaType secondType = BadToken;
-    Node* body = nullptr;
+    UNode body;
 
     TypecastClass();
     void CodePrint(std::string inLeft, std::string inRight) override;
@@ -447,8 +489,8 @@ public:
 //Object comparisons
 class Equal : public Node{
 public:
-    Node* left = nullptr;
-    Node* right = nullptr;
+    UNode left;
+    UNode right;
 
     Equal();
     void CodePrint(std::string inLeft, std::string inRight) override;
@@ -458,8 +500,8 @@ public:
 
 class NotEqual : public Node{
 public:
-    Node* left = nullptr;
-    Node* right = nullptr;
+    UNode left;
+    UNode right;
 
     NotEqual();
     void CodePrint(std::string inLeft, std::string inRight) override;
@@ -469,8 +511,8 @@ public:
 
 class GreaterThan : public Node{
 public:
-    Node* left = nullptr;
-    Node* right = nullptr;
+    UNode left;
+    UNode right;
 
     GreaterThan();
     void CodePrint(std::string inLeft, std::string inRight) override;
@@ -480,8 +522,8 @@ public:
 
 class GreaterThanOr : public Node{
 public:
-    Node* left = nullptr;
-    Node* right = nullptr;
+    UNode left;
+    UNode right;
 
     GreaterThanOr();
     void CodePrint(std::string inLeft, std::string inRight) override;
@@ -491,8 +533,8 @@ public:
 
 class LessThan : public Node{
 public:
-    Node* left = nullptr;
-    Node* right = nullptr;
+    UNode left;
+    UNode right;
 
     LessThan();
     void CodePrint(std::string inLeft, std::string inRight) override;
@@ -502,8 +544,8 @@ public:
 
 class LessThanOr : public Node{
 public:
-    Node* left = nullptr;
-    Node* right = nullptr;
+    UNode left;
+    UNode right;
 
     LessThanOr();
     void CodePrint(std::string inLeft, std::string inRight) override;
@@ -516,8 +558,8 @@ public:
 //Boolean algebra
 class Or : public Node{
 public:
-    Node* left = nullptr;
-    Node* right = nullptr;
+    UNode left;
+    UNode right;
 
     Or();
     void CodePrint(std::string inLeft, std::string inRight) override;
@@ -527,8 +569,8 @@ public:
 
 class And : public Node{
 public:
-    Node* left = nullptr;
-    Node* right = nullptr;
+    UNode left;
+    UNode right;
 
     And();
     void CodePrint(std::string inLeft, std::string inRight) override;
@@ -538,7 +580,7 @@ public:
 
 class Not : public Node{
 public:
-    Node* right = nullptr;
+    UNode right;
 
     Not();
     void CodePrint(std::string inLeft, std::string inRight) override;
@@ -551,7 +593,7 @@ public:
 class IfClass : public Node{
 public:
     Error* MissingLP = nullptr;
-    Node* condition = nullptr;
+    UNode condition;
     Error* MissingRP = nullptr;
     Error* MissingIfLCB = nullptr;
     Scope* ifBody = nullptr;
@@ -568,9 +610,9 @@ public:
 
 class ForLoop : public Node{
 public:
-    Node* assign = nullptr;
-    Node* condition = nullptr;
-    Node* incrementer = nullptr;
+    UNode assign;
+    UNode condition;
+    UNode incrementer;
     Error* MissingLCB = nullptr;
     Scope* body = nullptr;
     Error* MissingRCB = nullptr;
@@ -583,7 +625,7 @@ public:
 
 class WhileLoop : public Node{
 public:
-    Node* condition = nullptr;
+    UNode condition;
     Error* MissingLCB = nullptr;
     Scope* body = nullptr;
     Error* MissingRCB = nullptr;
@@ -624,20 +666,17 @@ public:
     void CodePrint(std::string inLeft, std::string inRight) override;
     std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
-    void append(Initialize* input);
-    bool contains(Node* input);
 };
 
 class Arguments : public Node{
 public:
-    Node* current = nullptr;
+    UNode current;
     Arguments* next = nullptr;
 
     Arguments();
     void CodePrint(std::string inLeft, std::string inRight) override;
     std::string ToString(std::string inLeft, std::string inRight) override;
     void FLVMCodeGen(Instructions* inInstructions) override;
-    //void append(Arguments* input, Node* head);
     bool equals(Arguments* input);
     int64_t matchCount(Arguments* input);
     int64_t length();
@@ -660,7 +699,7 @@ class ReturnClass : public Node{
 public:
     //There will always be a minimum of 1 scope to exit.
     int64_t returnCount = 1;
-    Node* statement = nullptr;
+    UNode statement;
 
     ReturnClass();
     void CodePrint(std::string inLeft, std::string inRight) override;
@@ -669,35 +708,6 @@ public:
 };
 
 
-
-// class Method : public Node{
-// public:
-//     std::string_view name;
-//     //This is where the instruction set begings.
-//     int64_t position = -1;
-//     //This is how many arguments the method has.
-//     //There will always be at least 1 argument.
-//     int64_t argumentCount = 1;
-//     //This is the full method definition.
-//     Scope* code = nullptr;
-//     //For use in the parser and VM.
-//     //This points to the next method in the scope, if any.
-//     Method* next = nullptr;
-//     //Previous methods are needed to determine what is the previous scope.
-//     Method* previous = nullptr;
-//     //This connects all methods across scopes.
-//     Method* allMethods = nullptr;
-//     //This makes sure code isn't generated twice.
-//     bool alreadyGenerated = false;
-//
-//     Method();
-//     void CodePrint(std::string inLeft, std::string inRight) override;
-//     std::string ToString(std::string inLeft, std::string inRight) override;
-//     void FLVMCodeGen(Instructions* inInstructions) override;
-//     void append(Variable* input);
-//     
-//     Method* pcopy(StackAllocator& input);
-// };
 
 class ObjectClass : public Node{
 public:
@@ -771,7 +781,7 @@ public:
     PError errorType = PMissingSubexpression;
     int64_t row = -1;
     int64_t column = -1;
-    Node* body = nullptr;
+    UNode body;
     std::string placeHolder = "";
 
     Error();
@@ -780,32 +790,4 @@ public:
     std::string ErrorPrint();
     void FLVMCodeGen(Instructions* inInstructions) override;
 };
-
-
-
-class UNode : public Node{
-public:
-    UUnion joker;
-
-    UNode();
-    UNode(const UNode& input);
-
-    UNode operator=(UNode input){
-        type = input.type;
-        joker = input.joker;
-        nodeType = input.nodeType;
-
-        return *this;
-    }
-
-    void operator=(Node* right){
-        joker.node = right;
-        nodeType = right->nodeType;
-    }
-
-    void CodePrint(std::string inLeft, std::string inRight) override;
-    std::string ToString(std::string inLeft, std::string inRight) override;
-    void FLVMCodeGen(Instructions* inInstructions) override;
-};
-
 #endif

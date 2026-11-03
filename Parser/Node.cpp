@@ -124,17 +124,17 @@ int64_t allocationSize(FloridaType input){
     }
 
     void TypecastClass::CodePrint(std::string inLeft, std::string inRight){
-        body->CodePrint(inLeft, inRight);
+        body.CodePrint(inLeft, inRight);
     }
 
     std::string TypecastClass::ToString(std::string inLeft, std::string inRight){   
-        return body->ToString(inLeft, inRight);
+        return body.ToString(inLeft, inRight);
     }
 
     void TypecastClass::FLVMCodeGen(Instructions* inInstructions){
         types result;
         //Generate the code.
-        body->FLVMCodeGen(inInstructions);
+        body.FLVMCodeGen(inInstructions);
         //Push the instruction.
         result.operation[0] = Operation::ITypecast;
         inInstructions->push(result);
@@ -635,24 +635,8 @@ int64_t allocationSize(FloridaType input){
         nodeType = NodeType::NTBody;
     }
 
-    //Append the body to the end of the linked list.
-    Body* Body::append(Body* input){
-        if(current == nullptr){
-            current = input;
-        } else {
-            if(next != nullptr){
-                next->append(input);
-            } else {
-                next = input;
-            }
-        }
-
-        return this;
-
-    }
-
     void Body::CodePrint(std::string inLeft, std::string inRight){
-        current->CodePrint(inLeft, inRight);
+        current.CodePrint(inLeft, inRight);
         if(next != nullptr){
             std::cout << '\n';
             next->CodePrint(inLeft, inRight);
@@ -661,16 +645,16 @@ int64_t allocationSize(FloridaType input){
 
     std::string Body::ToString(std::string inLeft, std::string inRight){
         if(next != nullptr){
-            return current->ToString(inLeft, inRight) + next->ToString(inLeft, inRight);
+            return current.ToString(inLeft, inRight) + next->ToString(inLeft, inRight);
         } else {
-            return current->ToString(inLeft, inRight);
+            return current.ToString(inLeft, inRight);
         }   
     }
 
     void Body::FLVMCodeGen(Instructions* inInstructions){
         //Add the current chunk of code if it is not a function.
-        if(dynamic_cast<Function*>(current) == nullptr){
-            current->FLVMCodeGen(inInstructions);
+        if(current.nodeType != NodeType::NTFunction){
+            current.FLVMCodeGen(inInstructions);
             //After the line has finished execution, pop it from the stack.
             //inInstructions.push_back(Instruction(Operation::pop));
         }
@@ -685,18 +669,6 @@ int64_t allocationSize(FloridaType input){
 //Variable
     Variable::Variable(){
         nodeType = NodeType::NTVariable;
-    }
-
-    void Variable::append(Variable* input, void* head){
-        Variable* currVar = this;
-        if(currVar->next != nullptr){
-            while(currVar->next != nullptr){
-                currVar = currVar->next;
-            }
-        }
-
-        currVar->next = input;
-
     }
 
     void Variable::CodePrint(std::string inLeft, std::string inRight){
@@ -738,7 +710,26 @@ int64_t allocationSize(FloridaType input){
 
 
 
-//Pointers
+//Member Variable
+    MemberVariable::MemberVariable(){
+        nodeType = NodeType::NTMemberVariable;
+    }
+
+    void MemberVariable::CodePrint(std::string inLeft, std::string inRight){
+        std::cout << ToString(inLeft, inRight);
+    }
+
+    std::string MemberVariable::ToString(std::string inLeft, std::string inRight){
+        return thisToken.getName();
+    }
+
+    void MemberVariable::FLVMCodeGen(Instructions* inInstructions){
+        
+    }
+
+
+
+//Pointer
     Pointer::Pointer(){
         nodeType = NodeType::NTPointer;
     }
@@ -788,7 +779,7 @@ int64_t allocationSize(FloridaType input){
             if(code != nullptr){
                 std::cout <<  inLeft << std::string(thisVariable->objectType->name);
                 std::cout << " " << thisVariable->thisToken.getName() << " = ";
-                code->CodePrint(inLeft, inRight);
+                code.CodePrint(inLeft, inRight);
                 std::cout << inRight;
                 return;
             } else {
@@ -797,7 +788,7 @@ int64_t allocationSize(FloridaType input){
         } else {
             if(code != nullptr){
                 std::cout << inLeft << typeString(thisVariable->thisToken.type) << " " << thisVariable->thisToken.getName() << " = ";
-                code->CodePrint(inLeft, inRight);
+                code.CodePrint(inLeft, inRight);
                 std::cout << inRight;
             } else {
                 std::cout << inLeft << typeString(thisVariable->thisToken.type) << " " << thisVariable->thisToken.getName() << inRight;
@@ -810,14 +801,14 @@ int64_t allocationSize(FloridaType input){
             if(code != nullptr){
                 return  inLeft + std::string(thisVariable->objectType->name) + 
                 " " + thisVariable->thisToken.getName() + " = " + 
-                code->ToString(inLeft, inRight) + inRight;
+                code.ToString(inLeft, inRight) + inRight;
             } else {
                 return inLeft + std::string(thisVariable->objectType->name) + " " + thisVariable->thisToken.getName() + inRight;
             }
         } else {
             if(code != nullptr){
                 return inLeft + typeString(thisVariable->thisToken.type) + " " + thisVariable->thisToken.getName() + " = " +
-                code->ToString(inLeft, inRight) + inRight;
+                code.ToString(inLeft, inRight) + inRight;
             } else {
                 return inLeft + typeString(thisVariable->thisToken.type) + " " + thisVariable->thisToken.getName() + inRight;
             }
@@ -828,7 +819,7 @@ int64_t allocationSize(FloridaType input){
         //If there's code, then generate it.
         if(code != nullptr){
             //Generate the code for the right hand side.
-            code->FLVMCodeGen(inInstructions);
+            code.FLVMCodeGen(inInstructions);
 
             //Get the correct byte size.
             types result;
@@ -883,44 +874,30 @@ int64_t allocationSize(FloridaType input){
 
     void Assignment::CodePrint(std::string inLeft, std::string inRight){
         std::cout << inLeft;
-        left->CodePrint(inLeft, inRight);
+        left.CodePrint(inLeft, inRight);
         std::cout << " = ";
-        right->CodePrint(inLeft, inRight);
+        right.CodePrint(inLeft, inRight);
         std::cout << inRight;
     }
 
     std::string Assignment::ToString(std::string inLeft, std::string inRight){
-        return inLeft + left->ToString(inLeft, inRight) + 
+        return inLeft + left.ToString(inLeft, inRight) + 
         " = " + 
-        right->ToString(inLeft, inRight) + inRight;
+        right.ToString(inLeft, inRight) + inRight;
     }
 
-
+    //TO FIX
     void Assignment::FLVMCodeGen(Instructions* inInstructions){
         //Evaluate the right hand side before assigning.
         if(right != nullptr){
-            right->FLVMCodeGen(inInstructions);
+            right.FLVMCodeGen(inInstructions);
         }
-        //Generate the fetch instructions for this object.
-        //These will be changed to assignment instructions.
-        left->FLVMCodeGen(inInstructions);
-
-        Variable* theVariable = dynamic_cast<Variable*>(left);
-        if(theVariable != nullptr){
-            //TO DO
-            return;
-        }
-
-        MemberAccess* theAccess = dynamic_cast<MemberAccess*>(left);
-        if(theAccess != nullptr){
-            //addOffset(theAccess, head)->AssignCodeGen(inInstructions, head);
-            return;
-        }
-
-        Dereference* theDereference = dynamic_cast<Dereference*>(left);
-        if(theDereference != nullptr){
-            //addOffset(theDereference, head)->AssignCodeGen(inInstructions, head);
-            return;
+        //Generate the pointer that will be used to assign to.
+        left.FLVMCodeGen(inInstructions);
+        //Determine which assign size is needed.
+        switch(left.type){
+            default:
+                return;
         }
     }
 
@@ -932,33 +909,32 @@ int64_t allocationSize(FloridaType input){
     }
 
     void Addition::CodePrint(std::string inLeft, std::string inRight){
-        left->CodePrint(inLeft, inRight);
+        left.CodePrint(inLeft, inRight);
         std::cout << " + ";
-        right->CodePrint(inLeft, inRight);
+        right.CodePrint(inLeft, inRight);
     }
 
     std::string Addition::ToString(std::string inLeft, std::string inRight){
-        return left->ToString(inLeft, inRight) + 
+        return left.ToString(inLeft, inRight) + 
         " + " +
-        right->ToString(inLeft, inRight);
+        right.ToString(inLeft, inRight);
     }
-
 
     void Addition::FLVMCodeGen(Instructions* inInstructions){
         types result;
 
         //Generate the code for the left hand object.
-        left->FLVMCodeGen(inInstructions);
+        left.FLVMCodeGen(inInstructions);
         //Generate the code for the right hand object.
-        right->FLVMCodeGen(inInstructions);
+        right.FLVMCodeGen(inInstructions);
         //Push the operation.
         result.operation[0] = Operation::IAdd;
         inInstructions->push(result);
         //Push the left type.
-        result.type[0] = left->type;
+        result.type[0] = left.type;
         inInstructions->push(result);
         //Push the right type.
-        result.type[0] = right->type;
+        result.type[0] = right.type;
         inInstructions->push(result);
     }
 
@@ -970,32 +946,32 @@ int64_t allocationSize(FloridaType input){
     }
 
     void Subtraction::CodePrint(std::string inLeft, std::string inRight){
-        left->CodePrint(inLeft, inRight);
+        left.CodePrint(inLeft, inRight);
         std::cout << " - ";
-        right->CodePrint(inLeft, inRight);
+        right.CodePrint(inLeft, inRight);
     }
 
     std::string Subtraction::ToString(std::string inLeft, std::string inRight){
-        return left->ToString(inLeft, inRight) + 
+        return left.ToString(inLeft, inRight) + 
         " - " +
-        right->ToString(inLeft, inRight);
+        right.ToString(inLeft, inRight);
     }
 
     void Subtraction::FLVMCodeGen(Instructions* inInstructions){
         types result;
 
         //Generate the code for the left hand object.
-        left->FLVMCodeGen(inInstructions);
+        left.FLVMCodeGen(inInstructions);
         //Generate the code for the right hand object.
-        right->FLVMCodeGen(inInstructions);
+        right.FLVMCodeGen(inInstructions);
         //Push the operation.
         result.operation[0] = Operation::ISubtract;
         inInstructions->push(result);
         //Push the left type.
-        result.type[0] = left->type;
+        result.type[0] = left.type;
         inInstructions->push(result);
         //Push the right type.
-        result.type[0] = right->type;
+        result.type[0] = right.type;
         inInstructions->push(result);
     }
 
@@ -1007,32 +983,32 @@ int64_t allocationSize(FloridaType input){
     }
 
     void Multiplication::CodePrint(std::string inLeft, std::string inRight){
-        left->CodePrint(inLeft, inRight);
+        left.CodePrint(inLeft, inRight);
         std::cout << " * ";
-        right->CodePrint(inLeft, inRight);
+        right.CodePrint(inLeft, inRight);
     }
 
     std::string Multiplication::ToString(std::string inLeft, std::string inRight){
-        return left->ToString(inLeft, inRight) + 
+        return left.ToString(inLeft, inRight) + 
         " * " + 
-        right->ToString(inLeft, inRight);
+        right.ToString(inLeft, inRight);
     }
 
     void Multiplication::FLVMCodeGen(Instructions* inInstructions){
         types result;
         
         //Generate the code for the left hand object.
-        left->FLVMCodeGen(inInstructions);
+        left.FLVMCodeGen(inInstructions);
         //Generate the code for the right hand object.
-        right->FLVMCodeGen(inInstructions);
+        right.FLVMCodeGen(inInstructions);
         //Push the operation.
         result.operation[0] = Operation::IMultiply;
         inInstructions->push(result);
         //Push the left type.
-        result.type[0] = left->type;
+        result.type[0] = left.type;
         inInstructions->push(result);
         //Push the right type.
-        result.type[0] = right->type;
+        result.type[0] = right.type;
         inInstructions->push(result);
     }
 
@@ -1044,32 +1020,32 @@ int64_t allocationSize(FloridaType input){
     };
 
     void Division::CodePrint(std::string inLeft, std::string inRight){
-        left->CodePrint(inLeft, inRight);
+        left.CodePrint(inLeft, inRight);
         std::cout << " / ";
-        right->CodePrint(inLeft, inRight);
+        right.CodePrint(inLeft, inRight);
     }
 
     std::string Division::ToString(std::string inLeft, std::string inRight){
-        return left->ToString(inLeft, inRight) +
+        return left.ToString(inLeft, inRight) +
         " / " +
-        right->ToString(inLeft, inRight);
+        right.ToString(inLeft, inRight);
     }
 
     void Division::FLVMCodeGen(Instructions* inInstructions){
         types result;
 
         //Generate the code for the left hand object.
-        left->FLVMCodeGen(inInstructions);
+        left.FLVMCodeGen(inInstructions);
         //Generate the code for the right hand object.
-        right->FLVMCodeGen(inInstructions);
+        right.FLVMCodeGen(inInstructions);
         //Push the operation.
         result.operation[0] = Operation::IDivide;
         inInstructions->push(result);
         //Push the left type.
-        result.type[0] = left->type;
+        result.type[0] = left.type;
         inInstructions->push(result);
         //Push the right type.
-        result.type[0] = right->type;
+        result.type[0] = right.type;
         inInstructions->push(result);
     }
 
@@ -1104,17 +1080,17 @@ int64_t allocationSize(FloridaType input){
 
     void Negative::CodePrint(std::string inLeft, std::string inRight){
         std::cout << "-";
-        right->CodePrint(inLeft, inRight);
+        right.CodePrint(inLeft, inRight);
     }
 
     std::string Negative::ToString(std::string inLeft, std::string inRight){
-        return "-" + right->ToString(inLeft, inRight);
+        return "-" + right.ToString(inLeft, inRight);
     }
 
     void Negative::FLVMCodeGen(Instructions* inInstructions){
         types result;
 
-        right->FLVMCodeGen(inInstructions);
+        right.FLVMCodeGen(inInstructions);
         //Push back the instruction for -
         result.operation[0] = Operation::INegate;
         inInstructions->push(result);
@@ -1128,19 +1104,19 @@ int64_t allocationSize(FloridaType input){
     }
 
     void Equal::CodePrint(std::string inLeft, std::string inRight){
-        left->CodePrint(inLeft, inRight);
+        left.CodePrint(inLeft, inRight);
         std::cout << " == ";
-        right->CodePrint(inLeft, inRight);
+        right.CodePrint(inLeft, inRight);
     }
 
     std::string Equal::ToString(std::string inLeft, std::string inRight){
-        return left->ToString(inLeft, inRight) + " == " + right->ToString(inLeft, inRight);
+        return left.ToString(inLeft, inRight) + " == " + right.ToString(inLeft, inRight);
     }
 
     void Equal::FLVMCodeGen(Instructions* inInstructions){
         types result;
-        left->FLVMCodeGen(inInstructions);
-        right->FLVMCodeGen(inInstructions);
+        left.FLVMCodeGen(inInstructions);
+        right.FLVMCodeGen(inInstructions);
         //Push back the instruction for ==
         result.operation[0] = Operation::IEquals;
         inInstructions->push(result);
@@ -1154,19 +1130,19 @@ int64_t allocationSize(FloridaType input){
     }
 
     void NotEqual::CodePrint(std::string inLeft, std::string inRight){
-        left->CodePrint(inLeft, inRight);
+        left.CodePrint(inLeft, inRight);
         std::cout << " != ";
-        right->CodePrint(inLeft, inRight);
+        right.CodePrint(inLeft, inRight);
     }
 
     std::string NotEqual::ToString(std::string inLeft, std::string inRight){
-        return left->ToString(inLeft, inRight) + " != " + right->ToString(inLeft, inRight);
+        return left.ToString(inLeft, inRight) + " != " + right.ToString(inLeft, inRight);
     }
 
     void NotEqual::FLVMCodeGen(Instructions* inInstructions){
         types result;
-        left->FLVMCodeGen(inInstructions);
-        right->FLVMCodeGen(inInstructions);
+        left.FLVMCodeGen(inInstructions);
+        right.FLVMCodeGen(inInstructions);
         //Push back the instruction for !=
         result.operation[0] = Operation::INEquals;
         inInstructions->push(result);
@@ -1180,19 +1156,19 @@ int64_t allocationSize(FloridaType input){
     }
 
     void GreaterThan::CodePrint(std::string inLeft, std::string inRight){
-        left->CodePrint(inLeft, inRight);
+        left.CodePrint(inLeft, inRight);
         std::cout << " > ";
-        right->CodePrint(inLeft, inRight);
+        right.CodePrint(inLeft, inRight);
     }
 
     std::string GreaterThan::ToString(std::string inLeft, std::string inRight){
-        return left->ToString(inLeft, inRight) + " > " + right->ToString(inLeft, inRight);
+        return left.ToString(inLeft, inRight) + " > " + right.ToString(inLeft, inRight);
     }
 
     void GreaterThan::FLVMCodeGen(Instructions* inInstructions){
         types result;
-        left->FLVMCodeGen(inInstructions);
-        right->FLVMCodeGen(inInstructions);
+        left.FLVMCodeGen(inInstructions);
+        right.FLVMCodeGen(inInstructions);
         //Push back the instruction for >
         result.operation[0] = Operation::IGreater;
         inInstructions->push(result);
@@ -1206,19 +1182,19 @@ int64_t allocationSize(FloridaType input){
     }
 
     void GreaterThanOr::CodePrint(std::string inLeft, std::string inRight){
-        left->CodePrint(inLeft, inRight);
+        left.CodePrint(inLeft, inRight);
         std::cout << " >= ";
-        right->CodePrint(inLeft, inRight);
+        right.CodePrint(inLeft, inRight);
     }
 
     std::string GreaterThanOr::ToString(std::string inLeft, std::string inRight){
-        return left->ToString(inLeft, inRight) + " >= " + right->ToString(inLeft, inRight);
+        return left.ToString(inLeft, inRight) + " >= " + right.ToString(inLeft, inRight);
     }
 
     void GreaterThanOr::FLVMCodeGen(Instructions* inInstructions){
         types result;   
-        left->FLVMCodeGen(inInstructions);
-        right->FLVMCodeGen(inInstructions);
+        left.FLVMCodeGen(inInstructions);
+        right.FLVMCodeGen(inInstructions);
         //Push back the instruction for >=
         result.operation[0] = Operation::IGreaterOr;
         inInstructions->push(result);
@@ -1232,19 +1208,19 @@ int64_t allocationSize(FloridaType input){
     }
 
     void LessThan::CodePrint(std::string inLeft, std::string inRight){
-        left->CodePrint(inLeft, inRight);
+        left.CodePrint(inLeft, inRight);
         std::cout << " < ";
-        right->CodePrint(inLeft, inRight);
+        right.CodePrint(inLeft, inRight);
     }
 
     std::string LessThan::ToString(std::string inLeft, std::string inRight){
-        return left->ToString(inLeft, inRight) + " < " + right->ToString(inLeft, inRight);
+        return left.ToString(inLeft, inRight) + " < " + right.ToString(inLeft, inRight);
     }
 
     void LessThan::FLVMCodeGen(Instructions* inInstructions){
         types result;
-        left->FLVMCodeGen(inInstructions);
-        right->FLVMCodeGen(inInstructions);
+        left.FLVMCodeGen(inInstructions);
+        right.FLVMCodeGen(inInstructions);
         //Push back the instruction for <
         result.operation[0] = Operation::ILesser;
         inInstructions->push(result);
@@ -1258,19 +1234,19 @@ int64_t allocationSize(FloridaType input){
     }
 
     void LessThanOr::CodePrint(std::string inLeft, std::string inRight){
-        left->CodePrint(inLeft, inRight);
+        left.CodePrint(inLeft, inRight);
         std::cout << " <= ";
-        right->CodePrint(inLeft, inRight);
+        right.CodePrint(inLeft, inRight);
     }
 
     std::string LessThanOr::ToString(std::string inLeft, std::string inRight){
-        return left->ToString(inLeft, inRight) + " <= " + right->ToString(inLeft, inRight);
+        return left.ToString(inLeft, inRight) + " <= " + right.ToString(inLeft, inRight);
     }
 
     void LessThanOr::FLVMCodeGen(Instructions* inInstructions){
         types result;
-        left->FLVMCodeGen(inInstructions);
-        right->FLVMCodeGen(inInstructions);
+        left.FLVMCodeGen(inInstructions);
+        right.FLVMCodeGen(inInstructions);
         //Push back the instruction for <=
         result.operation[0] = Operation::ILesserOr;
         inInstructions->push(result);
@@ -1284,19 +1260,19 @@ int64_t allocationSize(FloridaType input){
     };
 
     void Or::CodePrint(std::string inLeft, std::string inRight){
-        left->CodePrint(inLeft, inRight);
+        left.CodePrint(inLeft, inRight);
         std::cout << " OR ";
-        right->CodePrint(inLeft, inRight);
+        right.CodePrint(inLeft, inRight);
     }
 
     std::string Or::ToString(std::string inLeft, std::string inRight){
-        return left->ToString(inLeft, inRight) + " OR " + right->ToString(inLeft, inRight);
+        return left.ToString(inLeft, inRight) + " OR " + right.ToString(inLeft, inRight);
     }
 
     void Or::FLVMCodeGen(Instructions* inInstructions){
         types result;
-        left->FLVMCodeGen(inInstructions);
-        right->FLVMCodeGen(inInstructions);
+        left.FLVMCodeGen(inInstructions);
+        right.FLVMCodeGen(inInstructions);
         //Push back the instruction for OR
         result.operation[0] = Operation::IOr;
         inInstructions->push(result);
@@ -1310,19 +1286,19 @@ int64_t allocationSize(FloridaType input){
     }
 
     void And::CodePrint(std::string inLeft, std::string inRight){
-        left->CodePrint(inLeft, inRight);
+        left.CodePrint(inLeft, inRight);
         std::cout << " AND ";
-        right->CodePrint(inLeft, inRight);
+        right.CodePrint(inLeft, inRight);
     }
 
     std::string And::ToString(std::string inLeft, std::string inRight){
-        return left->ToString(inLeft, inRight) + " AND " + right->ToString(inLeft, inRight);
+        return left.ToString(inLeft, inRight) + " AND " + right.ToString(inLeft, inRight);
     }
 
     void And::FLVMCodeGen(Instructions* inInstructions){
         types result;
-        left->FLVMCodeGen(inInstructions);
-        right->FLVMCodeGen(inInstructions);
+        left.FLVMCodeGen(inInstructions);
+        right.FLVMCodeGen(inInstructions);
         //Push back the instruction for AND
         result.operation[0] = Operation::IAnd;
         inInstructions->push(result);
@@ -1337,16 +1313,16 @@ int64_t allocationSize(FloridaType input){
 
     void Not::CodePrint(std::string inLeft, std::string inRight){
         std::cout << "!";
-        right->CodePrint(inLeft, inRight);
+        right.CodePrint(inLeft, inRight);
     }
 
     std::string Not::ToString(std::string inLeft, std::string inRight){
-        return "!" + right->ToString(inLeft, inRight);
+        return "!" + right.ToString(inLeft, inRight);
     }
 
     void Not::FLVMCodeGen(Instructions* inInstructions){
         types result;
-        right->FLVMCodeGen(inInstructions);
+        right.FLVMCodeGen(inInstructions);
         //Push back the operation for !
         result.operation[0] = Operation::INot;
         inInstructions->push(result);
@@ -1362,13 +1338,13 @@ int64_t allocationSize(FloridaType input){
     void IfClass::CodePrint(std::string inLeft, std::string inRight){
         if(elseBody == nullptr){
             std::cout << inLeft << "if(";
-            condition->CodePrint(inLeft, inRight);
+            condition.CodePrint(inLeft, inRight);
             std::cout << "){\n";
                 ifBody->CodePrint("  " + inLeft, ";");
             std::cout << "\n" << inLeft << "}\n";
         } else {
-            std::cout << inLeft + "\x1b[36mif\x1b[0m(";
-            condition->CodePrint(inLeft, ";");
+            std::cout << inLeft + "if(";
+            condition.CodePrint(inLeft, ";");
             std::cout << "){\n";
                 ifBody->CodePrint("  " + inLeft, inRight);
             std::cout << "\n" << inLeft << "} else {\n";
@@ -1380,13 +1356,13 @@ int64_t allocationSize(FloridaType input){
     std::string IfClass::ToString(std::string inLeft, std::string inRight){
         if(elseBody == nullptr){
             return inLeft + "if(" + 
-            condition->ToString(inLeft, inRight) +
+            condition.ToString(inLeft, inRight) +
             "){\n" + 
                 ifBody->ToString("  " + inLeft, ";") +
             "\n" + inLeft + "}\n";
         } else {
             return inLeft + "if(" +
-            condition->ToString(inLeft, ";") +
+            condition.ToString(inLeft, ";") +
             "){\n" +
                 ifBody->ToString("  " + inLeft, inRight) +
             "\n" + inLeft + "} else {\n" + 
@@ -1397,12 +1373,17 @@ int64_t allocationSize(FloridaType input){
 
     //TO FIX
     void IfClass::FLVMCodeGen(Instructions* inInstructions){
+        //If there are no bodies then generate no instructions.
+        if((ifBody == nullptr) & (elseBody == nullptr)){
+            return;
+        }
+
         types result;
         //If there is not an else statement, generate code for just an if statement.
         //otherwise, generate both bodies and cjumps as needed.
         if(elseBody == nullptr){
             //Generate the instructions for the if condition.
-            condition->FLVMCodeGen(inInstructions);
+            condition.FLVMCodeGen(inInstructions);
 
             //Add the conditional jump instruction.
             result.operation[0] = Operation::ICJump;
@@ -1424,7 +1405,7 @@ int64_t allocationSize(FloridaType input){
             inInstructions->instructionSet[cjumpPosition].fixed8 = inInstructions->instructionCount - cjumpPosition;
         } else {
             //Generate the instructions for the if condition.
-            condition->FLVMCodeGen(inInstructions);
+            condition.FLVMCodeGen(inInstructions);
 
             //Add the conditional jump instruction.
             result.operation[0] = Operation::ICJump;
@@ -1468,21 +1449,21 @@ int64_t allocationSize(FloridaType input){
     void ForLoop::CodePrint(std::string inLeft, std::string inRight){
         std::cout << inLeft << "for(";
         if(assign != nullptr){
-            assign->CodePrint("", "");
+            assign.CodePrint("", "");
             std::cout << "; ";
         } else {
             std::cout << ";";
         }
 
         if(condition != nullptr){
-            condition->CodePrint("", "");
+            condition.CodePrint("", "");
             std::cout << "; ";
         } else {
             std::cout << ";";
         }
 
         if(incrementer != nullptr){
-            incrementer->CodePrint("", "");
+            incrementer.CodePrint("", "");
         }
         std::cout << "){\n";
         body->CodePrint("  " + inLeft, inRight);
@@ -1493,19 +1474,19 @@ int64_t allocationSize(FloridaType input){
         std::string temp = "";
         std::cout << inLeft << "for(";
         if(assign != nullptr){
-            temp += assign->ToString("", "") + ";";
+            temp += assign.ToString("", "") + ";";
         } else {
             temp += ";";
         }
 
         if(condition != nullptr){
-            temp += condition->ToString("", "") + ";";
+            temp += condition.ToString("", "") + ";";
         } else {
             temp += ";";
         }
 
         if(incrementer != nullptr){
-            temp += incrementer->ToString("", "");
+            temp += incrementer.ToString("", "");
         }
         return inLeft + "for(" + temp + "){\n" +
         body->ToString("  " + inLeft, inRight) +
@@ -1516,7 +1497,7 @@ int64_t allocationSize(FloridaType input){
         types result;
         //The initial value of a for loop.
         if(assign != nullptr){
-            assign->FLVMCodeGen(inInstructions);
+            assign.FLVMCodeGen(inInstructions);
         }
 
         //Start the scope, because we don't want to continually assign/initialize.
@@ -1537,7 +1518,7 @@ int64_t allocationSize(FloridaType input){
         //The condition for a for loop to terminate.
         //If none is provided, then it will perpetually loop.
         if(condition != nullptr){
-            condition->FLVMCodeGen(inInstructions);
+            condition.FLVMCodeGen(inInstructions);
         } else {
             result.boolean[0] = false;
             inInstructions->push(result);
@@ -1555,7 +1536,7 @@ int64_t allocationSize(FloridaType input){
 
         //Add another line of code for changes at the end of the loop.
         if(incrementer != nullptr){
-            incrementer->FLVMCodeGen(inInstructions);
+            incrementer.FLVMCodeGen(inInstructions);
         }
 
         //Place the unconditional jump instruction at the end.
@@ -1583,7 +1564,7 @@ int64_t allocationSize(FloridaType input){
     void WhileLoop::CodePrint(std::string inLeft, std::string inRight){
         std::cout << inLeft << "while(";
         if(condition != nullptr){
-            condition->CodePrint(inLeft, inRight);
+            condition.CodePrint(inLeft, inRight);
         }
         std::cout << "){\n";
         if(body != nullptr){
@@ -1597,7 +1578,7 @@ int64_t allocationSize(FloridaType input){
         std::string SBody = "";
 
         if(condition != nullptr){
-            SCondition = condition->ToString(inLeft, inRight);
+            SCondition = condition.ToString(inLeft, inRight);
         }
 
         if(body != nullptr){
@@ -1633,7 +1614,7 @@ int64_t allocationSize(FloridaType input){
         size_t start = inInstructions->instructionCount;
         //Generate the code for the condition, if any.
         if(condition != nullptr){
-            condition->FLVMCodeGen(inInstructions);
+            condition.FLVMCodeGen(inInstructions);
         }
         //The location of the conditional jump statement.
         size_t here = inInstructions->instructionCount;    
@@ -1682,18 +1663,6 @@ int64_t allocationSize(FloridaType input){
         "\n" + inLeft + "}\n";
     }
 
-    void Function::append(Initialize* input){
-        Initialize* currInit = code->allInitializations;
-        if(currInit != nullptr){
-            while(currInit->next != nullptr){
-                currInit = currInit->next;
-            }
-            currInit->next = input;
-        } else {
-            code->allInitializations = input;
-        }
-    }
-
     void Function::FLVMCodeGen(Instructions* inInstructions){
         //Change where this function starts in the program.
         if(!alreadyGenerated){
@@ -1709,16 +1678,6 @@ int64_t allocationSize(FloridaType input){
         }
     }
 
-    bool Function::contains(Node* input){
-        Arguments* args = dynamic_cast<Arguments*>(input);
-
-        if(args == nullptr){
-            return false;
-        }
-
-        return false;
-        
-    }
 
 
 
@@ -1771,25 +1730,25 @@ int64_t allocationSize(FloridaType input){
 
     void Arguments::CodePrint(std::string inLeft, std::string inRight){
         if(next != nullptr){
-            current->CodePrint("", "");
+            current.CodePrint("", "");
             std::cout << ", ";
             next->CodePrint("", "");
         } else {
-            return current->CodePrint("", "");
+            return current.CodePrint("", "");
         }
     }
 
     std::string Arguments::ToString(std::string inLeft, std::string inRight){
         if(next != nullptr){
-            return current->ToString("", "") + "," + next->ToString("", "");
+            return current.ToString("", "") + "," + next->ToString("", "");
         } else {
-            return current->ToString("", "");
+            return current.ToString("", "");
         }
     }
 
     void Arguments::FLVMCodeGen(Instructions* inInstructions){
         Arguments* currArgs = this;
-        currArgs->current->FLVMCodeGen(inInstructions);
+        currArgs->current.FLVMCodeGen(inInstructions);
         if(currArgs->next != nullptr){
             currArgs->next->FLVMCodeGen(inInstructions);
         }
@@ -1808,7 +1767,7 @@ int64_t allocationSize(FloridaType input){
     }
 
     bool Arguments::equals(Arguments* input){
-        if(current->type == input->current->type){
+        if(current.type == input->current.type){
             if(next != nullptr){
                 return next->equals(input->next);
             } else {
@@ -1822,7 +1781,7 @@ int64_t allocationSize(FloridaType input){
         //Check to see if there is a next argument.
         if((next != nullptr) and (input->next != nullptr)){
             //Check to see if they are the same type or not.
-            if(current->type == input->current->type){
+            if(current.type == input->current.type){
                 return 1 + next->matchCount(input->next);
             } else {
                 return next->matchCount(input->next);
@@ -1830,7 +1789,7 @@ int64_t allocationSize(FloridaType input){
         //Otherwise just check to see if the current arguments' type match.
         } else {
             //Check to see if they are the same type or not.
-            if(current->type == input->current->type){
+            if(current.type == input->current.type){
                 return 1;
             } else {
                 return 0;
@@ -1840,7 +1799,7 @@ int64_t allocationSize(FloridaType input){
 
     bool Arguments::hasErrors(){
         //Check to see if `current` is an error.
-        if(dynamic_cast<Error*>(current) == nullptr){
+        if(dynamic_cast<Error*>(current.joker.node) == nullptr){
             //If there is no next, return true.
             if(next != nullptr){
                 //Check to see if `next` contains an error.
@@ -1865,18 +1824,20 @@ int64_t allocationSize(FloridaType input){
 
     void ReturnClass::CodePrint(std::string inLeft, std::string inRight){
         std::cout << inLeft << "return ";
-        statement->CodePrint(inLeft, inRight);
+        statement.CodePrint(inLeft, inRight);
         std::cout << inRight;
     }
 
     std::string ReturnClass::ToString(std::string inLeft, std::string inRight){
-        return inLeft + "return " + statement->ToString(inLeft, inRight) + inRight;
+        return inLeft + "return " + statement.ToString(inLeft, inRight) + inRight;
     }
 
     void ReturnClass::FLVMCodeGen(Instructions* inInstructions){
         types result;
-        //There will be code with the return statement.
-        statement->FLVMCodeGen(inInstructions);
+        //If there is code then generate it.
+        if(statement.nodeType != NodeType::NTNull){
+            statement.FLVMCodeGen(inInstructions);
+        }
         //Generate the return instruction and how many scopes to exit.
         result.operation[0] = Operation::IReturn;
         //This determines how many scopes to exit.
@@ -1922,13 +1883,13 @@ int64_t allocationSize(FloridaType input){
     }
 
     void MemberAccess::CodePrint(std::string inLeft, std::string inRight){
-        left->CodePrint(inLeft, inRight);
+        left.CodePrint(inLeft, inRight);
         std::cout << ".";
-        right->CodePrint(inLeft, inRight);
+        right.CodePrint(inLeft, inRight);
     }
 
     std::string MemberAccess::ToString(std::string inLeft, std::string inRight){
-        return left->ToString(inLeft, inRight) + "." + right->ToString(inLeft, inRight);
+        return left.ToString(inLeft, inRight) + "." + right.ToString(inLeft, inRight);
     }
 
     //TO FIX
@@ -1941,10 +1902,10 @@ int64_t allocationSize(FloridaType input){
         result.type[0] = FloridaType::fixed8;
         inInstructions->push(result);
         //Push the offset size to the stack.
-        //result.fixed8 = left->stackBytePosition;
+        //result.fixed8 = left.stackBytePosition;
         inInstructions->push(result);
         //Generating the code for the right.
-        right->FLVMCodeGen(inInstructions);
+        right.FLVMCodeGen(inInstructions);
         //Pushing an add instruction so I can add up the offsets.
         result.operation[0] = Operation::IAdd;
         inInstructions->push(result);
@@ -1963,13 +1924,13 @@ int64_t allocationSize(FloridaType input){
     }
 
     void Dereference::CodePrint(std::string inLeft, std::string inRight){
-        left->CodePrint(inLeft, inRight);
+        left.CodePrint(inLeft, inRight);
         std::cout << "->";
-        right->CodePrint(inLeft, inRight);
+        right.CodePrint(inLeft, inRight);
     }
 
     std::string Dereference::ToString(std::string inLeft, std::string inRight){
-        return left->ToString(inLeft, inRight) + "->" + right->ToString(inLeft, inRight);
+        return left.ToString(inLeft, inRight) + "->" + right.ToString(inLeft, inRight);
     }
 
     //TO FIX
@@ -1987,36 +1948,35 @@ int64_t allocationSize(FloridaType input){
     void Error::CodePrint(std::string inLeft, std::string inRight){
         switch(errorType){
             case PError::PMissingSubexpression:
-                body->CodePrint("", "");
                 std::cout << "???";
                 return;
             case PError::PMissingLParentheses:
                 std::cout << "\"(\"";
-                body->CodePrint("", "");
+                body.CodePrint("", "");
                 return;
             case PError::PMissingRParentheses:
                 std::cout << "\"(\"";
-                body->CodePrint("", "");
+                body.CodePrint("", "");
                 std::cout << "\")\"";
                 return;
             case PError::PMissingLCurlyBrace:
                 std::cout << "\"{\"";
-                body->CodePrint("", "");
+                body.CodePrint("", "");
                 return;
             case PError::PMissingRCurlyBrace:
-                body->CodePrint("", "");
+                body.CodePrint("", "");
                 std::cout << "\"}\"\n";
                 return;
             case PError::PMissingLBracket:
                 std::cout << "\"[\"";
-                body->CodePrint("", "");
+                body.CodePrint("", "");
                 return;
             case PError::PMissingRBracket:
-                body->CodePrint("", "");
+                body.CodePrint("", "");
                 std::cout << "\"]\"";
                 return;
             case PError::PMissingSemicolon:
-                body->CodePrint("", "");
+                body.CodePrint("", "");
                 std::cout << "\";\"";
                 return;
         }
@@ -2027,19 +1987,19 @@ int64_t allocationSize(FloridaType input){
             case PError::PMissingSubexpression:
                 return "???";
             case PError::PMissingLParentheses:
-                return "\"(\"" + body->ToString("", "") + ")";
+                return "\"(\"" + body.ToString("", "") + ")";
             case PError::PMissingRParentheses:
-                return "(" + body->ToString("", "") + "\")\"";
+                return "(" + body.ToString("", "") + "\")\"";
             case PError::PMissingLCurlyBrace:
-                return "\"{\"" + body->ToString("", "");
+                return "\"{\"" + body.ToString("", "");
             case PError::PMissingRCurlyBrace:
-                return body->ToString("", "") + "\"}\"";
+                return body.ToString("", "") + "\"}\"";
             case PError::PMissingLBracket:
-                return "\"[\"" + body->ToString("", "");
+                return "\"[\"" + body.ToString("", "");
             case PError::PMissingRBracket:
-                return body->ToString("", "") + "\"]\"\n";
+                return body.ToString("", "") + "\"]\"\n";
             case PError::PMissingSemicolon:
-                return body->ToString("", "") + "\";\"";
+                return body.ToString("", "") + "\";\"";
         }
 
         return "";
@@ -2048,21 +2008,21 @@ int64_t allocationSize(FloridaType input){
     std::string Error::ErrorPrint(){
         switch(errorType){
             case PError::PMissingSubexpression:
-                return "[R: " + std::to_string(row) + ", C: " + std::to_string(column) + "]\n\tMissing subexpression: " + body->ToString("", "") + "\n";
+                return "[R: " + std::to_string(row) + ", C: " + std::to_string(column) + "]\n\tMissing subexpression: " + body.ToString("", "") + "\n";
             case PError::PMissingLParentheses:
-                return "[R: " + std::to_string(row) + ", C: " + std::to_string(column) + "]\n\tMissing left parentheses: " + "\"(\"" + body->ToString("", "") + "\n";
+                return "[R: " + std::to_string(row) + ", C: " + std::to_string(column) + "]\n\tMissing left parentheses: " + "\"(\"" + body.ToString("", "") + "\n";
             case PError::PMissingRParentheses:
-                return "[R: " + std::to_string(row) + ", C: " + std::to_string(column) + "]\n\tMissing right parentheses: " + "(" + body->ToString("", "")+ "\")\"\n";
+                return "[R: " + std::to_string(row) + ", C: " + std::to_string(column) + "]\n\tMissing right parentheses: " + "(" + body.ToString("", "")+ "\")\"\n";
             case PError::PMissingLCurlyBrace:
-                return "[R: " + std::to_string(row) + ", C: " + std::to_string(column) + "]\n\tMissing left curly brace: " + "\"{\"" + body->ToString("", "") + "\n";
+                return "[R: " + std::to_string(row) + ", C: " + std::to_string(column) + "]\n\tMissing left curly brace: " + "\"{\"" + body.ToString("", "") + "\n";
             case PError::PMissingRCurlyBrace:
-                return "[R: " + std::to_string(row) + ", C: " + std::to_string(column) + "]\n\tMissing right curly brace: " + body->ToString("", "") + "\"}\"\n";
+                return "[R: " + std::to_string(row) + ", C: " + std::to_string(column) + "]\n\tMissing right curly brace: " + body.ToString("", "") + "\"}\"\n";
             case PError::PMissingLBracket:
-                return "[R: " + std::to_string(row) + ", C: " + std::to_string(column) + "]\n\tMissing left bracket: " + "\"[\"" + body->ToString("", "") + "\n";
+                return "[R: " + std::to_string(row) + ", C: " + std::to_string(column) + "]\n\tMissing left bracket: " + "\"[\"" + body.ToString("", "") + "\n";
             case PError::PMissingRBracket:
-                return "[R: " + std::to_string(row) + ", C: " + std::to_string(column) + "]\n\tMissing right bracket: " + body->ToString("", "") + "\"]\"\n";
+                return "[R: " + std::to_string(row) + ", C: " + std::to_string(column) + "]\n\tMissing right bracket: " + body.ToString("", "") + "\"]\"\n";
             case PError::PMissingSemicolon:
-                return "[R: " + std::to_string(row) + ", C: " + std::to_string(column) + "]\n\tMissing semicolon: " + body->ToString("", "") + "\";\"\n";
+                return "[R: " + std::to_string(row) + ", C: " + std::to_string(column) + "]\n\tMissing semicolon: " + body.ToString("", "") + "\";\"\n";
         }
 
         return "";
@@ -2092,9 +2052,10 @@ int64_t allocationSize(FloridaType input){
     void UNode::CodePrint(std::string inLeft, std::string inRight){
         if(nodeType != NodeType::NTNull){
             joker.node->CodePrint(inLeft, inRight);
+            return;
         }
         //This is a problem.
-        std::cout << "\n\nERROR: NTNull encountered.\n\n";
+        std::cout << "ERROR: NTNull encountered.";
     }
 
     //TO DO
@@ -2103,10 +2064,10 @@ int64_t allocationSize(FloridaType input){
             return joker.node->ToString(inLeft, inRight);
         }
         //This is a problem.
-        return "\n\nERROR: NTNull encountered.\n\n";
+        return "ERROR: NTNull encountered.";
     }
 
     //TO DO
-    void FLVMCodeGen(Instructions* inInstructions){
+    void UNode::FLVMCodeGen(Instructions* inInstructions){
 
     }

@@ -41,8 +41,8 @@ public:
     std::vector<Token> given;
     //The vector that contains all errors.
     std::vector<Error*> errorStack = std::vector<Error*>();
-    //This will be a stack of the currently most active body.
-    std::vector<Body*> bodyStack = std::vector<Body*>();
+    //This will be a stack of errors missing a body.
+    std::vector<Error*> unboundErrors = std::vector<Error*>();
     //This will be a stack of the currently active classes.
     std::vector<ObjectClass*> objectStack = std::vector<ObjectClass*>();
     //The StackAllocator keeps my program slightly tidier.
@@ -74,9 +74,9 @@ public:
     //Check for an initialization with or without assignment.
     Node* initialize();
     //Check for an assignment.
-    Node* assignment();
+    UNode assignment();
     //Check for a class declaration.
-    Node* object();
+    ObjectClass* object();
     //Determine the size of an object.
     uint64_t allocationSize(FloridaType input);
     //Convenient method for getting a dereference or a member access.
@@ -95,7 +95,7 @@ public:
     //Small subexpressions.
     UNode commonStatements();
     //Guaranteed returnable expressions.
-    Node* returnableExpressions();
+    UNode returnableExpressions();
     bool hasTokens();
     bool hasTokens(int64_t input);
 
@@ -112,11 +112,11 @@ public:
 
 //Booleans
     //Helper function for comparisons
-    Node* compare();
+    UNode compare();
     
     //Boolean algebra
-    Node* OR();
-    Node* AND();
+    UNode OR();
+    UNode AND();
 
     //if statement
     IfClass* IF();
@@ -125,15 +125,17 @@ public:
     ForLoop* FOR();
     WhileLoop* WHILE();
 
-    //Functions and methods
-    Node* function();
+    //Functions and methods.
+    //All functions are methods.
+    //All methods are functions.
+    Function* function();
     Arguments* arguments();
     //Generate a linked list of initializations.
     Arguments* initializeArguments();
     void functionAppend(Function* input);
     void addScope(Scope* input);
     FunctionCall* call(Scope* input);
-    Node* Return();
+    ReturnClass* Return();
     //Generate a vector of all functions of a particular name.
     std::vector<Function*> findFunctions();
     //Given the vector of functions and the arguments,

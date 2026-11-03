@@ -96,6 +96,7 @@ std::string Parser::ToString(){
 
 void Parser::CodePrint(){
     stack->AST->CodePrint("", "");
+    std::cout << "\n";
 }
 
 bool Parser::hasTokens(){
@@ -120,7 +121,10 @@ Variable* Parser::findVariable(Scope* input){
         theInitialization = theScope->allInitializations;
         //Check all variables in a given scope.
         while(theInitialization != nullptr){
+            //If the variable in question is found then
+            //increment iter and return the variable.
             if(theInitialization->thisVariable->thisToken.name == name){
+                iter++;
                 return theInitialization->thisVariable;
             }
             theInitialization = theInitialization->next;
@@ -218,7 +222,6 @@ std::vector<Function*> Parser::findFunctions(){
 
     //Find all functions whose name match the token.
     std::string name = std::string(given[iter].name);
-    iter++;
     //This is a while loop.
     while(currentScope != nullptr){
         currentFunction = currentScope->functions;
@@ -227,8 +230,13 @@ std::vector<Function*> Parser::findFunctions(){
             if(currentFunction->name == name){
                 result.push_back(currentFunction);
             }
+            currentFunction = currentFunction->next;
         }
         currentScope = currentScope->parent;
+    }
+
+    if(result.size() > 0){
+        iter++;
     }
 
     return result;
@@ -243,11 +251,11 @@ Error* Parser::MissingSubexpression(){
 
     result->type = FloridaType::TError;
     result->errorType = PError::PMissingSubexpression;
-    result->body = bodyStack[bodyStack.size() - 1];
     result->row = given[iter - 1].row;
     result->column = given[iter - 1].column;
     result->placeHolder = "???";
 
+    unboundErrors.push_back(result);
     errorStack.push_back(result);
     return result;
 }
@@ -257,11 +265,11 @@ Error* Parser::MissingLParentheses(){
 
     result->type = FloridaType::TError;
     result->errorType = PError::PMissingLParentheses;
-    result->body = bodyStack[bodyStack.size() - 1];
     result->row = given[iter - 1].row;
     result->column = given[iter - 1].column;
     result->placeHolder = "\"(\"";
 
+    unboundErrors.push_back(result);
     errorStack.push_back(result);
     return result;
 }
@@ -271,11 +279,11 @@ Error* Parser::MissingRParentheses(){
 
     result->type = FloridaType::TError;
     result->errorType = PError::PMissingRParentheses;
-    result->body = bodyStack[bodyStack.size() - 1];
     result->row = given[iter - 1].row;
     result->column = given[iter - 1].column;
     result->placeHolder = "\")\"";
 
+    unboundErrors.push_back(result);
     errorStack.push_back(result);
     return result;
 }
@@ -285,11 +293,11 @@ Error* Parser::MissingLCurlyBrace(){
 
     result->type = FloridaType::TError;
     result->errorType = PError::PMissingLCurlyBrace;
-    result->body = bodyStack[bodyStack.size() - 1];
     result->row = given[iter - 1].row;
     result->column = given[iter - 1].column;
     result->placeHolder = "\"{\"";
 
+    unboundErrors.push_back(result);
     errorStack.push_back(result);
     return result;
 }
@@ -299,11 +307,11 @@ Error* Parser::MissingRCurlyBrace(){
 
     result->type = FloridaType::TError;
     result->errorType = PError::PMissingRCurlyBrace;
-    result->body = bodyStack[bodyStack.size() - 1];
     result->row = given[iter - 1].row;
     result->column = given[iter - 1].column;
     result->placeHolder = "\")\"";
 
+    unboundErrors.push_back(result);
     errorStack.push_back(result);
     return result;
 }
@@ -313,11 +321,11 @@ Error* Parser::MissingLBracket(){
 
     result->type = FloridaType::TError;
     result->errorType = PError::PMissingLBracket;
-    result->body = bodyStack[bodyStack.size() - 1];
     result->row = given[iter - 1].row;
     result->column = given[iter - 1].column;
     result->placeHolder = "\"[\"";
 
+    unboundErrors.push_back(result);
     errorStack.push_back(result);
     return result;
 }
@@ -327,11 +335,11 @@ Error* Parser::MissingRBracket(){
 
     result->type = FloridaType::TError;
     result->errorType = PError::PMissingLBracket;
-    result->body = bodyStack[bodyStack.size() - 1];
     result->row = given[iter - 1].row;
     result->column = given[iter - 1].column;
     result->placeHolder = "\"]\"";
 
+    unboundErrors.push_back(result);
     errorStack.push_back(result);
     return result;
 }
@@ -341,11 +349,11 @@ Error* Parser::MissingSemicolon(){
 
     result->type = FloridaType::TError;
     result->errorType = PError::PMissingSemicolon;
-    result->body = bodyStack[bodyStack.size() - 1];
     result->row = given[iter - 1].row;
     result->column = given[iter - 1].column;
     result->placeHolder = "\";\"";
 
+    unboundErrors.push_back(result);
     errorStack.push_back(result);
     return result;
 }
@@ -444,13 +452,13 @@ UNode Parser::multiply(){
 }
 
 UNode Parser::divide(){
-    Node* left = nullptr;
-    Node* right = nullptr;
-    Division* result = nullptr;
+    UNode left;
+    UNode right;
+    UNode result;
 
     left = primitive();
     if(left == nullptr){
-        return nullptr;
+        return result;
     }
 
     //Failing here is not an error.
@@ -459,21 +467,23 @@ UNode Parser::divide(){
     }
 
     result = stack->alloc<Division>();
-    result->left = left;
+    result.joker.division->left = left;
 
     right = divide();
     if(right == nullptr){
-        return MissingSubexpression();
+        result.joker.division->right = MissingSubexpression();
+        return result;
     }
 
-    result->right = right;
-    result->type = returnType(left->type, right->type);
+    result.joker.division->right = right;
+    result.joker.division->type = returnType(left.joker.division->type, right.joker.division->type);
 
     return result;
 }
 
 UNode Parser::primitive(){
     UNode pointer;
+    UNode number;
 
     if(check("-")){
         UNode expression;
@@ -491,73 +501,72 @@ UNode Parser::primitive(){
 
     //Check for numbers.
     if(checkType(FloridaType::ufixed8)){
-        UNode number;
         number = stack->alloc<Primitive>();
-        number->value.ufixed8 = std::stoull(given[iter - 1].getName());
-        number->type = FloridaType::ufixed8;
+        number.joker.primitive->value.ufixed8 = std::stoull(given[iter - 1].getName());
+        number.joker.primitive->type = FloridaType::ufixed8;
 
         return number;
     }
     if(checkType(FloridaType::ufixed4)){
-        Primitive* number = stack->alloc<Primitive>();
-        number->value.ufixed4[0] = std::stoul(given[iter - 1].getName());
-        number->type = FloridaType::ufixed4;
+        number = stack->alloc<Primitive>();
+        number.joker.primitive->value.ufixed4[0] = std::stoul(given[iter - 1].getName());
+        number.joker.primitive->type = FloridaType::ufixed4;
 
         return number;
     }
     if(checkType(FloridaType::ufixed2)){
-        Primitive* number = stack->alloc<Primitive>();
-        number->value.ufixed2[0] = std::stoul(given[iter - 1].getName());
-        number->type = FloridaType::ufixed2;
+        number = stack->alloc<Primitive>();
+        number.joker.primitive->value.ufixed2[0] = std::stoul(given[iter - 1].getName());
+        number.joker.primitive->type = FloridaType::ufixed2;
 
         return number;
     }
     if(checkType(FloridaType::ufixed1)){
-        Primitive* number = stack->alloc<Primitive>();
-        number->value.ufixed1[0] = std::stoul(given[iter - 1].getName());
-        number->type = FloridaType::ufixed1;
+        number = stack->alloc<Primitive>();
+        number.joker.primitive->value.ufixed1[0] = std::stoul(given[iter - 1].getName());
+        number.joker.primitive->type = FloridaType::ufixed1;
 
         return number;
     }
     if(checkType(FloridaType::fixed8)){
-        Primitive* number = stack->alloc<Primitive>();
-        number->value.fixed8 = std::stoll(given[iter - 1].getName());
-        number->type = FloridaType::fixed8;
+        number = stack->alloc<Primitive>();
+        number.joker.primitive->value.fixed8 = std::stoll(given[iter - 1].getName());
+        number.joker.primitive->type = FloridaType::fixed8;
 
         return number;
     }
     if(checkType(FloridaType::fixed4)){
-        Primitive* number = stack->alloc<Primitive>();
-        number->value.fixed4[0] = std::stol(given[iter - 1].getName());
-        number->type = FloridaType::fixed4;
+        number = stack->alloc<Primitive>();
+        number.joker.primitive->value.fixed4[0] = std::stol(given[iter - 1].getName());
+        number.joker.primitive->type = FloridaType::fixed4;
 
        return number;
     }
     if(checkType(FloridaType::fixed2)){
-        Primitive* number = stack->alloc<Primitive>();
-        number->value.fixed2[0] = std::stol(given[iter - 1].getName());
-        number->type = FloridaType::fixed2;
+        number = stack->alloc<Primitive>();
+        number.joker.primitive->value.fixed2[0] = std::stol(given[iter - 1].getName());
+        number.joker.primitive->type = FloridaType::fixed2;
 
         return number;
     }
     if(checkType(FloridaType::fixed1)){
-        Primitive* number = stack->alloc<Primitive>();
-        number->value.fixed1[0] = std::stol(given[iter - 1].getName());
-        number->type = FloridaType::fixed1;
+        number = stack->alloc<Primitive>();
+        number.joker.primitive->value.fixed1[0] = std::stol(given[iter - 1].getName());
+        number.joker.primitive->type = FloridaType::fixed1;
 
         return number;
     }
     if(checkType(FloridaType::float8)){
-        Primitive* number = stack->alloc<Primitive>();
-        number->value.float8 = std::stod(given[iter - 1].getName());
-        number->type = FloridaType::float8;
+        number = stack->alloc<Primitive>();
+        number.joker.primitive->value.float8 = std::stod(given[iter - 1].getName());
+        number.joker.primitive->type = FloridaType::float8;
 
         return number;
     }
     if(checkType(FloridaType::float4)){
-        Primitive* number = stack->alloc<Primitive>();
-        number->value.float4[0] = std::stof(given[iter - 1].getName());
-        number->type = FloridaType::float4;
+        number = stack->alloc<Primitive>();
+        number.joker.primitive->value.float4[0] = std::stof(given[iter - 1].getName());
+        number.joker.primitive->type = FloridaType::float4;
 
         return number;
     }
@@ -566,22 +575,22 @@ UNode Parser::primitive(){
     
     //Check for booleans.
     if(checkType(FloridaType::Bool)){
-        Primitive* result = stack->alloc<Primitive>();
+        pointer = stack->alloc<Primitive>();
         if(given[iter - 1].getName() == "true"){
-            result->value.boolean[0] = true;
-            result->type = FloridaType::Bool;
+            pointer.joker.primitive->value.boolean[0] = true;
+            pointer.joker.primitive->type = FloridaType::Bool;
 
-            return result;
+            return pointer;
         } else {
-            result->value.boolean[0] = false;
-            result->type = FloridaType::Bool;
+            pointer.joker.primitive->value.boolean[0] = false;
+            pointer.joker.primitive->type = FloridaType::Bool;
             
-            return result;
+            return pointer;
         }
     }
 
-    //Hail Mary attempt.
-    pointer = memberAccess(stack->currentScope);
+    //Hail Mary attempt at finding a variable.
+    pointer = dereference(stack->currentScope);
 
     //If a MemberAccess is not found, then fuck it, nothing was.
     return pointer;
@@ -631,14 +640,15 @@ Parentheses* Parser::parentheses(){
 
 
 //Helper function for comparisons.
-Node* Parser::compare(){
-    Node* left = nullptr;
-    Node* right = nullptr;
+UNode Parser::compare(){
+    UNode left;
+    UNode right;
+    UNode result;
     std::string name = "";
 
     left = add();
     if(left == nullptr){
-        return nullptr;
+        return result;
     }
     
     int64_t namePlacement = iter;
@@ -652,65 +662,66 @@ Node* Parser::compare(){
     }
 
     if(std::string(given[namePlacement].name) == "=="){
-        Equal* result = stack->alloc<Equal>();
-        result->left = left;
-        result->right = right;
+        result = stack->alloc<Equal>();
+        result.joker.equal->left = left;
+        result.joker.equal->right = right;
 
         return result;
     }
 
     if(std::string(given[namePlacement].name) == "!="){
-        NotEqual* result = stack->alloc<NotEqual>();
-        result->left = left;
-        result->right = right;
+        result = stack->alloc<NotEqual>();
+        result.joker.notEqual->left = left;
+        result.joker.notEqual->right = right;
 
         return result;
     }
 
     if(std::string(given[namePlacement].name) == ">"){
-        GreaterThan* result = stack->alloc<GreaterThan>();
-        result->left = left;
-        result->right = right;
+        result = stack->alloc<GreaterThan>();
+        result.joker.greaterThan->left = left;
+        result.joker.greaterThan->right = right;
 
         return result;
     }
 
     if(std::string(given[namePlacement].name) == ">="){
-        GreaterThanOr* result = stack->alloc<GreaterThanOr>();
-        result->left = left;
-        result->right = right;
+        result = stack->alloc<GreaterThanOr>();
+        result.joker.greaterThanOr->left = left;
+        result.joker.greaterThanOr->right = right;
 
         return result;
     }
 
     if(std::string(given[namePlacement].name) == "<"){
-        LessThan* result = stack->alloc<LessThan>();
-        result->left = left;
-        result->right = right;
+        result = stack->alloc<LessThan>();
+        result.joker.lessThan->left = left;
+        result.joker.lessThan->right = right;
 
         return result;
     }
 
     if(std::string(given[namePlacement].name) == "<="){
-        LessThanOr* result = stack->alloc<LessThanOr>();
-        result->left = left;
-        result->right = right;
+        result = stack->alloc<LessThanOr>();
+        result.joker.lessThanOr->left = left;
+        result.joker.lessThanOr->right = right;
 
         return result;
     }
 
-    return nullptr;
+    return result;
 }
 
 
 
-Node* Parser::OR(){
-    Node* left = nullptr;
-    Or* result = nullptr;
+UNode Parser::OR(){
+    UNode left;
+    UNode right;
+    UNode result;
 
     left = AND();
     if(left == nullptr){
-        return nullptr;
+        return result;
     }
 
     if(!check("OR")){
@@ -718,23 +729,26 @@ Node* Parser::OR(){
     }
     result = stack->alloc<Or>();
 
-    result->left = left;
-    result->right = OR();
-    if(result->right == nullptr){
-        return MissingSubexpression();
+    result.joker.orClass->left = left;
+    right = OR();
+    if(right == nullptr){
+        result.joker.orClass->right = MissingSubexpression();
+    } else {
+        result.joker.orClass->right = right;
     }
 
     return result;
 
 }
 
-Node* Parser::AND(){
-    Node* left = nullptr;
-    And* result = nullptr;
+UNode Parser::AND(){
+    UNode left;
+    UNode right;
+    UNode result;
 
     left = compare();
     if(left == nullptr){
-        return nullptr;
+        return result;
     }
 
     if(!check("AND")){
@@ -742,9 +756,11 @@ Node* Parser::AND(){
     }
     result = stack->alloc<And>();
 
-    result->right = AND();
-    if(result->right == nullptr){
-        return MissingSubexpression();
+    right = AND();
+    if(right == nullptr){
+        result.joker.andClass->right = MissingSubexpression();
+    } else {
+        result.joker.andClass->right = right;
     }
 
     return result;
@@ -798,21 +814,33 @@ Scope* Parser::scope(){
 }
 
 Body* Parser::body(){
-    Node* temp = nullptr;
-    Body* result = stack->alloc<Body>();
-    bodyStack.push_back(result);
-    
+    UNode temp;
+    Body* result = nullptr;
+    size_t bodyStackStart = unboundErrors.size();
+
     //Look out for anything familiar such as assignments or if statements.
     temp = commonExpressions();
     if(temp == nullptr){
-        bodyStack.pop_back();
         return nullptr;
     }
-    
+
+    //Reaching this means that there is a body of code.
+    result = stack->alloc<Body>();
+    size_t bodyStackEnd = unboundErrors.size();
     result->current = temp;
+
+    //All the errors that need a body but don't have one will now get one.
+    for(size_t i = bodyStackStart; i < unboundErrors.size(); i++){
+        unboundErrors[i]->body = result;
+    }
+
+    //Remove the errors generated during this body call.
+    for(size_t i = 0; i < bodyStackEnd - bodyStackStart; i++){
+        unboundErrors.pop_back();
+    }
+    
     //Recursively call to check for another body of code.
     result->next = body();
-    bodyStack.pop_back();
 
     return result;
 }
@@ -843,16 +871,20 @@ UNode Parser::commonExpressions(){
 
     result = assignment();
     if(result.joker.node != nullptr){
-        if(!check(";")){
-            MissingSemicolon();
+        if(result.joker.node->nodeType == NodeType::NTAssignment){
+            if(!check(";")){
+                MissingSemicolon();
+            }
         }
         return result;
     }
 
     result = initialize();
     if(result.joker.node != nullptr){
-        if(!check(";")){
-            MissingSemicolon();
+        if(result.joker.node->nodeType == NodeType::NTInitialize){
+            if(!check(";")){
+                MissingSemicolon();
+            }
         }
         return result;
     }
@@ -888,14 +920,14 @@ UNode Parser::commonExpressions(){
 UNode Parser::commonStatements(){
     UNode result;
 
-    //Check for comparison statements.
-    result = OR();
+    //Check for assignments.
+    result = assignment();
     if(result.joker.node != nullptr){
         return result;
     }
 
-    //Check for assignments.
-    result = assignment();
+    //Check for comparison statements.
+    result = OR();
     if(result.joker.node != nullptr){
         return result;
     }
@@ -907,25 +939,26 @@ UNode Parser::commonStatements(){
 
 //if statement
 IfClass* Parser::IF(){
-    Node* condition = nullptr;
+    UNode condition;
     IfClass* result = nullptr;
 
     //Check to see if the syntax matches properly.
     if(check("if")){
         result = stack->alloc<IfClass>();
-        result->ifBody->name = given[iter - 1].name;
-        uint64_t ifPosition = iter - 2;
+        uint64_t ifPosition = iter - 1;
 
         //Check for a left parentheses.
         if(!check("(")){
             result->MissingLP = MissingLParentheses();
         }
-
-        condition = OR();
+        
         //Get the condition of the if statement.
+        condition = OR();
         if(condition == nullptr){
             result->condition = MissingSubexpression();
         }
+        result->condition = condition;
+
         //Check for a right parentheses.
         if(!check(")")){
             result->MissingRP = MissingRParentheses();
@@ -938,6 +971,7 @@ IfClass* Parser::IF(){
         //Check for the if body.
         result->ifBody = scope();
         result->ifBody->name = given[ifPosition].name;
+
         //Check for a right curly brace.
         if(!check("}")){
             result->MissingIfRCB = MissingRCurlyBrace();
@@ -953,6 +987,7 @@ IfClass* Parser::IF(){
             result->MissingElseLCB = MissingLCurlyBrace();
         }
 
+        //Check for the else body.
         result->elseBody = scope();
         result->elseBody->name = given[elsePosition].name;
 
@@ -1132,6 +1167,7 @@ Node* Parser::initialize(){
 
         //If there's an assignment operator, then there should be a statement that follows.
         if(bool3){
+            
             iter++;
             result->code = commonStatements();
             if(result->code == nullptr){
@@ -1146,21 +1182,28 @@ Node* Parser::initialize(){
     return nullptr;
 }
 
-Node* Parser::assignment(){
-    UNode left = dereference(stack->currentScope);
+UNode Parser::assignment(){
+    UNode left = OR();
+    UNode right;
+    UNode result;
     if(left.joker.node == nullptr){
-        return nullptr;
+        return left;
     }
-    Assignment* result = nullptr;
-
+    /*
+    TO DO, check for unacceptable left hand sides.
+    If it is unnaceptable and there is an assignment operation,
+    then generate an error and continue parsing like normal.
+    */
+    
     if(check("=")){
         result = stack->alloc<Assignment>();
-        result->left = left.joker.node;
-        result->right = commonExpressions();
+        result.joker.assignment->left = left.joker.node;
+        right = assignment();
 
-        return result;
-        if(result->right == nullptr){
-            result->right = MissingSubexpression();
+        if(right.joker.node == nullptr){
+            result.joker.assignment->right = MissingSubexpression();
+        } else {
+            result.joker.assignment->right = right;
         }
 
         return result;
@@ -1168,10 +1211,10 @@ Node* Parser::assignment(){
 
     //This could be an object that has a method applied to it.
     //"Object.method();" as an exmaple.
-    return left.joker.node;
+    return left;
 }
 
-Node* Parser::object(){
+ObjectClass* Parser::object(){
     if(!hasTokens(3)){
         return nullptr;
     }
@@ -1282,7 +1325,7 @@ UNode Parser::memberAccess(Scope* input){
 
 //Function stuff
 //TO FIX
-Node* Parser::function(){
+Function* Parser::function(){
     if(!hasTokens(3)){
         return nullptr;
     }
@@ -1296,9 +1339,6 @@ Node* Parser::function(){
 
     if(bool1 & bool2 & (given[iter + 2].name == "(")){
         Function* result = stack->alloc<Function>();
-        //I forgot to comment what this is.
-        //I dunno what it is.
-        //int64_t firstHalfStackSize = 0;
         result->previous = stack->currentFunction;  
         stack->currentFunction = result;
         result->returnable = returnable;
@@ -1333,7 +1373,6 @@ Node* Parser::function(){
 
         //Get all argument initializations, if any.
         result->allArguments = initializeArguments();
-
         if(!check(")")){
             MissingRParentheses();
         }
@@ -1358,7 +1397,6 @@ Node* Parser::function(){
         result->code->byteAssign();
 
         return result;
-
     }
 
     return nullptr;
@@ -1384,7 +1422,7 @@ Arguments* Parser::initializeArguments(){
 }
 
 Arguments* Parser::arguments(){
-    Node* code = nullptr;
+    UNode code;
     Arguments* result = nullptr;
 
     //Check for any sort  of subexpression.
@@ -1410,8 +1448,8 @@ Arguments* Parser::arguments(){
     return result;
 }
 
-Node* Parser::returnableExpressions(){
-    Node* result;
+UNode Parser::returnableExpressions(){
+    UNode result;
 
     result = call(stack->currentScope);
     if(result != nullptr){
@@ -1432,7 +1470,7 @@ Node* Parser::returnableExpressions(){
     }
 
     //Reaching this IS a problem.
-    return nullptr;
+    return result;
 }
 
 //TO FIX
@@ -1464,10 +1502,10 @@ FunctionCall* Parser::call(Scope* input){
 
 }
 
-Node* Parser::Return(){
+ReturnClass* Parser::Return(){
     //Check for the string and then the statement that follows.
     if(check("return")){
-        Node* statement = commonStatements();
+        UNode statement = commonStatements();
         ReturnClass* result = stack->alloc<ReturnClass>();
         result->statement = statement;
         int64_t returnCount = 1;
@@ -1490,7 +1528,7 @@ Node* Parser::Return(){
         }
 
         //Check if the return type differs from what is on the return line.
-        if(statement->type != stack->currentFunction->type){
+        if(statement.joker.node->type != stack->currentFunction->type){
             TypecastClass* thing = stack->alloc<TypecastClass>();
             thing->type = stack->currentFunction->type;
             thing->body = statement;
